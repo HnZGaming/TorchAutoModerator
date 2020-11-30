@@ -1,0 +1,13 @@
+<?xml version="1.0"?>
+
+<PluginManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+
+  <Name>Shitty Shit Shitter</Name>
+
+  <Guid>8333d8a5-c545-42d9-a606-8dae9db3c678</Guid>
+
+  <Repository>https://github.com/HnZGaming/TorchShittyShitShitter</Repository>
+
+  <Version>v1.0.0</Version>
+
+</PluginManifest>
