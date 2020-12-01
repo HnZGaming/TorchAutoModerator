@@ -17,9 +17,10 @@ namespace TorchShittyShitShitter
         Persistent<ShittyShitShitterConfig> _config;
         UserControl _userControl;
         CancellationTokenSource _canceller;
-        LaggyGridCollector _gridCollector;
-        LaggyGridWindowBuffer _gridBuffer;
-        LaggyGridGpsBroadcaster _gridBroadcaster;
+        GpsBroadcaster _gpsBroadcaster;
+        LaggyGridScanner _gridScanner;
+        LaggyGridReportBuffer _gridBuffer;
+        LaggyGridGpsCreator _gridCreator;
 
         ShittyShitShitterConfig Config => _config.Data;
 
@@ -35,13 +36,18 @@ namespace TorchShittyShitShitter
             this.ListenOnGameLoaded(OnGameLoaded);
             this.ListenOnGameUnloading(OnGameUnloading);
 
+            var mngr = new ShittyShitShitterManager(torch);
+            torch.Managers.AddManager(mngr);
+
             var configFilePath = this.MakeConfigFilePath();
             _config = Persistent<ShittyShitShitterConfig>.Load(configFilePath);
 
             _canceller = new CancellationTokenSource();
-            _gridCollector = new LaggyGridCollector(Config, _gridBuffer);
-            _gridBroadcaster = new LaggyGridGpsBroadcaster(Config);
-            _gridBuffer = new LaggyGridWindowBuffer(Config, _gridBroadcaster);
+            
+            _gpsBroadcaster = new GpsBroadcaster(Config, "LaggyGridGps");
+            _gridCreator = new LaggyGridGpsCreator(_gpsBroadcaster);
+            _gridBuffer = new LaggyGridReportBuffer(Config, _gridCreator);
+            _gridScanner = new LaggyGridScanner(Config, _gridBuffer);
         }
 
         UserControl IWpfPlugin.GetControl()
@@ -53,20 +59,30 @@ namespace TorchShittyShitShitter
         {
             _canceller.StartAsync(LoopCollecting).Forget(Log);
 
-            _gridBroadcaster.CleanAllCustomGps();
-            _canceller.StartAsync(_gridBroadcaster.LoopCleaning).Forget(Log);
+            _gpsBroadcaster.CleanAllCustomGps();
+            _canceller.StartAsync(_gpsBroadcaster.LoopCleaning).Forget(Log);
         }
 
         void LoopCollecting(CancellationToken canceller)
         {
             Log.Info("Started collector loop");
 
+            // Idle for some time during the session startup
+            try
+            {
+                canceller.WaitHandle.WaitOne(Config.FirstIdleSeconds.Seconds());
+            }
+            catch // on cancellation
+            {
+                return;
+            }
+
             while (!canceller.IsCancellationRequested)
             {
                 if (!Enabled)
                 {
                     // clear past reports 
-                    _gridBuffer.ResetCollection();
+                    _gridBuffer.Clear();
 
                     // dry run until re-enabled
                     try
@@ -83,7 +99,7 @@ namespace TorchShittyShitShitter
                 try
                 {
                     // will spend several seconds here
-                    _gridCollector.CollectLaggyGrids(canceller);
+                    _gridScanner.ScanLaggyGrids(canceller);
                 }
                 catch (Exception e)
                 {
@@ -100,7 +116,7 @@ namespace TorchShittyShitShitter
 
         public void CleanAllCustomGps()
         {
-            _gridBroadcaster.CleanAllCustomGps();
+            _gpsBroadcaster.CleanAllCustomGps();
         }
     }
 }

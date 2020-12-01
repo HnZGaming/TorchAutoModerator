@@ -9,14 +9,23 @@ namespace TorchShittyShitShitter
 {
     public sealed class ShittyShitShitterConfig :
         ViewModel,
-        LaggyGridWindowBuffer.IConfig,
-        LaggyGridCollector.IConfig,
-        LaggyGridGpsBroadcaster.IConfig
+        LaggyGridReportBuffer.IConfig,
+        LaggyGridScanner.IConfig,
+        GpsBroadcaster.IConfig
     {
+        double _firstIdleSeconds = 120;
         bool _enableBroadcasting = true;
         double _bufferSeconds = 60d;
         double _gpsLifespanSeconds = 60d;
         double _mspfPerFactionMemberLimit = 0.3d;
+
+        [XmlElement("FirstIdleSeconds")]
+        [Display(Order = -1, Name = "First idle seconds", Description = "All grids tend to be laggy during the first couple minutes of a session.")]
+        public double FirstIdleSeconds
+        {
+            get => _firstIdleSeconds;
+            set => SetProperty(ref _firstIdleSeconds, value);
+        }
 
         [XmlElement("EnableBroadcasting")]
         [Display(Order = 0, Name = "Enable broadcasting")]
@@ -31,7 +40,7 @@ namespace TorchShittyShitShitter
         public double MspfPerFactionMemberLimit
         {
             get => _mspfPerFactionMemberLimit;
-            set => SetProperty(ref _mspfPerFactionMemberLimit, Math.Max(0.1d, value));
+            set => SetProperty(ref _mspfPerFactionMemberLimit, value);
         }
 
         [XmlElement("BufferSeconds")]
@@ -59,7 +68,7 @@ namespace TorchShittyShitShitter
             }
         }
 
-        public TimeSpan WindowTime => BufferSeconds.Seconds();
-        public TimeSpan GpsLifespan => _gpsLifespanSeconds.Seconds();
+        TimeSpan LaggyGridReportBuffer.IConfig.WindowTime => BufferSeconds.Seconds();
+        TimeSpan GpsBroadcaster.IConfig.GpsLifespan => _gpsLifespanSeconds.Seconds();
     }
 }

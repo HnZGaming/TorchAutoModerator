@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
+using NLog;
 using Utils.General;
 
 namespace TorchShittyShitShitter.Core
@@ -7,31 +9,27 @@ namespace TorchShittyShitShitter.Core
     /// <summary>
     /// Hold onto laggy grids until consistently laggy for a good length of time.
     /// </summary>
-    public sealed class LaggyGridWindowBuffer
+    public sealed class LaggyGridReportBuffer
     {
         public interface IConfig
         {
             TimeSpan WindowTime { get; }
         }
 
+        static readonly ILogger Log = LogManager.GetCurrentClassLogger();
         readonly IConfig _config;
-        readonly LaggyGridGpsBroadcaster _gpsBroadcaster;
+        readonly LaggyGridGpsCreator _gpsCreator;
         readonly PersistencyObserver<long> _reports;
         DateTime? _lastCollectionTimestamp;
 
-        public LaggyGridWindowBuffer(IConfig config, LaggyGridGpsBroadcaster gpsBroadcaster)
+        public LaggyGridReportBuffer(IConfig config, LaggyGridGpsCreator gpsCreator)
         {
             _config = config;
-            _gpsBroadcaster = gpsBroadcaster;
+            _gpsCreator = gpsCreator;
             _reports = new PersistencyObserver<long>();
         }
 
-        public void ResetCollection()
-        {
-            _reports.Clear();
-        }
-
-        public void UpdateCollection(IEnumerable<LaggyGridReport> laggyGrids)
+        public void UpdateLaggyGrids(IEnumerable<LaggyGridReport> laggyGrids)
         {
             laggyGrids.ThrowIfNull(nameof(laggyGrids));
 
@@ -58,11 +56,15 @@ namespace TorchShittyShitShitter.Core
 
             // broadcast "persistently" laggy grids
             var longLaggyGridIds = _reports.GetElementsPresentInAllIntervals();
-            foreach (var gridId in longLaggyGridIds)
-            {
-                var gridReport = laggyGridsMap[gridId];
-                _gpsBroadcaster.BroadcastGrid(gridReport);
-            }
+            var longLaggyGrids = longLaggyGridIds.Select(i => laggyGridsMap[i]);
+            _gpsCreator.CreateGps(longLaggyGrids).Forget(Log);
+
+            Log.Trace($"done updating collection: {laggyGrids.ToStringSeq()}");
+        }
+
+        public void Clear()
+        {
+            _reports.Clear();
         }
     }
 }

@@ -3,7 +3,7 @@ using System.Linq;
 
 namespace Utils.General
 {
-    public sealed class PersistencyObserver<T>
+    internal sealed class PersistencyObserver<T>
     {
         readonly LinkedList<HashSet<T>> _timeline;
 

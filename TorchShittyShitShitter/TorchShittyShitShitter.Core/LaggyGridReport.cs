@@ -13,5 +13,10 @@
 
         public long GridId { get; }
         public double Mspf { get; }
+
+        public override string ToString()
+        {
+            return $"({GridId}, {Mspf:0.00}ms/f)";
+        }
     }
 }
