@@ -22,6 +22,7 @@ namespace TorchShittyShitShitter.Core
         public interface IConfig
         {
             double MspfPerFactionMemberLimit { get; }
+            int MaxLaggyGridCountPerScan { get; }
         }
 
         static readonly ILogger Log = LogManager.GetCurrentClassLogger();
@@ -185,7 +186,12 @@ namespace TorchShittyShitShitter.Core
 
             Log.Trace($"Laggy grids: {laggyGrids.Select(s => $"{s.GridId} ({s.Mspf:0.00}ms/f)").ToStringSeq()}");
 
-            _gridBuffer.UpdateLaggyGrids(laggyGrids);
+            var topLaggyGrids = laggyGrids
+                .OrderByDescending(r => r.Mspf)
+                .Take(_config.MaxLaggyGridCountPerScan)
+                .ToArray();
+
+            _gridBuffer.UpdateLaggyGrids(topLaggyGrids);
         }
     }
 }

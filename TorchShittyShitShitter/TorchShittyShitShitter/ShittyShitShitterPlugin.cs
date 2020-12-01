@@ -43,7 +43,7 @@ namespace TorchShittyShitShitter
             _config = Persistent<ShittyShitShitterConfig>.Load(configFilePath);
 
             _canceller = new CancellationTokenSource();
-            
+
             _gpsBroadcaster = new GpsBroadcaster(Config, "LaggyGridGps");
             _gridCreator = new LaggyGridGpsCreator(_gpsBroadcaster);
             _gridBuffer = new LaggyGridReportBuffer(Config, _gridCreator);

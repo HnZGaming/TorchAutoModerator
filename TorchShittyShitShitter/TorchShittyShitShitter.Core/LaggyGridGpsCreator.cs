@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using NLog;
 using Sandbox.Game.Entities;
 using Sandbox.Game.Screens.Helpers;
+using Utils.General;
 using Utils.Torch;
 using VRage;
 using VRage.Game;
@@ -27,6 +28,9 @@ namespace TorchShittyShitShitter.Core
         public async Task CreateGps(IEnumerable<LaggyGridReport> gridReports)
         {
             var gpsList = await CreateGpsAsync(gridReports);
+
+            await TaskUtils.MoveToThreadPool();
+
             foreach (var gps in gpsList)
             {
                 _gpsBroadcaster.BroadcastToOnlinePlayers(gps);

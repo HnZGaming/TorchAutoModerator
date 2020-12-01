@@ -94,7 +94,7 @@ namespace TorchShittyShitShitter.Core
 
             if (removedGpsHashes.Any())
             {
-                Log.Trace($"Cleaned gps: {removedGpsHashes.ToStringSeq()}");
+                Log.Info($"Cleaned laggy grids gps: {removedGpsHashes.ToStringSeq()}");
             }
         }
     }

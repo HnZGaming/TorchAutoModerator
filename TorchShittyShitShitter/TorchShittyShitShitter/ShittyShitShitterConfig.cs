@@ -16,6 +16,7 @@ namespace TorchShittyShitShitter
         double _firstIdleSeconds = 120;
         bool _enableBroadcasting = true;
         double _bufferSeconds = 60d;
+        int _maxLaggyGridCountPerScan = 5;
         double _gpsLifespanSeconds = 60d;
         double _mspfPerFactionMemberLimit = 0.3d;
 
@@ -36,15 +37,23 @@ namespace TorchShittyShitShitter
         }
 
         [XmlElement("MspfPerFactionMemberLimit")]
-        [Display(Order = 1, Name = "Limit ms/f per online member", Description = "Lagginess is calculated by a faction's sim impact divided by its online member count.")]
+        [Display(Order = 1, Name = "Limit ms/f per online member", Description = "\"Lagginess\" is calculated by a faction's sim impact divided by its online member count.")]
         public double MspfPerFactionMemberLimit
         {
             get => _mspfPerFactionMemberLimit;
             set => SetProperty(ref _mspfPerFactionMemberLimit, value);
         }
 
+        [XmlElement("MaxLaggyGridCountPerScan")]
+        [Display(Order = 2, Name = "Max laggy grid count per scan", Description = "Too many GPS entities can abstract the general sight of players and cause a server sim drop.")]
+        public int MaxLaggyGridCountPerScan
+        {
+            get => _maxLaggyGridCountPerScan;
+            set => SetProperty(ref _maxLaggyGridCountPerScan, value);
+        }
+
         [XmlElement("BufferSeconds")]
-        [Display(Order = 2, Name = "Buffer seconds", Description = "Factions that are laggy for a length of time will be broadcast.")]
+        [Display(Order = 3, Name = "Buffer seconds", Description = "Factions that are laggy for a length of time will be broadcast.")]
         public double BufferSeconds
         {
             get => _bufferSeconds;
@@ -52,7 +61,7 @@ namespace TorchShittyShitShitter
         }
 
         [XmlElement("GpsLifespanSeconds")]
-        [Display(Order = 3, Name = "GPS lifespan seconds", Description = "Top grid's GPS will stay active for a length of time even if its faction is no longer laggy.")]
+        [Display(Order = 4, Name = "GPS lifespan seconds", Description = "Top grid's GPS will stay active for a length of time even if its faction is no longer laggy.")]
         public double GpsLifespanSeconds
         {
             get => _gpsLifespanSeconds;

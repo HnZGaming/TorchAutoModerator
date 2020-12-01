@@ -20,7 +20,7 @@ namespace Utils.General
 
         public void Flush(ILogger logger)
         {
-            foreach (var action in _queue)
+            while (_queue.TryDequeue(out var action))
             {
                 try
                 {
