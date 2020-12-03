@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Threading;
 using NLog;
 using Sandbox;
@@ -17,7 +18,7 @@ namespace TorchShittyShitShitter.Core
     {
         static readonly ILogger Log = LogManager.GetCurrentClassLogger();
 
-        public MyGps CreateGpsOrNull(LaggyGridReport gridReport)
+        public MyGps CreateGpsOrNull(LaggyGridReport gridReport, int ranking)
         {
             // must be called in the game loop
             if (Thread.CurrentThread.ManagedThreadId !=
@@ -45,17 +46,29 @@ namespace TorchShittyShitShitter.Core
 
             var gps = new MyGps(new MyObjectBuilder_Gps.Entry
             {
+                name = grid.DisplayName,
                 DisplayName = grid.DisplayName,
                 coords = grid.PositionComp.GetPosition(),
                 showOnHud = true,
                 color = Color.Purple,
-                description = $"Reported by {nameof(LaggyGridGpsCreator)} with love",
+                description = $"The {RankingToString(ranking)} laggiest grid. Get 'em!",
             });
 
             gps.SetEntity(grid);
             gps.UpdateHash();
 
             return gps;
+        }
+
+        static string RankingToString(int ranking)
+        {
+            switch ($"{ranking}".Last())
+            {
+                case '1': return $"{ranking}st";
+                case '2': return $"{ranking}nd";
+                case '3': return $"{ranking}rd";
+                default: return $"{ranking}th";
+            }
         }
     }
 }

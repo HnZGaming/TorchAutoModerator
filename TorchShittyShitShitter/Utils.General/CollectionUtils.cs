@@ -92,5 +92,19 @@ namespace Utils.General
                 self[keyValuePair.Key] = keyValuePair.Value;
             }
         }
+
+        public static IEnumerable<T> FilterUniqueByKey<K, T>(this IEnumerable<T> self, Func<T, K> makeKey)
+        {
+            var dic = new HashSet<K>();
+            foreach (var t in self)
+            {
+                var key = makeKey(t);
+                if (!dic.Contains(key))
+                {
+                    dic.Add(key);
+                    yield return t;
+                }
+            }
+        }
     }
 }

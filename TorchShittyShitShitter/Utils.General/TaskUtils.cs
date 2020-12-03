@@ -21,30 +21,43 @@ namespace Utils.General
         public static Task MoveToThreadPool()
         {
             var taskSource = new TaskCompletionSource<byte>();
-            ThreadPool.QueueUserWorkItem(_ => taskSource.SetResult(0));
+
+            try
+            {
+                ThreadPool.QueueUserWorkItem(_ => taskSource.SetResult(0));
+            }
+            catch (Exception e)
+            {
+                taskSource.SetException(e);
+            }
+
             return taskSource.Task;
         }
 
-        public static Task StartAsync(this CancellationTokenSource self, Action<CancellationToken> f)
+        public static Task RunUntilCancelledAsync(this CancellationToken self, Func<CancellationToken, Task> f)
         {
-            return Task.Factory.StartNew(() => f(self.Token), self.Token);
+            return Task.Factory.StartNew(async () =>
+            {
+                try
+                {
+                    await f(self);
+                }
+                catch (OperationCanceledException)
+                {
+                    // ignored
+                }
+            }, self);
         }
 
-        public static Task StartAsync(this CancellationTokenSource self, Func<CancellationToken, Task> f)
-        {
-            return Task.Factory.StartNew(() => f(self.Token), self.Token);
-        }
-
-        public static bool WaitOneSafe(this WaitHandle self, TimeSpan timeSpan)
+        public static async Task Delay(this CancellationToken self, TimeSpan timeSpan)
         {
             try
             {
-                self.WaitOne(timeSpan);
-                return true;
+                await Task.Delay(timeSpan, self);
             }
             catch (ObjectDisposedException)
             {
-                return false;
+                throw new OperationCanceledException();
             }
         }
     }

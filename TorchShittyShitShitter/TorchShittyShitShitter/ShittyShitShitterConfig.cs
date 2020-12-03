@@ -29,7 +29,7 @@ namespace TorchShittyShitShitter
         }
 
         [XmlElement("EnableBroadcasting")]
-        [Display(Order = 0, Name = "Enable broadcasting")]
+        [Display(Order = 0, Name = "Enable broadcasting", Description = "Tick off to stop broadcasting new GPS entities.")]
         public bool EnableBroadcasting
         {
             get => _enableBroadcasting;
@@ -77,7 +77,7 @@ namespace TorchShittyShitShitter
         }
 
         [XmlElement("MutedPlayerIds")]
-        [Display(Order = 6, Name = "Muted Players", Description = "Players can mute GPS broadcaster.")]
+        [Display(Order = 6, Name = "Muted Players", Description = "Players can mute GPS broadcaster with a command.")]
         [Obsolete("For UI and serialization only; use Add/Remove methods to modify this list.")]
         public List<ulong> MutedPlayerIds
         {

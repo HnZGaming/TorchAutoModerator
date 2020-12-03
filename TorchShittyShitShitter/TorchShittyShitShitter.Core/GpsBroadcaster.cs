@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using NLog;
 using Sandbox.Game.Multiplayer;
 using Sandbox.Game.Screens.Helpers;
@@ -15,7 +16,6 @@ namespace TorchShittyShitShitter.Core
     /// <summary>
     /// Broadcast GPS entities to online players.
     /// Clean up old GPS entities.
-    /// Use MyGps.Name property to find and delete its own GPS entities from last sessions.
     /// </summary>
     public sealed class GpsBroadcaster
     {
@@ -33,13 +33,11 @@ namespace TorchShittyShitShitter.Core
         }
 
         static readonly ILogger Log = LogManager.GetCurrentClassLogger();
-        readonly string _customName;
         readonly IConfig _config;
         readonly DeprecationObserver<int> _gpsTimestamps;
 
-        public GpsBroadcaster(IConfig config, string customName)
+        public GpsBroadcaster(IConfig config)
         {
-            _customName = customName;
             _config = config;
             _gpsTimestamps = new DeprecationObserver<int>();
         }
@@ -49,9 +47,6 @@ namespace TorchShittyShitShitter.Core
         public void BroadcastToOnlinePlayers(MyGps gps)
         {
             gps.ThrowIfNull(nameof(gps));
-
-            // mark
-            gps.Name = _customName;
 
             // Update this grid's last broadcast time
             _gpsTimestamps.Add(gps.Hash);
@@ -80,21 +75,22 @@ namespace TorchShittyShitShitter.Core
 
         public void CleanAllCustomGps()
         {
-            // delete all custom gps here
-            GpsCollection.DeleteWhere(gps => gps.Name == _customName);
+            // wipe all from the tracker
+            var removedGpsHashes = _gpsTimestamps.RemoveAll();
 
-            // wipe the tracker too
-            _gpsTimestamps.RemoveAll();
+            // delete all custom gps from the world
+            var removedGpsHashSet = new HashSet<int>(removedGpsHashes);
+            GpsCollection.DeleteWhere(gps => removedGpsHashSet.Contains(gps.Hash));
         }
 
-        public void LoopCleaning(CancellationToken canceller)
+        public async Task LoopCleaning(CancellationToken canceller)
         {
             Log.Trace("Started cleaner loop");
 
             while (!canceller.IsCancellationRequested)
             {
                 CleanOldGps();
-                canceller.WaitHandle.WaitOneSafe(TimeSpan.FromSeconds(5));
+                await canceller.Delay(5.Seconds());
             }
         }
 
@@ -112,15 +108,21 @@ namespace TorchShittyShitShitter.Core
 
         public IEnumerable<(long, MyGps)> GetAllCustomGpsEntities()
         {
+            var customGpsCollection = new HashSet<int>(_gpsTimestamps.Items);
+            var keyedCustomGpsCollection = new List<(long, MyGps)>();
             var allGpsCollection = GpsCollection.GetPlayerGpss();
             foreach (var (identityId, playerGpsCollection) in allGpsCollection)
             foreach (var (_, gps) in playerGpsCollection)
             {
-                if (gps.Name == _customName)
+                if (customGpsCollection.Contains(gps.Hash))
                 {
-                    yield return (identityId, gps);
+                    keyedCustomGpsCollection.Add((identityId, gps));
                 }
             }
+
+            Log.Debug($"Cleand gps from the last session: {keyedCustomGpsCollection.Select(e => e.Item1).ToStringSeq()}");
+
+            return keyedCustomGpsCollection;
         }
     }
 }

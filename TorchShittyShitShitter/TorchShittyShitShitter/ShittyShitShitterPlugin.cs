@@ -57,7 +57,7 @@ namespace TorchShittyShitShitter
             _gridScanner = new LaggyGridScanner(Config);
             _gridReportBuffer = new LaggyGridReportBuffer(Config);
             _gridCreator = new LaggyGridGpsCreator();
-            _gpsBroadcaster = new GpsBroadcaster(Config, "LaggyGridGps");
+            _gpsBroadcaster = new GpsBroadcaster(Config);
         }
 
         UserControl IWpfPlugin.GetControl()
@@ -67,18 +67,16 @@ namespace TorchShittyShitShitter
 
         void OnGameLoaded()
         {
-            _canceller.StartAsync(LoopCollecting).Forget(Log);
-
-            _gpsBroadcaster.CleanAllCustomGps();
-            _canceller.StartAsync(_gpsBroadcaster.LoopCleaning).Forget(Log);
+            _canceller.Token.RunUntilCancelledAsync(LoopCollecting).Forget(Log);
+            _canceller.Token.RunUntilCancelledAsync(_gpsBroadcaster.LoopCleaning).Forget(Log);
         }
 
-        void LoopCollecting(CancellationToken canceller)
+        async Task LoopCollecting(CancellationToken canceller)
         {
             Log.Info("Started collector loop");
 
             // Idle for some time during the session startup
-            canceller.WaitHandle.WaitOneSafe(Config.FirstIdleSeconds.Seconds());
+            await canceller.Delay(Config.FirstIdleSeconds.Seconds());
 
             while (!canceller.IsCancellationRequested)
             {
@@ -89,11 +87,11 @@ namespace TorchShittyShitShitter
                         // clear past reports 
                         _gridReportBuffer.Clear();
 
-                        if (!canceller.WaitHandle.WaitOneSafe(1.Seconds())) return;
+                        await canceller.Delay(1.Seconds());
                         continue;
                     }
 
-                    RunOneInterval(canceller).Wait(canceller);
+                    await RunOneInterval(canceller);
                 }
                 catch (OperationCanceledException)
                 {
@@ -104,7 +102,7 @@ namespace TorchShittyShitShitter
                     Log.Error(e);
 
                     // wait a bit otherwise the logs will flood the UI
-                    if (!canceller.WaitHandle.WaitOneSafe(5.Seconds())) return;
+                    await canceller.Delay(5.Seconds());
                 }
             }
         }
@@ -112,8 +110,7 @@ namespace TorchShittyShitShitter
         async Task RunOneInterval(CancellationToken canceller)
         {
             // profile laggy grids
-            var gridReports = _gridScanner.ScanLaggyGrids(canceller);
-            Log.Trace($"done scanning: {gridReports?.ToStringSeq()}");
+            var gridReports = await _gridScanner.ScanLaggyGrids(canceller);
 
             canceller.ThrowIfCancellationRequested();
 
@@ -124,7 +121,10 @@ namespace TorchShittyShitShitter
 
             // retrieve laggy grids by grid IDs
             var reportIdMapping = gridReports.ToDictionary(r => r.GridId);
-            var targetGridReports = targetGridIds.Select(i => reportIdMapping[i]);
+            var targetGridReports =
+                targetGridIds
+                    .Select(i => reportIdMapping[i])
+                    .OrderByDescending(r => r.Mspf);
 
             // MyGps can be created in the game loop only (idk why)
             await GameLoopObserver.WaitUntilGameLoop();
@@ -133,9 +133,10 @@ namespace TorchShittyShitShitter
 
             // collect GPS of laggy grids
             var gpsCollection = new List<MyGps>();
-            foreach (var gridReport in targetGridReports)
+            foreach (var (gridReport, i) in targetGridReports.Select((r, i) => (r, i)))
             {
-                var gpsOrNull = _gridCreator.CreateGpsOrNull(gridReport);
+                var ranking = i + 1;
+                var gpsOrNull = _gridCreator.CreateGpsOrNull(gridReport, ranking);
                 if (gpsOrNull is MyGps gps)
                 {
                     gpsCollection.Add(gps);
