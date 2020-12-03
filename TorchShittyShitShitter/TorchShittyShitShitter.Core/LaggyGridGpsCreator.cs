@@ -18,7 +18,7 @@ namespace TorchShittyShitShitter.Core
     {
         static readonly ILogger Log = LogManager.GetCurrentClassLogger();
 
-        public MyGps CreateGpsOrNull(LaggyGridReport gridReport, int ranking)
+        public bool TryCreateGps(long gridId, int rank, out MyGps gps)
         {
             // must be called in the game loop
             if (Thread.CurrentThread.ManagedThreadId !=
@@ -27,47 +27,49 @@ namespace TorchShittyShitShitter.Core
                 throw new Exception("Can be called in the game loop only");
             }
 
-            Log.Trace($"laggy grid report to be broadcast: {gridReport}");
+            Log.Trace($"laggy grid report to be broadcast: {gridId}");
+
+            gps = null;
 
             // this method fails outside the game loop
-            if (!MyEntityIdentifier.TryGetEntity(gridReport.GridId, out var entity, true))
+            if (!MyEntityIdentifier.TryGetEntity(gridId, out var entity, true))
             {
-                Log.Warn($"Grid not found by EntityId: {gridReport}");
-                return null;
+                Log.Warn($"Grid not found by EntityId: {gridId}");
+                return false;
             }
 
             if (entity.Closed)
             {
-                Log.Warn($"Grid found but closed: {gridReport}");
-                return null;
+                Log.Warn($"Grid found but closed: {gridId}");
+                return false;
             }
 
             var grid = (MyCubeGrid) entity;
 
-            var gps = new MyGps(new MyObjectBuilder_Gps.Entry
+            gps = new MyGps(new MyObjectBuilder_Gps.Entry
             {
                 name = grid.DisplayName,
                 DisplayName = grid.DisplayName,
                 coords = grid.PositionComp.GetPosition(),
                 showOnHud = true,
                 color = Color.Purple,
-                description = $"The {RankingToString(ranking)} laggiest grid. Get 'em!",
+                description = $"The {RankToString(rank)} laggiest grid. Get 'em!",
             });
 
             gps.SetEntity(grid);
             gps.UpdateHash();
 
-            return gps;
+            return true;
         }
 
-        static string RankingToString(int ranking)
+        static string RankToString(int rank)
         {
-            switch ($"{ranking}".Last())
+            switch ($"{rank}".Last())
             {
-                case '1': return $"{ranking}st";
-                case '2': return $"{ranking}nd";
-                case '3': return $"{ranking}rd";
-                default: return $"{ranking}th";
+                case '1': return $"{rank}st";
+                case '2': return $"{rank}nd";
+                case '3': return $"{rank}rd";
+                default: return $"{rank}th";
             }
         }
     }

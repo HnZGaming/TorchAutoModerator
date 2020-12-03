@@ -159,10 +159,15 @@
     </ItemGroup>
     <ItemGroup>
         <Compile Include="Properties\AssemblyInfo.cs" />
+        <Compile Include="TorchShittyShitShitter.Core.Scanners\FactionScanner.cs" />
+        <Compile Include="TorchShittyShitShitter.Core.Scanners\ILagScanner.cs" />
+        <Compile Include="TorchShittyShitShitter.Core.Scanners\ILagScannerConfig.cs" />
+        <Compile Include="TorchShittyShitShitter.Core.Scanners\SinglePlayerScanner.cs" />
+        <Compile Include="TorchShittyShitShitter.Core.Scanners\UnownedGridScanner.cs" />
         <Compile Include="TorchShittyShitShitter.Core\GpsBroadcaster.cs" />
         <Compile Include="TorchShittyShitShitter.Core\LaggyGridGpsCreator.cs" />
         <Compile Include="TorchShittyShitShitter.Core\LaggyGridReportBuffer.cs" />
-        <Compile Include="TorchShittyShitShitter.Core\LaggyGridScanner.cs" />
+        <Compile Include="TorchShittyShitShitter.Core\LaggyGridFinder.cs" />
         <Compile Include="TorchShittyShitShitter.Core\LaggyGridReport.cs" />
         <Compile Include="TorchShittyShitShitter.Reflections\MyGpsCollection_PlayerGpss.cs" />
         <Compile Include="TorchShittyShitShitter\ShittyShitShitterCommandModule.cs" />

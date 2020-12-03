@@ -10,6 +10,7 @@ using Torch;
 using Torch.API;
 using Torch.API.Plugins;
 using TorchShittyShitShitter.Core;
+using TorchShittyShitShitter.Core.Scanners;
 using Utils.General;
 using Utils.Torch;
 
@@ -22,9 +23,10 @@ namespace TorchShittyShitShitter
         UserControl _userControl;
         CancellationTokenSource _canceller;
         GpsBroadcaster _gpsBroadcaster;
-        LaggyGridScanner _gridScanner;
+        LaggyGridFinder _gridFinder;
         LaggyGridReportBuffer _gridReportBuffer;
         LaggyGridGpsCreator _gridCreator;
+        FactionScanner _factionScanner;
 
         ShittyShitShitterConfig Config => _config.Data;
 
@@ -36,8 +38,8 @@ namespace TorchShittyShitShitter
 
         public double Threshold
         {
-            get => Config.MspfPerFactionMemberLimit;
-            set => Config.MspfPerFactionMemberLimit = value;
+            get => Config.MspfPerOnlineGroupMember;
+            set => Config.MspfPerOnlineGroupMember = value;
         }
 
         public override void Init(ITorchBase torch)
@@ -54,7 +56,15 @@ namespace TorchShittyShitShitter
 
             _canceller = new CancellationTokenSource();
 
-            _gridScanner = new LaggyGridScanner(Config);
+            _factionScanner = new FactionScanner(Config);
+
+            _gridFinder = new LaggyGridFinder(Config, new ILagScanner[]
+            {
+                _factionScanner,
+                new SinglePlayerScanner(Config),
+                new UnownedGridScanner(Config),
+            });
+
             _gridReportBuffer = new LaggyGridReportBuffer(Config);
             _gridCreator = new LaggyGridGpsCreator();
             _gpsBroadcaster = new GpsBroadcaster(Config);
@@ -68,6 +78,7 @@ namespace TorchShittyShitShitter
         void OnGameLoaded()
         {
             _canceller.Token.RunUntilCancelledAsync(LoopCollecting).Forget(Log);
+            _canceller.Token.RunUntilCancelledAsync(_factionScanner.LoopProfilingFactions).Forget(Log);
             _canceller.Token.RunUntilCancelledAsync(_gpsBroadcaster.LoopCleaning).Forget(Log);
         }
 
@@ -110,7 +121,7 @@ namespace TorchShittyShitShitter
         async Task RunOneInterval(CancellationToken canceller)
         {
             // profile laggy grids
-            var gridReports = await _gridScanner.ScanLaggyGrids(canceller);
+            var gridReports = await _gridFinder.ScanLaggyGrids(canceller);
 
             canceller.ThrowIfCancellationRequested();
 
@@ -131,13 +142,12 @@ namespace TorchShittyShitShitter
 
             canceller.ThrowIfCancellationRequested();
 
-            // collect GPS of laggy grids
+            // create GPS entities of laggy grids
             var gpsCollection = new List<MyGps>();
             foreach (var (gridReport, i) in targetGridReports.Select((r, i) => (r, i)))
             {
-                var ranking = i + 1;
-                var gpsOrNull = _gridCreator.CreateGpsOrNull(gridReport, ranking);
-                if (gpsOrNull is MyGps gps)
+                var lagRank = i + 1;
+                if (_gridCreator.TryCreateGps(gridReport.GridId, lagRank, out var gps))
                 {
                     gpsCollection.Add(gps);
                 }

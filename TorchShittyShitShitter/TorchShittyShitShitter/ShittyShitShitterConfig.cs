@@ -5,6 +5,7 @@ using System.Xml.Serialization;
 using Torch;
 using Torch.Views;
 using TorchShittyShitShitter.Core;
+using TorchShittyShitShitter.Core.Scanners;
 using Utils.General;
 
 namespace TorchShittyShitShitter
@@ -12,7 +13,8 @@ namespace TorchShittyShitShitter
     public sealed class ShittyShitShitterConfig :
         ViewModel,
         LaggyGridReportBuffer.IConfig,
-        LaggyGridScanner.IConfig,
+        LaggyGridFinder.IConfig,
+        ILagScannerConfig,
         GpsBroadcaster.IConfig
     {
         double _firstIdleSeconds = 120;
@@ -46,7 +48,7 @@ namespace TorchShittyShitShitter
 
         [XmlElement("MspfPerFactionMemberLimit")]
         [Display(Order = 2, Name = "Threshold ms/f per online member", Description = "\"Lagginess\" is calculated by a faction's sim impact divided by its online member count.")]
-        public double MspfPerFactionMemberLimit
+        public double MspfPerOnlineGroupMember
         {
             get => _mspfPerFactionMemberLimit;
             set => SetValue(ref _mspfPerFactionMemberLimit, value);
@@ -54,7 +56,7 @@ namespace TorchShittyShitShitter
 
         [XmlElement("MaxLaggyGridCountPerScan")]
         [Display(Order = 3, Name = "Max GPS count", Description = "Too many GPS entities can cause issues: block the sight of players and drop the server sim.")]
-        public int MaxLaggyGridCountPerScan
+        public int MaxReportCountPerScan
         {
             get => _maxLaggyGridCountPerScan;
             set => SetValue(ref _maxLaggyGridCountPerScan, value);
