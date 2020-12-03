@@ -10,6 +10,7 @@ using Sandbox.Game.World;
 using TorchShittyShitShitter.Reflections;
 using Utils.General;
 using Utils.Torch;
+using VRage.Game.ModAPI;
 
 namespace TorchShittyShitShitter.Core
 {
@@ -30,6 +31,11 @@ namespace TorchShittyShitShitter.Core
             /// Steam IDs of players who have muted this GPS broadcaster.
             /// </summary>
             IEnumerable<ulong> MutedPlayers { get; }
+
+            /// <summary>
+            /// Broadcast to admin players only.
+            /// </summary>
+            bool EnableAdminOnly { get; }
         }
 
         static readonly ILogger Log = LogManager.GetCurrentClassLogger();
@@ -59,18 +65,23 @@ namespace TorchShittyShitShitter.Core
 
         IEnumerable<long> GetDestinationIdentityIds()
         {
-            var targetPlayers = new List<MyPlayer>();
+            var targetPlayers = new List<long>();
             var mutedPlayerIds = new HashSet<ulong>(_config.MutedPlayers);
             var onlinePlayers = MySession.Static.Players.GetOnlinePlayers();
             foreach (var onlinePlayer in onlinePlayers)
             {
-                if (!mutedPlayerIds.Contains(onlinePlayer.SteamId()))
-                {
-                    targetPlayers.Add(onlinePlayer);
-                }
+                if (mutedPlayerIds.Contains(onlinePlayer.SteamId())) continue;
+                if (_config.EnableAdminOnly && !IsAdmin(onlinePlayer)) continue;
+
+                targetPlayers.Add(onlinePlayer.Identity.IdentityId);
             }
 
-            return targetPlayers.Select(p => p.Identity.IdentityId);
+            return targetPlayers;
+        }
+
+        static bool IsAdmin(IMyPlayer onlinePlayer)
+        {
+            return onlinePlayer.PromoteLevel >= MyPromoteLevel.Moderator;
         }
 
         public void CleanAllCustomGps()

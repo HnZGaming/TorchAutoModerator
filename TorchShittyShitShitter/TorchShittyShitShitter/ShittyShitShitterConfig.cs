@@ -20,6 +20,7 @@ namespace TorchShittyShitShitter
     {
         double _firstIdleSeconds = 120;
         bool _enableBroadcasting = true;
+        bool _enableAdminOnly;
         double _bufferSeconds = 60d;
         int _maxLaggyGridCountPerScan = 5;
         double _gpsLifespanSeconds = 60d;
@@ -40,8 +41,16 @@ namespace TorchShittyShitShitter
             set => SetValue(ref _enableBroadcasting, value);
         }
 
+        [XmlElement("EnableAdminOnly")]
+        [Display(Order = 1, Name = "Enable admin only", Description = "Broadcast to admin players only.")]
+        public bool EnableAdminOnly
+        {
+            get => _enableAdminOnly;
+            set => SetValue(ref _enableAdminOnly, value);
+        }
+
         [XmlElement("FirstIdleSeconds")]
-        [Display(Order = 1, Name = "First idle seconds", Description = "All grids tend to be laggy during the first couple minutes of a session.")]
+        [Display(Order = 2, Name = "First idle seconds", Description = "All grids tend to be laggy during the first couple minutes of a session.")]
         public double FirstIdleSeconds
         {
             get => _firstIdleSeconds;
@@ -49,7 +58,7 @@ namespace TorchShittyShitShitter
         }
 
         [XmlElement("MspfPerFactionMemberLimit")]
-        [Display(Order = 2, Name = "Threshold ms/f per online member", Description = "\"Lagginess\" is calculated by a faction's sim impact divided by its online member count.")]
+        [Display(Order = 3, Name = "Threshold ms/f per online member", Description = "\"Lagginess\" is calculated by a faction's sim impact divided by its online member count.")]
         public double MspfPerOnlineGroupMember
         {
             get => _mspfPerFactionMemberLimit;
@@ -57,7 +66,7 @@ namespace TorchShittyShitShitter
         }
 
         [XmlElement("MaxLaggyGridCountPerScan")]
-        [Display(Order = 3, Name = "Max GPS count", Description = "Too many GPS entities can cause issues: block the sight of players and drop the server sim.")]
+        [Display(Order = 4, Name = "Max GPS count", Description = "Too many GPS entities can cause issues: block the sight of players and drop the server sim.")]
         public int MaxReportCountPerScan
         {
             get => _maxLaggyGridCountPerScan;
@@ -65,7 +74,7 @@ namespace TorchShittyShitShitter
         }
 
         [XmlElement("BufferSeconds")]
-        [Display(Order = 4, Name = "Window time (seconds)", Description = "Factions that are laggy for a length of time will be broadcast.")]
+        [Display(Order = 5, Name = "Window time (seconds)", Description = "Factions that are laggy for a length of time will be broadcast.")]
         public double BufferSeconds
         {
             get => _bufferSeconds;
@@ -73,7 +82,7 @@ namespace TorchShittyShitShitter
         }
 
         [XmlElement("GpsLifespanSeconds")]
-        [Display(Order = 5, Name = "GPS lifespan (seconds)", Description = "Top grid's GPS will stay active for a length of time even if its faction is no longer laggy.")]
+        [Display(Order = 6, Name = "GPS lifespan (seconds)", Description = "Top grid's GPS will stay active for a length of time even if its faction is no longer laggy.")]
         public double GpsLifespanSeconds
         {
             get => _gpsLifespanSeconds;
@@ -81,7 +90,7 @@ namespace TorchShittyShitShitter
         }
 
         [XmlElement("ThresholdSimSpeed")]
-        [Display(Order = 6, Name = "Threshold sim speed", Description = "Broadcast begins when the server sim speed drops.")]
+        [Display(Order = 7, Name = "Threshold sim speed", Description = "Broadcast begins when the server sim speed drops.")]
         public double ThresholdSimSpeed
         {
             get => _thresholdSimSpeed;
@@ -89,7 +98,7 @@ namespace TorchShittyShitShitter
         }
 
         [XmlElement("MutedPlayerIds")]
-        [Display(Order = 7, Name = "Muted Players", Description = "Players can mute GPS broadcaster with a command.")]
+        [Display(Order = 8, Name = "Muted Players", Description = "Players can mute GPS broadcaster with a command.")]
         [Obsolete("For UI and serialization only; use Add/Remove methods to modify this list.")]
         public List<ulong> MutedPlayerIds
         {
