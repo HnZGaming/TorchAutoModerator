@@ -34,6 +34,12 @@ namespace TorchShittyShitShitter
             set => Config.EnableBroadcasting = value;
         }
 
+        public double Threshold
+        {
+            get => Config.MspfPerFactionMemberLimit;
+            set => Config.MspfPerFactionMemberLimit = value;
+        }
+
         public override void Init(ITorchBase torch)
         {
             base.Init(torch);
@@ -149,8 +155,9 @@ namespace TorchShittyShitShitter
 
         void OnGameUnloading()
         {
-            _canceller.Cancel();
-            _canceller.Dispose();
+            _config?.Dispose();
+            _canceller?.Cancel();
+            _canceller?.Dispose();
         }
 
         public void CleanAllCustomGps()

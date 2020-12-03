@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Xml.Serialization;
+using NLog;
 using Torch;
 using Torch.Views;
 using TorchShittyShitShitter.Core;
@@ -15,6 +16,8 @@ namespace TorchShittyShitShitter
         LaggyGridScanner.IConfig,
         GpsBroadcaster.IConfig
     {
+        static readonly ILogger Log = LogManager.GetCurrentClassLogger();
+        
         double _firstIdleSeconds = 120;
         bool _enableBroadcasting = true;
         double _bufferSeconds = 60d;
@@ -28,14 +31,6 @@ namespace TorchShittyShitShitter
             _mutedPlayerIds = new List<ulong>();
         }
 
-        [XmlElement("FirstIdleSeconds")]
-        [Display(Order = -1, Name = "First idle seconds", Description = "All grids tend to be laggy during the first couple minutes of a session.")]
-        public double FirstIdleSeconds
-        {
-            get => _firstIdleSeconds;
-            set => SetProperty(ref _firstIdleSeconds, value);
-        }
-
         [XmlElement("EnableBroadcasting")]
         [Display(Order = 0, Name = "Enable broadcasting")]
         public bool EnableBroadcasting
@@ -44,8 +39,16 @@ namespace TorchShittyShitShitter
             set => SetProperty(ref _enableBroadcasting, value);
         }
 
+        [XmlElement("FirstIdleSeconds")]
+        [Display(Order = 1, Name = "First idle seconds", Description = "All grids tend to be laggy during the first couple minutes of a session.")]
+        public double FirstIdleSeconds
+        {
+            get => _firstIdleSeconds;
+            set => SetProperty(ref _firstIdleSeconds, value);
+        }
+
         [XmlElement("MspfPerFactionMemberLimit")]
-        [Display(Order = 1, Name = "Limit ms/f per online member", Description = "\"Lagginess\" is calculated by a faction's sim impact divided by its online member count.")]
+        [Display(Order = 2, Name = "Threshold ms/f per online member", Description = "\"Lagginess\" is calculated by a faction's sim impact divided by its online member count.")]
         public double MspfPerFactionMemberLimit
         {
             get => _mspfPerFactionMemberLimit;
@@ -53,7 +56,7 @@ namespace TorchShittyShitShitter
         }
 
         [XmlElement("MaxLaggyGridCountPerScan")]
-        [Display(Order = 2, Name = "Max laggy grid count per scan", Description = "Too many GPS entities can abstract the general sight of players and cause a server sim drop.")]
+        [Display(Order = 3, Name = "Max GPS count", Description = "Too many GPS entities can cause issues: block the sight of players and drop the server sim.")]
         public int MaxLaggyGridCountPerScan
         {
             get => _maxLaggyGridCountPerScan;
@@ -61,7 +64,7 @@ namespace TorchShittyShitShitter
         }
 
         [XmlElement("BufferSeconds")]
-        [Display(Order = 3, Name = "Buffer seconds", Description = "Factions that are laggy for a length of time will be broadcast.")]
+        [Display(Order = 4, Name = "Window time (seconds)", Description = "Factions that are laggy for a length of time will be broadcast.")]
         public double BufferSeconds
         {
             get => _bufferSeconds;
@@ -69,7 +72,7 @@ namespace TorchShittyShitShitter
         }
 
         [XmlElement("GpsLifespanSeconds")]
-        [Display(Order = 4, Name = "GPS lifespan seconds", Description = "Top grid's GPS will stay active for a length of time even if its faction is no longer laggy.")]
+        [Display(Order = 5, Name = "GPS lifespan (seconds)", Description = "Top grid's GPS will stay active for a length of time even if its faction is no longer laggy.")]
         public double GpsLifespanSeconds
         {
             get => _gpsLifespanSeconds;
@@ -77,7 +80,7 @@ namespace TorchShittyShitShitter
         }
 
         [XmlElement("MutedPlayerIds")]
-        [Display(Order = 5, Name = "Muted Players", Description = "Players can mute GPS broadcaster.")]
+        [Display(Order = 6, Name = "Muted Players", Description = "Players can mute GPS broadcaster.")]
         [Obsolete("For UI and serialization only; use Add/Remove methods to modify this list.")]
         public List<ulong> MutedPlayerIds
         {
@@ -108,10 +111,13 @@ namespace TorchShittyShitShitter
 
         void SetProperty<T>(ref T property, T value)
         {
+            Log.Info($"Attempting property change -> {value}");
+
             if (!property.Equals(value))
             {
                 property = value;
                 OnPropertyChanged();
+                Log.Info($"Property changed -> {value}");
             }
         }
     }

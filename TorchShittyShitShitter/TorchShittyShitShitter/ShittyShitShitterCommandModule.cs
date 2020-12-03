@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Text;
 using Sandbox.Game.World;
 using Torch.Commands;
@@ -26,6 +27,29 @@ namespace TorchShittyShitShitter
         public void DisableBroadcasting() => this.CatchAndReport(() =>
         {
             Plugin.Enabled = false;
+        });
+
+
+        [Command("threshold", "Get or set the current threshold value.")]
+        [Permission(MyPromoteLevel.Admin)]
+        public void SetThreshold() => this.CatchAndReport(() =>
+        {
+            if (!Context.Args.Any())
+            {
+                var currentThreshold = Plugin.Threshold;
+                Context.Respond($"{currentThreshold:0.000}mspf per online member");
+                return;
+            }
+
+            var arg = Context.Args[0];
+            if (!double.TryParse(arg, out var newThreshold))
+            {
+                Context.Respond($"Failed to parse threshold value: {arg}", Color.Red);
+                return;
+            }
+
+            Plugin.Threshold = newThreshold;
+            Context.Respond($"Set new threshold: {newThreshold:0.000}mspf per online member");
         });
 
         [Command("clear", "Clear all custom GPS entities.")]
