@@ -27,6 +27,7 @@ namespace TorchShittyShitShitter
         LaggyGridReportBuffer _gridReportBuffer;
         LaggyGridGpsCreator _gridCreator;
         FactionScanner _factionScanner;
+        SimSpeedObserver _simSpeedObserver;
 
         ShittyShitShitterConfig Config => _config.Data;
 
@@ -68,6 +69,8 @@ namespace TorchShittyShitShitter
             _gridReportBuffer = new LaggyGridReportBuffer(Config);
             _gridCreator = new LaggyGridGpsCreator();
             _gpsBroadcaster = new GpsBroadcaster(Config);
+
+            _simSpeedObserver = new SimSpeedObserver(Config, 5);
         }
 
         UserControl IWpfPlugin.GetControl()
@@ -80,6 +83,7 @@ namespace TorchShittyShitShitter
             _canceller.Token.RunUntilCancelledAsync(LoopCollecting).Forget(Log);
             _canceller.Token.RunUntilCancelledAsync(_factionScanner.LoopProfilingFactions).Forget(Log);
             _canceller.Token.RunUntilCancelledAsync(_gpsBroadcaster.LoopCleaning).Forget(Log);
+            _canceller.Token.RunUntilCancelledAsync(_simSpeedObserver.LoopObserving).Forget(Log);
         }
 
         async Task LoopCollecting(CancellationToken canceller)
@@ -93,7 +97,7 @@ namespace TorchShittyShitShitter
             {
                 try
                 {
-                    if (!Enabled)
+                    if (!Enabled || !_simSpeedObserver.IsLaggy)
                     {
                         // clear past reports 
                         _gridReportBuffer.Clear();

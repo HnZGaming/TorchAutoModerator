@@ -15,7 +15,8 @@ namespace TorchShittyShitShitter
         LaggyGridReportBuffer.IConfig,
         LaggyGridFinder.IConfig,
         ILagScannerConfig,
-        GpsBroadcaster.IConfig
+        GpsBroadcaster.IConfig,
+        SimSpeedObserver.IConfig
     {
         double _firstIdleSeconds = 120;
         bool _enableBroadcasting = true;
@@ -23,6 +24,7 @@ namespace TorchShittyShitShitter
         int _maxLaggyGridCountPerScan = 5;
         double _gpsLifespanSeconds = 60d;
         double _mspfPerFactionMemberLimit = 0.3d;
+        double _thresholdSimSpeed = 0.7;
         List<ulong> _mutedPlayerIds;
 
         public ShittyShitShitterConfig()
@@ -78,8 +80,16 @@ namespace TorchShittyShitShitter
             set => SetValue(ref _gpsLifespanSeconds, value);
         }
 
+        [XmlElement("ThresholdSimSpeed")]
+        [Display(Order = 6, Name = "Threshold sim speed", Description = "Broadcast begins when the server sim speed drops.")]
+        public double ThresholdSimSpeed
+        {
+            get => _thresholdSimSpeed;
+            set => SetValue(ref _thresholdSimSpeed, MathUtils.Clamp(value, 0, 2));
+        }
+
         [XmlElement("MutedPlayerIds")]
-        [Display(Order = 6, Name = "Muted Players", Description = "Players can mute GPS broadcaster with a command.")]
+        [Display(Order = 7, Name = "Muted Players", Description = "Players can mute GPS broadcaster with a command.")]
         [Obsolete("For UI and serialization only; use Add/Remove methods to modify this list.")]
         public List<ulong> MutedPlayerIds
         {

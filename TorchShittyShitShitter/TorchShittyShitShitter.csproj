@@ -169,6 +169,7 @@
         <Compile Include="TorchShittyShitShitter.Core\LaggyGridReportBuffer.cs" />
         <Compile Include="TorchShittyShitShitter.Core\LaggyGridFinder.cs" />
         <Compile Include="TorchShittyShitShitter.Core\LaggyGridReport.cs" />
+        <Compile Include="TorchShittyShitShitter.Core\SimSpeedObserver.cs" />
         <Compile Include="TorchShittyShitShitter.Reflections\MyGpsCollection_PlayerGpss.cs" />
         <Compile Include="TorchShittyShitShitter\ShittyShitShitterCommandModule.cs" />
         <Compile Include="TorchShittyShitShitter\ShittyShitShitterConfig.cs" />
@@ -183,6 +184,7 @@
         <Compile Include="Utils.General\DisposableCollection.cs" />
         <Compile Include="Utils.General\DisposableUtils.cs" />
         <Compile Include="Utils.General\LangUtils.cs" />
+        <Compile Include="Utils.General\MathUtils.cs" />
         <Compile Include="Utils.General\ObjectPool.cs" />
         <Compile Include="Utils.General\PersistencyObserver.cs" />
         <Compile Include="Utils.General\ReflectionUtils.cs" />
