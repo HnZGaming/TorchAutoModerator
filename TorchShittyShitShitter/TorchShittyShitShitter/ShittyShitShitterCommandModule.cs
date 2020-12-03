@@ -29,7 +29,6 @@ namespace TorchShittyShitShitter
             Plugin.Enabled = false;
         });
 
-
         [Command("threshold", "Get or set the current threshold value.")]
         [Permission(MyPromoteLevel.Admin)]
         public void SetThreshold() => this.CatchAndReport(() =>

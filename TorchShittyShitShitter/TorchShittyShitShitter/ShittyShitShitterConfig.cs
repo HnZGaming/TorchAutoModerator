@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Xml.Serialization;
-using NLog;
 using Torch;
 using Torch.Views;
 using TorchShittyShitShitter.Core;
@@ -16,8 +15,6 @@ namespace TorchShittyShitShitter
         LaggyGridScanner.IConfig,
         GpsBroadcaster.IConfig
     {
-        static readonly ILogger Log = LogManager.GetCurrentClassLogger();
-        
         double _firstIdleSeconds = 120;
         bool _enableBroadcasting = true;
         double _bufferSeconds = 60d;
@@ -36,7 +33,7 @@ namespace TorchShittyShitShitter
         public bool EnableBroadcasting
         {
             get => _enableBroadcasting;
-            set => SetProperty(ref _enableBroadcasting, value);
+            set => SetValue(ref _enableBroadcasting, value);
         }
 
         [XmlElement("FirstIdleSeconds")]
@@ -44,7 +41,7 @@ namespace TorchShittyShitShitter
         public double FirstIdleSeconds
         {
             get => _firstIdleSeconds;
-            set => SetProperty(ref _firstIdleSeconds, value);
+            set => SetValue(ref _firstIdleSeconds, value);
         }
 
         [XmlElement("MspfPerFactionMemberLimit")]
@@ -52,7 +49,7 @@ namespace TorchShittyShitShitter
         public double MspfPerFactionMemberLimit
         {
             get => _mspfPerFactionMemberLimit;
-            set => SetProperty(ref _mspfPerFactionMemberLimit, value);
+            set => SetValue(ref _mspfPerFactionMemberLimit, value);
         }
 
         [XmlElement("MaxLaggyGridCountPerScan")]
@@ -60,7 +57,7 @@ namespace TorchShittyShitShitter
         public int MaxLaggyGridCountPerScan
         {
             get => _maxLaggyGridCountPerScan;
-            set => SetProperty(ref _maxLaggyGridCountPerScan, value);
+            set => SetValue(ref _maxLaggyGridCountPerScan, value);
         }
 
         [XmlElement("BufferSeconds")]
@@ -68,7 +65,7 @@ namespace TorchShittyShitShitter
         public double BufferSeconds
         {
             get => _bufferSeconds;
-            set => SetProperty(ref _bufferSeconds, value);
+            set => SetValue(ref _bufferSeconds, value);
         }
 
         [XmlElement("GpsLifespanSeconds")]
@@ -76,7 +73,7 @@ namespace TorchShittyShitShitter
         public double GpsLifespanSeconds
         {
             get => _gpsLifespanSeconds;
-            set => SetProperty(ref _gpsLifespanSeconds, value);
+            set => SetValue(ref _gpsLifespanSeconds, value);
         }
 
         [XmlElement("MutedPlayerIds")]
@@ -85,7 +82,7 @@ namespace TorchShittyShitShitter
         public List<ulong> MutedPlayerIds
         {
             get => _mutedPlayerIds;
-            set => SetProperty(ref _mutedPlayerIds, new HashSet<ulong>(value).ToList());
+            set => SetValue(ref _mutedPlayerIds, new HashSet<ulong>(value).ToList());
         }
 
         TimeSpan LaggyGridReportBuffer.IConfig.WindowTime => BufferSeconds.Seconds();
@@ -106,18 +103,6 @@ namespace TorchShittyShitShitter
             if (_mutedPlayerIds.Remove(unmutedPlayerId))
             {
                 OnPropertyChanged();
-            }
-        }
-
-        void SetProperty<T>(ref T property, T value)
-        {
-            Log.Info($"Attempting property change -> {value}");
-
-            if (!property.Equals(value))
-            {
-                property = value;
-                OnPropertyChanged();
-                Log.Info($"Property changed -> {value}");
             }
         }
     }
