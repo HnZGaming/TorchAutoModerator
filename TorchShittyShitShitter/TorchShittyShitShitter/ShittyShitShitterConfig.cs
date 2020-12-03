@@ -16,16 +16,16 @@ namespace TorchShittyShitShitter
         LaggyGridFinder.IConfig,
         ILagScannerConfig,
         GpsBroadcaster.IConfig,
-        SimSpeedObserver.IConfig
+        ServerLagObserver.IConfig
     {
         double _firstIdleSeconds = 120;
         bool _enableBroadcasting = true;
-        bool _enableAdminOnly;
+        bool _enableAdminsOnly = true;
         double _bufferSeconds = 60d;
-        int _maxLaggyGridCountPerScan = 5;
+        int _maxLaggyGridCountPerScan = 3;
         double _gpsLifespanSeconds = 60d;
         double _mspfPerFactionMemberLimit = 0.3d;
-        double _thresholdSimSpeed = 0.7;
+        double _simSpeedThreshold = 0.7;
         List<ulong> _mutedPlayerIds;
 
         public ShittyShitShitterConfig()
@@ -41,12 +41,12 @@ namespace TorchShittyShitShitter
             set => SetValue(ref _enableBroadcasting, value);
         }
 
-        [XmlElement("EnableAdminOnly")]
-        [Display(Order = 1, Name = "Enable admin only", Description = "Broadcast to admin players only.")]
-        public bool EnableAdminOnly
+        [XmlElement("EnableAdminsOnly")]
+        [Display(Order = 1, Name = "Broadcast to admins only", Description = "Broadcast to admin players only.")]
+        public bool EnableAdminsOnly
         {
-            get => _enableAdminOnly;
-            set => SetValue(ref _enableAdminOnly, value);
+            get => _enableAdminsOnly;
+            set => SetValue(ref _enableAdminsOnly, value);
         }
 
         [XmlElement("FirstIdleSeconds")]
@@ -89,12 +89,12 @@ namespace TorchShittyShitShitter
             set => SetValue(ref _gpsLifespanSeconds, value);
         }
 
-        [XmlElement("ThresholdSimSpeed")]
+        [XmlElement("SimSpeedThreshold")]
         [Display(Order = 7, Name = "Threshold sim speed", Description = "Broadcast begins when the server sim speed drops.")]
-        public double ThresholdSimSpeed
+        public double SimSpeedThreshold
         {
-            get => _thresholdSimSpeed;
-            set => SetValue(ref _thresholdSimSpeed, MathUtils.Clamp(value, 0, 2));
+            get => _simSpeedThreshold;
+            set => SetValue(ref _simSpeedThreshold, MathUtils.Clamp(value, 0, 2));
         }
 
         [XmlElement("MutedPlayerIds")]

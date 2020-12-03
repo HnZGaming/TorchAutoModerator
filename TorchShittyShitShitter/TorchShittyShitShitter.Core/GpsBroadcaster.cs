@@ -35,7 +35,7 @@ namespace TorchShittyShitShitter.Core
             /// <summary>
             /// Broadcast to admin players only.
             /// </summary>
-            bool EnableAdminOnly { get; }
+            bool EnableAdminsOnly { get; }
         }
 
         static readonly ILogger Log = LogManager.GetCurrentClassLogger();
@@ -71,7 +71,7 @@ namespace TorchShittyShitShitter.Core
             foreach (var onlinePlayer in onlinePlayers)
             {
                 if (mutedPlayerIds.Contains(onlinePlayer.SteamId())) continue;
-                if (_config.EnableAdminOnly && !IsAdmin(onlinePlayer)) continue;
+                if (_config.EnableAdminsOnly && !IsAdmin(onlinePlayer)) continue;
 
                 targetPlayers.Add(onlinePlayer.Identity.IdentityId);
             }

@@ -1,5 +1,4 @@
-﻿using System.Collections.Concurrent;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -8,18 +7,21 @@ using Utils.General;
 
 namespace TorchShittyShitShitter.Core
 {
-    public sealed class SimSpeedObserver
+    /// <summary>
+    /// Observe when the server is laggy.
+    /// </summary>
+    public sealed class ServerLagObserver
     {
         public interface IConfig
         {
-            double ThresholdSimSpeed { get; }
+            double SimSpeedThreshold { get; }
         }
 
         readonly IConfig _config;
         readonly int _bufferSeconds;
         readonly Queue<double> _timeline;
 
-        public SimSpeedObserver(IConfig config, int bufferSeconds)
+        public ServerLagObserver(IConfig config, int bufferSeconds)
         {
             _config = config;
             _bufferSeconds = bufferSeconds;
@@ -41,7 +43,7 @@ namespace TorchShittyShitShitter.Core
                 }
 
                 var referenceSimSpeed = _timeline.Max();
-                IsLaggy = referenceSimSpeed < _config.ThresholdSimSpeed;
+                IsLaggy = referenceSimSpeed < _config.SimSpeedThreshold;
 
                 await canceller.Delay(1.Seconds());
             }

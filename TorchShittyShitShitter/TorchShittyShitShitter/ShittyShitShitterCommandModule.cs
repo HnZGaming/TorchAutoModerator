@@ -10,7 +10,7 @@ using VRageMath;
 
 namespace TorchShittyShitShitter
 {
-    [Category("lgb")]
+    [Category("lg")]
     public sealed class ShittyShitShitterCommandModule : CommandModule
     {
         ShittyShitShitterPlugin Plugin => (ShittyShitShitterPlugin) Context.Plugin;
@@ -29,13 +29,13 @@ namespace TorchShittyShitShitter
             Plugin.Enabled = false;
         });
 
-        [Command("threshold", "Get or set the current threshold value.")]
+        [Command("mspf", "Get or set the current ms/f threshold per online member.")]
         [Permission(MyPromoteLevel.Admin)]
-        public void SetThreshold() => this.CatchAndReport(() =>
+        public void MspfThreshold() => this.CatchAndReport(() =>
         {
             if (!Context.Args.Any())
             {
-                var currentThreshold = Plugin.Threshold;
+                var currentThreshold = Plugin.MspfThreshold;
                 Context.Respond($"{currentThreshold:0.000}mspf per online member");
                 return;
             }
@@ -47,8 +47,30 @@ namespace TorchShittyShitShitter
                 return;
             }
 
-            Plugin.Threshold = newThreshold;
+            Plugin.MspfThreshold = newThreshold;
             Context.Respond($"Set new threshold: {newThreshold:0.000}mspf per online member");
+        });
+
+        [Command("ss", "Get or set the current sim speed threshold.")]
+        [Permission(MyPromoteLevel.Admin)]
+        public void SimSpeedThreshold() => this.CatchAndReport(() =>
+        {
+            if (!Context.Args.Any())
+            {
+                var value = Plugin.SimSpeedThreshold;
+                Context.Respond($"{value:0.00}ss");
+                return;
+            }
+
+            var arg = Context.Args[0];
+            if (!double.TryParse(arg, out var newThreshold))
+            {
+                Context.Respond($"Failed to parse threshold value: {arg}", Color.Red);
+                return;
+            }
+
+            Plugin.SimSpeedThreshold = newThreshold;
+            Context.Respond($"Set new threshold: {newThreshold:0.000}ss");
         });
 
         [Command("clear", "Clear all custom GPS entities.")]
@@ -58,7 +80,7 @@ namespace TorchShittyShitShitter
             Plugin.CleanAllCustomGps();
         });
 
-        [Command("show", "Show custom GPS entities in the world.")]
+        [Command("show", "Show the list of custom GPS entities.")]
         [Permission(MyPromoteLevel.Admin)]
         public void ShowCustomGpsEntities() => this.CatchAndReport(() =>
         {
@@ -71,7 +93,7 @@ namespace TorchShittyShitShitter
                         ? player.DisplayName
                         : "<unknown>";
 
-                var txt = $"{identityId} ({playerName}): {gps.EntityId} \"{gps.Name}\" \"{gps.DisplayName}\"";
+                var txt = $"{playerName} ({identityId}): {gps.EntityId} \"{gps.Name}\"";
                 msgBuilder.AppendLine(txt);
             }
 

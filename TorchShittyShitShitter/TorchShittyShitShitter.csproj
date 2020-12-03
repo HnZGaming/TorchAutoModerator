@@ -169,7 +169,7 @@
         <Compile Include="TorchShittyShitShitter.Core\LaggyGridReportBuffer.cs" />
         <Compile Include="TorchShittyShitShitter.Core\LaggyGridFinder.cs" />
         <Compile Include="TorchShittyShitShitter.Core\LaggyGridReport.cs" />
-        <Compile Include="TorchShittyShitShitter.Core\SimSpeedObserver.cs" />
+        <Compile Include="TorchShittyShitShitter.Core\ServerLagObserver.cs" />
         <Compile Include="TorchShittyShitShitter.Reflections\MyGpsCollection_PlayerGpss.cs" />
         <Compile Include="TorchShittyShitShitter\ShittyShitShitterCommandModule.cs" />
         <Compile Include="TorchShittyShitShitter\ShittyShitShitterConfig.cs" />

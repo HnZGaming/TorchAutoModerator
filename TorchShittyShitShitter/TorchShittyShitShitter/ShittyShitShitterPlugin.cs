@@ -27,7 +27,7 @@ namespace TorchShittyShitShitter
         LaggyGridReportBuffer _gridReportBuffer;
         LaggyGridGpsCreator _gridCreator;
         FactionScanner _factionScanner;
-        SimSpeedObserver _simSpeedObserver;
+        ServerLagObserver _serverLagObserver;
 
         ShittyShitShitterConfig Config => _config.Data;
 
@@ -37,10 +37,16 @@ namespace TorchShittyShitShitter
             set => Config.EnableBroadcasting = value;
         }
 
-        public double Threshold
+        public double MspfThreshold
         {
             get => Config.MspfPerOnlineGroupMember;
             set => Config.MspfPerOnlineGroupMember = value;
+        }
+
+        public double SimSpeedThreshold
+        {
+            get => Config.SimSpeedThreshold;
+            set => Config.SimSpeedThreshold = value;
         }
 
         public override void Init(ITorchBase torch)
@@ -70,7 +76,7 @@ namespace TorchShittyShitShitter
             _gridCreator = new LaggyGridGpsCreator();
             _gpsBroadcaster = new GpsBroadcaster(Config);
 
-            _simSpeedObserver = new SimSpeedObserver(Config, 5);
+            _serverLagObserver = new ServerLagObserver(Config, 5);
         }
 
         UserControl IWpfPlugin.GetControl()
@@ -83,7 +89,7 @@ namespace TorchShittyShitShitter
             _canceller.Token.RunUntilCancelledAsync(LoopCollecting).Forget(Log);
             _canceller.Token.RunUntilCancelledAsync(_factionScanner.LoopProfilingFactions).Forget(Log);
             _canceller.Token.RunUntilCancelledAsync(_gpsBroadcaster.LoopCleaning).Forget(Log);
-            _canceller.Token.RunUntilCancelledAsync(_simSpeedObserver.LoopObserving).Forget(Log);
+            _canceller.Token.RunUntilCancelledAsync(_serverLagObserver.LoopObserving).Forget(Log);
         }
 
         async Task LoopCollecting(CancellationToken canceller)
@@ -97,7 +103,7 @@ namespace TorchShittyShitShitter
             {
                 try
                 {
-                    if (!Enabled || !_simSpeedObserver.IsLaggy)
+                    if (!Enabled || !_serverLagObserver.IsLaggy)
                     {
                         // clear past reports 
                         _gridReportBuffer.Clear();
