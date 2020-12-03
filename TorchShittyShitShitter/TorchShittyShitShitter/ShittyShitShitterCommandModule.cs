@@ -125,5 +125,12 @@ namespace TorchShittyShitShitter
 
             Plugin.UnmutePlayer(Context.Player.SteamUserId);
         });
+
+        [Command("unmute_all", "Force every player to unmute broadcasting.")]
+        [Permission(MyPromoteLevel.Admin)]
+        public void UnmuteBroadcastsToAll() => this.CatchAndReport(() =>
+        {
+            Plugin.UnmuteAll();
+        });
     }
 }

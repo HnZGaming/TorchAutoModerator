@@ -200,5 +200,10 @@ namespace TorchShittyShitShitter
         {
             Config.RemoveMutedPlayer(playerSteamId);
         }
+
+        public void UnmuteAll()
+        {
+            Config.RemoveAllMutedPlayers();
+        }
     }
 }

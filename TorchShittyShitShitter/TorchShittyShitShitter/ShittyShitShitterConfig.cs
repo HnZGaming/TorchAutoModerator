@@ -99,7 +99,6 @@ namespace TorchShittyShitShitter
 
         [XmlElement("MutedPlayerIds")]
         [Display(Order = 8, Name = "Muted Players", Description = "Players can mute GPS broadcaster with a command.")]
-        [Obsolete("For UI and serialization only; use Add/Remove methods to modify this list.")]
         public List<ulong> MutedPlayerIds
         {
             get => _mutedPlayerIds;
@@ -115,7 +114,7 @@ namespace TorchShittyShitShitter
             if (!_mutedPlayerIds.Contains(mutedPlayerId))
             {
                 _mutedPlayerIds.Add(mutedPlayerId);
-                OnPropertyChanged();
+                OnPropertyChanged(nameof(MutedPlayerIds));
             }
         }
 
@@ -123,8 +122,14 @@ namespace TorchShittyShitShitter
         {
             if (_mutedPlayerIds.Remove(unmutedPlayerId))
             {
-                OnPropertyChanged();
+                OnPropertyChanged(nameof(MutedPlayerIds));
             }
+        }
+
+        public void RemoveAllMutedPlayers()
+        {
+            _mutedPlayerIds.Clear();
+            OnPropertyChanged(nameof(MutedPlayerIds));
         }
     }
 }
