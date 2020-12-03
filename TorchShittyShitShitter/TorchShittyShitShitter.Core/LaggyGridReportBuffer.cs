@@ -7,7 +7,8 @@ using Utils.General;
 namespace TorchShittyShitShitter.Core
 {
     /// <summary>
-    /// Hold onto laggy grids until consistently laggy for a good length of time.
+    /// Hold onto laggy grid reports (before submitting to the GPS broadcaster)
+    /// until consistently laggy for a good length of time.
     /// </summary>
     public sealed class LaggyGridReportBuffer
     {
@@ -18,48 +19,27 @@ namespace TorchShittyShitShitter.Core
 
         static readonly ILogger Log = LogManager.GetCurrentClassLogger();
         readonly IConfig _config;
-        readonly LaggyGridGpsCreator _gpsCreator;
         readonly PersistencyObserver<long> _reports;
-        DateTime? _lastCollectionTimestamp;
 
-        public LaggyGridReportBuffer(IConfig config, LaggyGridGpsCreator gpsCreator)
+        public LaggyGridReportBuffer(IConfig config)
         {
             _config = config;
-            _gpsCreator = gpsCreator;
             _reports = new PersistencyObserver<long>();
         }
 
-        public void UpdateLaggyGrids(IEnumerable<LaggyGridReport> laggyGrids)
+        public void AddInterval(IEnumerable<LaggyGridReport> laggyGrids)
         {
             laggyGrids.ThrowIfNull(nameof(laggyGrids));
 
-            var laggyGridsMap = new Dictionary<long, LaggyGridReport>();
-            foreach (var gridReport in laggyGrids)
-            {
-                laggyGridsMap[gridReport.GridId] = gridReport;
-            }
-
-            // update last collection timestamp
-            var timeNow = DateTime.UtcNow;
-            var lastCollectionTimestamp = _lastCollectionTimestamp;
-            _lastCollectionTimestamp = timeNow;
-
-            // skip the first interval
-            if (!(lastCollectionTimestamp is DateTime lastTimestamp)) return;
+            _reports.AddInterval(laggyGrids.Select(r => r.GridId));
 
             // remove old intervals
-            var timeInterval = timeNow - lastTimestamp;
-            var maxBufferSize = (int) (_config.WindowTime.TotalSeconds / timeInterval.TotalSeconds);
-            _reports.CapBufferSize(maxBufferSize);
+            _reports.CapBufferSize(_config.WindowTime);
+        }
 
-            _reports.AddInterval(laggyGridsMap.Keys);
-
-            // broadcast "persistently" laggy grids
-            var longLaggyGridIds = _reports.GetElementsPresentInAllIntervals();
-            var longLaggyGrids = longLaggyGridIds.Select(i => laggyGridsMap[i]);
-            _gpsCreator.CreateGps(longLaggyGrids).Forget(Log);
-
-            Log.Trace($"done updating collection: {laggyGrids.ToStringSeq()}");
+        public IEnumerable<long> GetPersistentlyLaggyGridIds()
+        {
+            return _reports.GetPersistentIntervals();
         }
 
         public void Clear()

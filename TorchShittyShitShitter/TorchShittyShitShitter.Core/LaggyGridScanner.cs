@@ -28,17 +28,13 @@ namespace TorchShittyShitShitter.Core
         static readonly ILogger Log = LogManager.GetCurrentClassLogger();
 
         readonly IConfig _config;
-        readonly LaggyGridReportBuffer _gridBuffer;
 
-        public LaggyGridScanner(
-            IConfig config,
-            LaggyGridReportBuffer gridBuffer)
+        public LaggyGridScanner(IConfig config)
         {
             _config = config;
-            _gridBuffer = gridBuffer;
         }
 
-        public void ScanLaggyGrids(CancellationToken canceller)
+        public IEnumerable<LaggyGridReport> ScanLaggyGrids(CancellationToken canceller)
         {
             Log.Trace("Dewing it");
 
@@ -52,31 +48,37 @@ namespace TorchShittyShitShitter.Core
                 gridProfiler.MarkStart();
 
                 // profile the world for some time
-                try
-                {
-                    canceller.WaitHandle.WaitOne(5.Seconds());
-                }
-                catch // on cancellation
-                {
-                    return;
-                }
+                if (!canceller.WaitHandle.WaitOneSafe(5.Seconds())) return null;
 
-                ScanLaggyGrids(factionProfiler, gridProfiler);
+                var profiledFactions = factionProfiler.GetResult();
+                var profiledGrids = gridProfiler.GetResult();
+
+                var scanStartTick = Stopwatch.GetTimestamp();
+
+                // scan
+                var laggyGrids = new List<LaggyGridReport>();
+                laggyGrids.AddRange(ScanFactionGrids(profiledFactions, profiledGrids));
+                laggyGrids.AddRange(ScanSinglePlayerGrids(profiledGrids));
+
+                // pick top laggiest grids
+                var topLaggyGrids = laggyGrids
+                    .OrderByDescending(r => r.Mspf)
+                    .Take(_config.MaxLaggyGridCountPerScan)
+                    .ToArray();
+
+                var scanTime = (Stopwatch.GetTimestamp() - scanStartTick) / 10000D;
+                Log.Debug($"Done scanning; took {scanTime:0.00}ms");
+                Log.Debug($"Laggy grids: {topLaggyGrids.ToStringSeq()}");
+
+                Log.Trace("did it");
+                return topLaggyGrids;
             }
-
-            Log.Trace("did it");
         }
 
-        void ScanLaggyGrids(FactionProfiler factionProfiler, GridProfiler gridProfiler)
+        IEnumerable<LaggyGridReport> ScanFactionGrids(
+            BaseProfilerResult<IMyFaction> profiledFactions,
+            BaseProfilerResult<MyCubeGrid> profiledGrids)
         {
-            var profiledFactions = factionProfiler.GetResult();
-            var profiledGrids = gridProfiler.GetResult();
-
-            // final product
-            var laggyGrids = new List<LaggyGridReport>();
-
-            var scanStartTick = Stopwatch.GetTimestamp();
-
             Log.Trace("Scanning online member counts");
 
             // get the number of online members of all factions
@@ -121,8 +123,12 @@ namespace TorchShittyShitShitter.Core
 
             // get the laggiest grid of laggy factions
             var laggiestFactionGrids = new Dictionary<IMyFaction, LaggyGridReport>();
+            var remainingFactions = new HashSet<IMyFaction>(laggyFactions);
             foreach (var (grid, entity) in profiledGrids.GetTopEntities())
             {
+                // found all the laggiest grids
+                if (!remainingFactions.Any()) break;
+
                 var gridMspf = entity.MainThreadTime / profiledGrids.TotalFrameCount;
 
                 foreach (var gridOwnerId in grid.BigOwners)
@@ -133,11 +139,17 @@ namespace TorchShittyShitShitter.Core
                         {
                             var report = new LaggyGridReport(grid.EntityId, gridMspf);
                             laggiestFactionGrids.Add(laggyFaction, report);
+                            remainingFactions.Remove(laggyFaction);
                         }
                     }
                 }
             }
 
+            return laggiestFactionGrids.Values;
+        }
+
+        IEnumerable<LaggyGridReport> ScanSinglePlayerGrids(BaseProfilerResult<MyCubeGrid> profiledGrids)
+        {
             Log.Trace("Scanning laggiest grids for single players");
 
             // get a mapping from "single" players to their grids
@@ -177,21 +189,7 @@ namespace TorchShittyShitShitter.Core
 
             Log.Trace($"Laggy single player grids: {singlePlayerLaggyGrids.ToStringSeq()}");
 
-            laggyGrids.AddRange(laggiestFactionGrids.Values);
-            laggyGrids.AddRange(singlePlayerLaggyGrids);
-
-            var scanTotalTick = Stopwatch.GetTimestamp() - scanStartTick;
-            var scanTotalTime = scanTotalTick / 10000D;
-            Log.Trace($"Done scanning; took {scanTotalTime:0.00}ms");
-
-            Log.Trace($"Laggy grids: {laggyGrids.Select(s => $"{s.GridId} ({s.Mspf:0.00}ms/f)").ToStringSeq()}");
-
-            var topLaggyGrids = laggyGrids
-                .OrderByDescending(r => r.Mspf)
-                .Take(_config.MaxLaggyGridCountPerScan)
-                .ToArray();
-
-            _gridBuffer.UpdateLaggyGrids(topLaggyGrids);
+            return singlePlayerLaggyGrids;
         }
     }
 }

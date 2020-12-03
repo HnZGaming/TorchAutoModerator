@@ -40,9 +40,6 @@
         <Reference Include="WindowsBase" />
     </ItemGroup>
     <ItemGroup>
-        <Reference Include="JsonSubTypes">
-            <HintPath>..\TorchBinaries\JsonSubTypes.dll</HintPath>
-        </Reference>
         <Reference Include="Newtonsoft.Json">
             <HintPath>..\TorchBinaries\Newtonsoft.Json.dll</HintPath>
         </Reference>
@@ -187,7 +184,6 @@
         <Compile Include="Utils.General\StringFloatConverter.cs" />
         <Compile Include="Utils.General\StupidDb.cs" />
         <Compile Include="Utils.General\TaskUtils.cs" />
-        <Compile Include="Utils.General\ThreadPoolTask.cs" />
         <Compile Include="Utils.General\ThreadSafeThrottle.cs" />
         <Compile Include="Utils.Torch\CommandErrorResponseGenerator.cs" />
         <Compile Include="Utils.Torch\CommandOption.cs" />

@@ -1,11 +1,11 @@
 ﻿using System;
 using System.Reflection;
+using System.Threading.Tasks;
 using NLog;
 using Sandbox.Game.World;
 using Torch.Managers.PatchManager;
 using Torch.Utils;
 using Utils.General;
-using VRage.Library.Utils;
 
 namespace Utils.Torch
 {
@@ -46,6 +46,13 @@ namespace Utils.Torch
             }
 
             _actionQueue.Add(action);
+        }
+
+        public static Task WaitUntilGameLoop()
+        {
+            var taskSource = new TaskCompletionSource<byte>();
+            OnNextUpdate(() => taskSource.TrySetResult(0));
+            return taskSource.Task;
         }
     }
 }
