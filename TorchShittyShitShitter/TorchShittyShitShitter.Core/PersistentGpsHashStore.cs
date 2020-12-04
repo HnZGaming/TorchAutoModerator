@@ -2,6 +2,8 @@
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using Sandbox.Game.World;
+using TorchShittyShitShitter.Reflections;
 
 namespace TorchShittyShitShitter.Core
 {
@@ -20,7 +22,7 @@ namespace TorchShittyShitShitter.Core
         }
 
         [MethodImpl(MethodImplOptions.Synchronized)]
-        public void UpdateGpsHashes(IEnumerable<int> gpsHashes)
+        public void UpdateTrackedGpsHashes(IEnumerable<int> gpsHashes)
         {
             var lines = new List<string>();
             foreach (var gpsHash in gpsHashes)
@@ -32,7 +34,7 @@ namespace TorchShittyShitShitter.Core
         }
 
         [MethodImpl(MethodImplOptions.Synchronized)]
-        public IEnumerable<int> GetGpsHashes()
+        IEnumerable<int> GetAllTrackedGpsHashes()
         {
             if (!File.Exists(_path)) return Enumerable.Empty<int>();
 
@@ -47,6 +49,13 @@ namespace TorchShittyShitShitter.Core
             }
 
             return hashes;
+        }
+
+        public void DeleteAllTrackedGpssFromGame()
+        {
+            var savedGpsHashes = GetAllTrackedGpsHashes();
+            var savedGpsHashSet = new HashSet<int>(savedGpsHashes);
+            MySession.Static.Gpss.DeleteWhere((_, g) => savedGpsHashSet.Contains(g.Hash));
         }
     }
 }

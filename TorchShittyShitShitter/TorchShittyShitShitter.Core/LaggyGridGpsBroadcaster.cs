@@ -7,7 +7,6 @@ using System.Threading.Tasks;
 using NLog;
 using Sandbox.Game.Screens.Helpers;
 using Sandbox.Game.World;
-using TorchShittyShitShitter.Reflections;
 using Utils.General;
 using Utils.Torch;
 
@@ -52,14 +51,6 @@ namespace TorchShittyShitShitter.Core
         }
 
         [MethodImpl(MethodImplOptions.Synchronized)]
-        public void DeleteGpssFromLastSession()
-        {
-            var savedGpsHashes = _persistentGpsHashes.GetGpsHashes();
-            var savedGpsHashSet = new HashSet<int>(savedGpsHashes);
-            MySession.Static.Gpss.DeleteWhere((_, g) => savedGpsHashSet.Contains(g.Hash));
-        }
-
-        [MethodImpl(MethodImplOptions.Synchronized)]
         public void BroadcastToOnlinePlayers(IEnumerable<MyGps> gpss)
         {
             var identityIds = GetDestinationIdentityIds().ToArray();
@@ -95,7 +86,7 @@ namespace TorchShittyShitShitter.Core
         }
 
         [MethodImpl(MethodImplOptions.Synchronized)]
-        public void DeleteAllCustomGps()
+        public void DeleteAllCustomGpss()
         {
             var removedGridIds = _gpsTimestamps.RemoveAll();
             _gpsCollection.SendDeleteGpss(removedGridIds);
@@ -109,12 +100,12 @@ namespace TorchShittyShitShitter.Core
 
             while (!canceller.IsCancellationRequested)
             {
-                DeleteExpiredGps();
+                DeleteExpiredGpss();
                 await Task.Delay(5.Seconds(), canceller);
             }
         }
 
-        void DeleteExpiredGps()
+        void DeleteExpiredGpss()
         {
             var removedGridIds = _gpsTimestamps.RemoveDeprecated(_config.GpsLifespan);
             _gpsCollection.SendDeleteGpss(removedGridIds);
@@ -130,7 +121,7 @@ namespace TorchShittyShitShitter.Core
         void SaveGpsHashesToDisk()
         {
             var allTrackedGpsHashes = _gpsCollection.GetAllTrackedGpsHashes();
-            _persistentGpsHashes.UpdateGpsHashes(allTrackedGpsHashes);
+            _persistentGpsHashes.UpdateTrackedGpsHashes(allTrackedGpsHashes);
         }
 
         [MethodImpl(MethodImplOptions.Synchronized)]

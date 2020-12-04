@@ -31,6 +31,7 @@ namespace TorchShittyShitShitter
         ServerLagObserver _serverLagObserver;
         FactionMemberProfiler _factionMemberProfiler;
         LaggyGridGpsDescriptionMaker _descriptionMaker;
+        PersistentGpsHashStore _gpsHashStore;
 
         ShittyShitShitterConfig Config => _config.Data;
 
@@ -82,12 +83,12 @@ namespace TorchShittyShitShitter
             });
 
             var gpsHashFilePath = this.MakeFilePath("gpsHashes.txt");
-            var gpsHashStore = new PersistentGpsHashStore(gpsHashFilePath);
+            _gpsHashStore = new PersistentGpsHashStore(gpsHashFilePath);
 
             _gridReportBuffer = new LaggyGridReportBuffer(Config);
             _descriptionMaker = new LaggyGridGpsDescriptionMaker(Config);
             _gridMaker = new LaggyGridGpsMaker(_descriptionMaker);
-            _gpsBroadcaster = new LaggyGridGpsBroadcaster(Config, gpsHashStore);
+            _gpsBroadcaster = new LaggyGridGpsBroadcaster(Config, _gpsHashStore);
 
             _serverLagObserver = new ServerLagObserver(Config, 5);
         }
@@ -99,12 +100,13 @@ namespace TorchShittyShitShitter
 
         void OnGameLoaded()
         {
-            _gpsBroadcaster.DeleteGpssFromLastSession();
+            _gpsHashStore.DeleteAllTrackedGpssFromGame();
 
-            _canceller.Token.RunUntilCancelledAsync(LoopCollecting).Forget(Log);
-            _canceller.Token.RunUntilCancelledAsync(_factionScanner.LoopProfilingFactions).Forget(Log);
-            _canceller.Token.RunUntilCancelledAsync(_gpsBroadcaster.LoopCleaning).Forget(Log);
-            _canceller.Token.RunUntilCancelledAsync(_serverLagObserver.LoopObserving).Forget(Log);
+            var canceller = _canceller.Token;
+            TaskUtils.RunUntilCancelledAsync(LoopCollecting, canceller).Forget(Log);
+            TaskUtils.RunUntilCancelledAsync(_factionScanner.LoopProfilingFactions, canceller).Forget(Log);
+            TaskUtils.RunUntilCancelledAsync(_gpsBroadcaster.LoopCleaning, canceller).Forget(Log);
+            TaskUtils.RunUntilCancelledAsync(_serverLagObserver.LoopObserving, canceller).Forget(Log);
         }
 
         async Task LoopCollecting(CancellationToken canceller)
@@ -201,7 +203,7 @@ namespace TorchShittyShitShitter
 
         public void CleanAllCustomGps()
         {
-            _gpsBroadcaster.DeleteAllCustomGps();
+            _gpsBroadcaster.DeleteAllCustomGpss();
         }
 
         public IEnumerable<MyGps> GetAllCustomGpsEntities()
