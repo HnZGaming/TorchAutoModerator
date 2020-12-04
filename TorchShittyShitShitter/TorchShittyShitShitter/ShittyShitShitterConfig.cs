@@ -99,7 +99,7 @@ namespace TorchShittyShitShitter
             set => SetValue(ref _gpsLifespanSeconds, value);
         }
 
-        [XmlElement("GpsLifespanSeconds")]
+        [XmlElement("ExemptNpcFactions")]
         [Display(Order = 8, Name = "Exempt NPC factions", Description = "Ignore NPC factions in scan results.")]
         public bool ExemptNpcFactions
         {
