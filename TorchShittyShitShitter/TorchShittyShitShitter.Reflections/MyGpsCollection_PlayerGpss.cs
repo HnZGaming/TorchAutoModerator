@@ -21,14 +21,14 @@ namespace TorchShittyShitShitter.Reflections
         }
 
         public static IEnumerable<(long IdentityId, MyGps Gps)> Where(
-            this MyGpsCollection self, Func<MyGps, bool> f)
+            this MyGpsCollection self, Func<long, MyGps, bool> f)
         {
             var result = new List<(long, MyGps)>();
             var worldGpsCollection = self.GetPlayerGpss();
             foreach (var (identity, gpsCollection) in worldGpsCollection)
             foreach (var (_, gps) in gpsCollection)
             {
-                if (f(gps))
+                if (f(identity, gps))
                 {
                     result.Add((identity, gps));
                 }
@@ -37,7 +37,7 @@ namespace TorchShittyShitShitter.Reflections
             return result;
         }
 
-        public static void DeleteWhere(this MyGpsCollection self, Func<MyGps, bool> f)
+        public static void DeleteWhere(this MyGpsCollection self, Func<long, MyGps, bool> f)
         {
             foreach (var (identityId, gps) in self.Where(f))
             {

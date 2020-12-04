@@ -23,7 +23,7 @@ namespace TorchShittyShitShitter
         Persistent<ShittyShitShitterConfig> _config;
         UserControl _userControl;
         CancellationTokenSource _canceller;
-        GridGpsBroadcaster _gpsBroadcaster;
+        LaggyGridGpsBroadcaster _gpsBroadcaster;
         LaggyGridFinder _gridFinder;
         LaggyGridReportBuffer _gridReportBuffer;
         LaggyGridGpsMaker _gridMaker;
@@ -81,10 +81,13 @@ namespace TorchShittyShitShitter
                 new UnownedGridScanner(Config),
             });
 
+            var gpsHashFilePath = this.MakeFilePath("gpsHashes.txt");
+            var gpsHashStore = new PersistentGpsHashStore(gpsHashFilePath);
+
             _gridReportBuffer = new LaggyGridReportBuffer(Config);
             _descriptionMaker = new LaggyGridGpsDescriptionMaker(Config);
             _gridMaker = new LaggyGridGpsMaker(_descriptionMaker);
-            _gpsBroadcaster = new GridGpsBroadcaster(Config);
+            _gpsBroadcaster = new LaggyGridGpsBroadcaster(Config, gpsHashStore);
 
             _serverLagObserver = new ServerLagObserver(Config, 5);
         }
@@ -96,6 +99,8 @@ namespace TorchShittyShitShitter
 
         void OnGameLoaded()
         {
+            _gpsBroadcaster.DeleteGpssFromLastSession();
+
             _canceller.Token.RunUntilCancelledAsync(LoopCollecting).Forget(Log);
             _canceller.Token.RunUntilCancelledAsync(_factionScanner.LoopProfilingFactions).Forget(Log);
             _canceller.Token.RunUntilCancelledAsync(_gpsBroadcaster.LoopCleaning).Forget(Log);
@@ -191,10 +196,7 @@ namespace TorchShittyShitShitter
             await TaskUtils.MoveToThreadPool(canceller);
 
             // broadcast to players
-            foreach (var laggyGridGps in gpsCollection)
-            {
-                _gpsBroadcaster.BroadcastToOnlinePlayers(laggyGridGps);
-            }
+            _gpsBroadcaster.BroadcastToOnlinePlayers(gpsCollection);
         }
 
         public void CleanAllCustomGps()

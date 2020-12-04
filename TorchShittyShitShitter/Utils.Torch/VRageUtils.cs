@@ -98,6 +98,11 @@ namespace Utils.Torch
             return MySessionComponentSafeZones.IsActionAllowed(self, MySafeZoneAction.All);
         }
 
+        public static bool IsNormalPlayer(this IMyPlayer onlinePlayer)
+        {
+            return onlinePlayer.PromoteLevel == MyPromoteLevel.None;
+        }
+
         public static ulong GetAdminSteamId()
         {
             if (!MySandboxGame.ConfigDedicated.Administrators.TryGetFirst(out var adminSteamIdStr)) return 0L;

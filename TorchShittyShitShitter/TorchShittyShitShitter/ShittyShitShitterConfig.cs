@@ -15,7 +15,7 @@ namespace TorchShittyShitShitter
         LaggyGridReportBuffer.IConfig,
         LaggyGridFinder.IConfig,
         ILagScannerConfig,
-        GridGpsBroadcaster.IConfig,
+        LaggyGridGpsBroadcaster.IConfig,
         ServerLagObserver.IConfig,
         LaggyGridGpsDescriptionMaker.IConfig
     {
@@ -129,8 +129,8 @@ namespace TorchShittyShitShitter
         }
 
         TimeSpan LaggyGridReportBuffer.IConfig.WindowTime => BufferSeconds.Seconds();
-        TimeSpan GridGpsBroadcaster.IConfig.GpsLifespan => _gpsLifespanSeconds.Seconds();
-        IEnumerable<ulong> GridGpsBroadcaster.IConfig.MutedPlayers => _mutedPlayerIds;
+        TimeSpan LaggyGridGpsBroadcaster.IConfig.GpsLifespan => _gpsLifespanSeconds.Seconds();
+        IEnumerable<ulong> LaggyGridGpsBroadcaster.IConfig.MutedPlayers => _mutedPlayerIds;
         IEnumerable<string> LaggyGridFinder.IConfig.ExemptFactionTags => _exemptFactionTags;
 
         public void AddMutedPlayer(ulong mutedPlayerId)

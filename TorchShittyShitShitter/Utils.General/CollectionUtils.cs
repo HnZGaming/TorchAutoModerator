@@ -106,5 +106,23 @@ namespace Utils.General
                 }
             }
         }
+
+        public static bool TryGetOrdinalByName(this DataColumnCollection self, string name, out int ordinal)
+        {
+            if (self.Contains(name))
+            {
+                var column = self[name];
+                ordinal = column.Ordinal;
+                return true;
+            }
+
+            ordinal = default;
+            return false;
+        }
+
+        public static IReadOnlyDictionary<K, V> ToDictionary<K, V>(this IEnumerable<(K, V)> self)
+        {
+            return self.ToDictionary(p => p.Item1, p => p.Item2);
+        }
     }
 }

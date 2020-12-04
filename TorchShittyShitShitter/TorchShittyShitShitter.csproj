@@ -164,8 +164,10 @@
         <Compile Include="TorchShittyShitShitter.Core.Scanners\ILagScannerConfig.cs" />
         <Compile Include="TorchShittyShitShitter.Core.Scanners\SinglePlayerScanner.cs" />
         <Compile Include="TorchShittyShitShitter.Core.Scanners\UnownedGridScanner.cs" />
+        <Compile Include="TorchShittyShitShitter.Core\EntityIdGpsCollection.cs" />
         <Compile Include="TorchShittyShitShitter.Core\FactionMemberProfiler.cs" />
-        <Compile Include="TorchShittyShitShitter.Core\GridGpsBroadcaster.cs" />
+        <Compile Include="TorchShittyShitShitter.Core\PersistentGpsHashStore.cs" />
+        <Compile Include="TorchShittyShitShitter.Core\LaggyGridGpsBroadcaster.cs" />
         <Compile Include="TorchShittyShitShitter.Core\LaggyGridGpsMaker.cs" />
         <Compile Include="TorchShittyShitShitter.Core\LaggyGridGpsDescriptionMaker.cs" />
         <Compile Include="TorchShittyShitShitter.Core\LaggyGridReportBuffer.cs" />

@@ -106,8 +106,16 @@ namespace TorchShittyShitShitter
         [Permission(MyPromoteLevel.Admin)]
         public void ShowCustomGpsEntities() => this.CatchAndReport(() =>
         {
+            var gpss = Plugin.GetAllCustomGpsEntities();
+
+            if (!gpss.Any())
+            {
+                Context.Respond("No GPS entities found");
+                return;
+            }
+
             var msgBuilder = new StringBuilder();
-            foreach (var gps in Plugin.GetAllCustomGpsEntities())
+            foreach (var gps in gpss)
             {
                 msgBuilder.AppendLine($"> {gps.Name}");
             }

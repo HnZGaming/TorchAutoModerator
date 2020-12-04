@@ -2,7 +2,7 @@
 
 namespace Utils.General
 {
-    public static class MathUtils
+    internal static class MathUtils
     {
         public static double Clamp(double value, double min, double max)
         {
