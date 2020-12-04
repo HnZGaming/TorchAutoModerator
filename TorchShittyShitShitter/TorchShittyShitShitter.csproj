@@ -164,6 +164,7 @@
         <Compile Include="TorchShittyShitShitter.Core.Scanners\ILagScannerConfig.cs" />
         <Compile Include="TorchShittyShitShitter.Core.Scanners\SinglePlayerScanner.cs" />
         <Compile Include="TorchShittyShitShitter.Core.Scanners\UnownedGridScanner.cs" />
+        <Compile Include="TorchShittyShitShitter.Core\FactionMemberProfiler.cs" />
         <Compile Include="TorchShittyShitShitter.Core\GpsBroadcaster.cs" />
         <Compile Include="TorchShittyShitShitter.Core\LaggyGridGpsCreator.cs" />
         <Compile Include="TorchShittyShitShitter.Core\LaggyGridReportBuffer.cs" />
@@ -173,7 +174,6 @@
         <Compile Include="TorchShittyShitShitter.Reflections\MyGpsCollection_PlayerGpss.cs" />
         <Compile Include="TorchShittyShitShitter\ShittyShitShitterCommandModule.cs" />
         <Compile Include="TorchShittyShitShitter\ShittyShitShitterConfig.cs" />
-        <Compile Include="TorchShittyShitShitter\ShittyShitShitterManager.cs" />
         <Compile Include="TorchShittyShitShitter\ShittyShitShitterPlugin.cs" />
         <Compile Include="Utils.General\AbsJsonConverter.cs" />
         <Compile Include="Utils.General\ActionDisposable.cs" />
@@ -195,6 +195,7 @@
         <Compile Include="Utils.Torch\CommandErrorResponseGenerator.cs" />
         <Compile Include="Utils.Torch\CommandOption.cs" />
         <Compile Include="Utils.Torch\GameLoopObserver.cs" />
+        <Compile Include="Utils.Torch\GameLoopObserverManager.cs" />
         <Compile Include="Utils.Torch\TorchPluginUtils.cs" />
         <Compile Include="Utils.Torch\TorchUtils.cs" />
         <Compile Include="Utils.Torch\ViewUtils.cs" />

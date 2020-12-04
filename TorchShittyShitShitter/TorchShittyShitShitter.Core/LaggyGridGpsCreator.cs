@@ -18,7 +18,7 @@ namespace TorchShittyShitShitter.Core
     {
         static readonly ILogger Log = LogManager.GetCurrentClassLogger();
 
-        public bool TryCreateGps(long gridId, int rank, out MyGps gps)
+        public bool TryCreateGps(LaggyGridReport report, int rank, out MyGps gps)
         {
             // must be called in the game loop
             if (Thread.CurrentThread.ManagedThreadId !=
@@ -26,6 +26,8 @@ namespace TorchShittyShitShitter.Core
             {
                 throw new Exception("Can be called in the game loop only");
             }
+
+            var gridId = report.GridId;
 
             Log.Trace($"laggy grid report to be broadcast: {gridId}");
 
@@ -53,7 +55,7 @@ namespace TorchShittyShitShitter.Core
                 coords = grid.PositionComp.GetPosition(),
                 showOnHud = true,
                 color = Color.Purple,
-                description = $"The {RankToString(rank)} laggiest grid. Get 'em!",
+                description = $"The {RankToString(rank)} laggiest faction. Get 'em!",
             });
 
             gps.SetEntity(grid);

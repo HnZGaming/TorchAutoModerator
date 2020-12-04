@@ -4,12 +4,8 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using NLog;
-using Profiler.Basics;
-using Profiler.Core;
 using Sandbox.Game.Entities;
-using Sandbox.Game.World;
 using Utils.General;
-using Utils.Torch;
 using VRage.Game.ModAPI;
 
 namespace TorchShittyShitShitter.Core.Scanners
@@ -18,11 +14,13 @@ namespace TorchShittyShitShitter.Core.Scanners
     {
         static readonly ILogger Log = LogManager.GetCurrentClassLogger();
         readonly ILagScannerConfig _config;
+        readonly FactionMemberProfiler _factionMemberProfiler;
         readonly List<IMyFaction> _laggyFactions;
 
-        public FactionScanner(ILagScannerConfig config)
+        public FactionScanner(ILagScannerConfig config, FactionMemberProfiler factionMemberProfiler)
         {
             _config = config;
+            _factionMemberProfiler = factionMemberProfiler;
             _laggyFactions = new List<IMyFaction>();
         }
 
@@ -36,65 +34,44 @@ namespace TorchShittyShitShitter.Core.Scanners
 
         async Task ProfileFactions(CancellationToken canceller)
         {
-            var mask = new GameEntityMask(null, null, null);
-            using (var factionProfiler = new FactionProfiler(mask))
-            using (ProfilerResultQueue.Profile(factionProfiler))
+            var factions = await _factionMemberProfiler.Profile(10.Seconds(), canceller);
+
+            lock (_laggyFactions)
             {
-                factionProfiler.MarkStart();
+                _laggyFactions.Clear();
 
-                await canceller.Delay(10.Seconds());
-
-                // get the number of online members of all factions
-                var onlineFactions = new Dictionary<IMyFaction, int>();
-                var onlinePlayers = MySession.Static.Players.GetOnlinePlayers();
-                foreach (var onlinePlayer in onlinePlayers)
+                foreach (var (faction, _, mspf) in factions)
                 {
-                    var faction = MySession.Static.Factions.TryGetPlayerFaction(onlinePlayer.PlayerId());
-                    if (faction == null) continue;
-                    onlineFactions.Increment(faction);
-                }
-
-                lock (_laggyFactions)
-                {
-                    _laggyFactions.Clear();
-
-                    var result = factionProfiler.GetResult();
-                    foreach (var (faction, entity) in result.GetTopEntities())
+                    if (mspf > _config.MspfPerOnlineGroupMember)
                     {
-                        var onlineMemberCount = onlineFactions.TryGetValue(faction, out var c) ? c : 0;
-                        var mspf = entity.MainThreadTime / result.TotalFrameCount;
-                        var mspfPerOnlineMember = mspf / Math.Max(1, onlineMemberCount);
-                        if (mspfPerOnlineMember > _config.MspfPerOnlineGroupMember)
-                        {
-                            _laggyFactions.Add(faction);
-                        }
+                        _laggyFactions.Add(faction);
                     }
-
-                    Log.Trace($"Laggy factions: {_laggyFactions.Select(f => f.Tag).ToStringSeq()}");
                 }
+
+                Log.Trace($"Laggy factions: {_laggyFactions.Select(f => f.Tag).ToStringSeq()}");
             }
         }
 
         public IEnumerable<LaggyGridReport> Scan(IEnumerable<(MyCubeGrid Grid, double Mspf)> profiledGrids)
         {
-            IEnumerable<IMyFaction> laggyFactions;
+            IEnumerable<IMyFaction> factions;
             lock (_laggyFactions)
             {
-                laggyFactions = _laggyFactions.ToArray();
+                factions = _laggyFactions.ToArray();
             }
 
             // get a mapping from players to their laggy factions
-            var laggyFactionMembers = new Dictionary<long, IMyFaction>(); // key is player id
-            foreach (var faction in laggyFactions)
+            var factionMembers = new Dictionary<long, IMyFaction>(); // key is player id
+            foreach (var faction in factions)
             foreach (var (_, factionMember) in faction.Members)
             {
                 var playerId = factionMember.PlayerId;
-                laggyFactionMembers[playerId] = faction;
+                factionMembers[playerId] = faction;
             }
 
             // get the laggiest grid of laggy factions
-            var laggiestFactionGrids = new Dictionary<IMyFaction, LaggyGridReport>();
-            var remainingFactions = new HashSet<IMyFaction>(laggyFactions);
+            var topGrids = new Dictionary<IMyFaction, LaggyGridReport>();
+            var remainingFactions = new HashSet<IMyFaction>(factions);
             foreach (var (grid, gridMspf) in profiledGrids)
             {
                 // found all the laggiest grids
@@ -102,19 +79,19 @@ namespace TorchShittyShitShitter.Core.Scanners
 
                 foreach (var gridOwnerId in grid.BigOwners)
                 {
-                    if (laggyFactionMembers.TryGetValue(gridOwnerId, out var laggyFaction))
+                    if (factionMembers.TryGetValue(gridOwnerId, out var faction))
                     {
-                        if (!laggiestFactionGrids.ContainsKey(laggyFaction))
+                        if (!topGrids.ContainsKey(faction))
                         {
-                            var report = new LaggyGridReport(grid.EntityId, gridMspf);
-                            laggiestFactionGrids.Add(laggyFaction, report);
-                            remainingFactions.Remove(laggyFaction);
+                            var report = new LaggyGridReport(grid.EntityId, gridMspf, grid.DisplayName, factionTag: faction.Tag);
+                            topGrids.Add(faction, report);
+                            remainingFactions.Remove(faction);
                         }
                     }
                 }
             }
 
-            return laggiestFactionGrids.Values;
+            return topGrids.Values;
         }
     }
 }

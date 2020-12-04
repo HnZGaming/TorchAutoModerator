@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -8,6 +9,7 @@ using NLog;
 using Profiler.Basics;
 using Profiler.Core;
 using Sandbox.Game.Entities;
+using Sandbox.Game.World;
 using TorchShittyShitShitter.Core.Scanners;
 using Utils.General;
 
@@ -21,24 +23,28 @@ namespace TorchShittyShitShitter.Core
         public interface IConfig
         {
             int MaxReportCountPerScan { get; }
+            bool ExemptNpcFactions { get; }
+            IEnumerable<string> ExemptFactionTags { get; }
         }
 
         static readonly ILogger Log = LogManager.GetCurrentClassLogger();
 
         readonly IConfig _config;
-        readonly List<ILagScanner> _subScanners;
+        readonly List<ILagScanner> _scanners;
+        readonly HashSet<string> _exemptFactionTags;
 
-        public LaggyGridFinder(IConfig config, IEnumerable<ILagScanner> subScanners)
+        public LaggyGridFinder(IConfig config, IEnumerable<ILagScanner> scanners)
         {
             _config = config;
-            _subScanners = subScanners.ToList();
+            _scanners = scanners.ToList();
+            _exemptFactionTags = new HashSet<string>();
         }
 
-        public async Task<IEnumerable<LaggyGridReport>> ScanLaggyGrids(CancellationToken canceller)
+        public async Task<IEnumerable<LaggyGridReport>> ScanLaggyGrids(CancellationToken canceller, TimeSpan profileTime)
         {
             Log.Debug("Scanning laggy grids...");
 
-            var reports = new List<LaggyGridReport>();
+            var reports = new ConcurrentQueue<LaggyGridReport>();
 
             var mask = new GameEntityMask(null, null, null);
             using (var profiler = new GridProfiler(mask))
@@ -47,7 +53,7 @@ namespace TorchShittyShitShitter.Core
                 profiler.MarkStart();
 
                 // profile the world for some time
-                await canceller.Delay(5.Seconds());
+                await Task.Delay(profileTime, canceller);
 
                 var profiledGrids = new List<(MyCubeGrid, double)>();
                 var result = profiler.GetResult();
@@ -60,12 +66,15 @@ namespace TorchShittyShitShitter.Core
                 var scanStartTick = Stopwatch.GetTimestamp();
 
                 // scan
-                foreach (var subScanner in _subScanners)
+                Parallel.ForEach(_scanners, scanner =>
                 {
                     try
                     {
-                        var subReports = subScanner.Scan(profiledGrids);
-                        reports.AddRange(subReports);
+                        var scan = scanner.Scan(profiledGrids);
+                        foreach (var report in scan)
+                        {
+                            reports.Enqueue(report);
+                        }
                     }
                     catch (OperationCanceledException)
                     {
@@ -75,14 +84,17 @@ namespace TorchShittyShitShitter.Core
                     {
                         Log.Error(e);
                     }
-                }
+                });
 
                 var scanTime = (Stopwatch.GetTimestamp() - scanStartTick) / 10000D;
                 Log.Trace($"Done scanning ({scanTime:0.00}ms spent)");
             }
 
+            UpdateExemptList();
+
             // pick top laggiest grids
             var topReports = reports
+                .Where(r => !IsExempt(r))
                 .FilterUniqueByKey(r => r.GridId)
                 .OrderByDescending(r => r.Mspf)
                 .Take(_config.MaxReportCountPerScan)
@@ -90,6 +102,33 @@ namespace TorchShittyShitShitter.Core
 
             Log.Debug($"Laggy grids: {topReports.ToStringSeq()}");
             return topReports;
+        }
+
+        void UpdateExemptList()
+        {
+            _exemptFactionTags.Clear();
+            foreach (var exemptFactionTag in _config.ExemptFactionTags)
+            {
+                _exemptFactionTags.Add(exemptFactionTag.ToLower());
+            }
+        }
+
+        bool IsExempt(LaggyGridReport report)
+        {
+            if (report.FactionTagOrNull is string factionTag)
+            {
+                var exemptByNpc = IsNpcFaction(factionTag) && _config.ExemptNpcFactions;
+                var exemptByTag = _exemptFactionTags.Contains(factionTag.ToLower());
+                return exemptByNpc || exemptByTag;
+            }
+
+            return false;
+        }
+
+        static bool IsNpcFaction(string factionTag)
+        {
+            var faction = MySession.Static.Factions.TryGetFactionByTag(factionTag);
+            return faction?.IsEveryoneNpc() ?? false;
         }
     }
 }

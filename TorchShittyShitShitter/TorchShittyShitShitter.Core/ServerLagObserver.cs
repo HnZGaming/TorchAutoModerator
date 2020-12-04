@@ -45,7 +45,7 @@ namespace TorchShittyShitShitter.Core
                 var referenceSimSpeed = _timeline.Max();
                 IsLaggy = referenceSimSpeed < _config.SimSpeedThreshold;
 
-                await canceller.Delay(1.Seconds());
+                await Task.Delay(1.Seconds(), canceller);
             }
         }
     }

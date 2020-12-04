@@ -1,9 +1,11 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using NLog;
 using Sandbox.Game.Entities;
 using Sandbox.Game.World;
 using Utils.General;
+using Utils.Torch;
 
 namespace TorchShittyShitShitter.Core.Scanners
 {
@@ -41,15 +43,16 @@ namespace TorchShittyShitShitter.Core.Scanners
             }
 
             var reports = new List<LaggyGridReport>();
-            foreach (var (_, grids) in playerGrids)
+            foreach (var (ownerId, grids) in playerGrids)
             {
                 if (!grids.Any()) continue; // player doesn't have a grid
 
                 var playerMspf = grids.Sum(g => g.Mspf);
                 if (playerMspf > _config.MspfPerOnlineGroupMember) // laggy single player!
                 {
-                    var (laggiestGrid, gridMspf) = grids[0];
-                    var report = new LaggyGridReport(laggiestGrid.EntityId, gridMspf);
+                    var (topGrid, gridMspf) = grids[0];
+                    var playerName = VRageUtils.TryGetPlayerById(ownerId, out var p) ? p.DisplayName : null;
+                    var report = new LaggyGridReport(topGrid.EntityId, gridMspf, topGrid.DisplayName, playerName: playerName);
                     reports.Add(report);
                 }
             }

@@ -1,9 +1,10 @@
 ﻿using System;
 using System.Linq;
 using System.Text;
-using Sandbox.Game.World;
+using Sandbox.Game.Entities;
 using Torch.Commands;
 using Torch.Commands.Permissions;
+using Utils.General;
 using Utils.Torch;
 using VRage.Game.ModAPI;
 using VRageMath;
@@ -73,6 +74,28 @@ namespace TorchShittyShitShitter
             Context.Respond($"Set new threshold: {newThreshold:0.000}ss");
         });
 
+        [Command("admins-only", "Get or set the current \"admins only\" value.")]
+        [Permission(MyPromoteLevel.Admin)]
+        public void AdminsOnly() => this.CatchAndReport(() =>
+        {
+            if (!Context.Args.Any())
+            {
+                var value = Plugin.AdminsOnly;
+                Context.Respond($"{value}");
+                return;
+            }
+
+            var arg = Context.Args[0];
+            if (!bool.TryParse(arg, out var newValue))
+            {
+                Context.Respond($"Failed to parse bool value: {arg}", Color.Red);
+                return;
+            }
+
+            Plugin.AdminsOnly = newValue;
+            Context.Respond($"Set admins-only: {newValue}");
+        });
+
         [Command("clear", "Clear all custom GPS entities.")]
         [Permission(MyPromoteLevel.Admin)]
         public void ClearCustomGps() => this.CatchAndReport(() =>
@@ -85,16 +108,9 @@ namespace TorchShittyShitShitter
         public void ShowCustomGpsEntities() => this.CatchAndReport(() =>
         {
             var msgBuilder = new StringBuilder();
-            foreach (var (identityId, gps) in Plugin.GetAllCustomGpsEntities())
+            foreach (var gps in Plugin.GetAllCustomGpsEntities())
             {
-                var playerName =
-                    MySession.Static.Players.TryGetPlayerId(identityId, out var playerId) &&
-                    MySession.Static.Players.TryGetPlayerById(playerId, out var player)
-                        ? player.DisplayName
-                        : "<unknown>";
-
-                var txt = $"{playerName} ({identityId}): {gps.EntityId} \"{gps.Name}\"";
-                msgBuilder.AppendLine(txt);
+                msgBuilder.AppendLine($"> {gps.Name}");
             }
 
             Context.Respond($"Custom GPS entities: \n{msgBuilder}");
@@ -131,6 +147,105 @@ namespace TorchShittyShitShitter
         public void UnmuteBroadcastsToAll() => this.CatchAndReport(() =>
         {
             Plugin.UnmuteAll();
+        });
+
+        [Command("profile", "Profile online faction members.")]
+        [Permission(MyPromoteLevel.Admin)]
+        public void ProfileOnlineFactionMembers() => this.CatchAndReport(async () =>
+        {
+            var profileTime = 5d;
+            var top = 10;
+
+            foreach (var arg in Context.Args)
+            {
+                if (CommandOption.TryGetOption(arg, out var option))
+                {
+                    if (option.TryParse("time", out var timeStr) &&
+                        double.TryParse(timeStr, out var time))
+                    {
+                        profileTime = time;
+                        continue;
+                    }
+
+                    if (option.TryParse("top", out var topStr) &&
+                        int.TryParse(topStr, out var topvalue))
+                    {
+                        top = topvalue;
+                        continue;
+                    }
+
+                    Context.Respond($"Unknown option: {arg}", Color.Red);
+                    return;
+                }
+            }
+
+            Context.Respond($"Profiling (profile time: {profileTime:0.0}s, top: {top} factions)...");
+
+            var result = await Plugin.ProfileFactionMembers(profileTime.Seconds());
+            result = result.OrderByDescending(r => r.Mspf).Take(top);
+
+            var msgBuilder = new StringBuilder();
+            foreach (var (faction, count, mspf) in result)
+            {
+                msgBuilder.AppendLine($"> {faction.Tag}: {mspf:0.00}mspf ({count} online players)");
+            }
+
+            Context.Respond($"Finished profiling:\n{msgBuilder}");
+        });
+
+        [Command("scan", "Scan laggy grids.")]
+        [Permission(MyPromoteLevel.Admin)]
+        public void ScanLaggyGrids() => this.CatchAndReport(async () =>
+        {
+            var profileTime = 5d;
+            var broadcast = false;
+            var buffered = false;
+
+            foreach (var arg in Context.Args)
+            {
+                if (CommandOption.TryGetOption(arg, out var option))
+                {
+                    if (option.TryParse("time", out var timeStr) &&
+                        double.TryParse(timeStr, out var time))
+                    {
+                        profileTime = time;
+                        continue;
+                    }
+
+                    if (option.IsParameterless("gps"))
+                    {
+                        broadcast = true;
+                        continue;
+                    }
+
+                    if (option.IsParameterless("buffered"))
+                    {
+                        buffered = true;
+                        continue;
+                    }
+
+                    Context.Respond($"Unknown option: {arg}", Color.Red);
+                    return;
+                }
+            }
+
+            Context.Respond($"Scanning (profile time: {profileTime:0.0}s, buffered: {buffered}, broadcast: {broadcast})...");
+
+            var reports = await Plugin.FindLaggyGrids(profileTime.Seconds(), buffered);
+
+            var msgBuilder = new StringBuilder();
+            foreach (var report in reports)
+            {
+                msgBuilder.AppendLine($"> {report}");
+            }
+
+            Context.Respond($"Finished scanning:\n{msgBuilder}");
+
+            if (broadcast)
+            {
+                await Plugin.BroadcastLaggyGrids(reports);
+                Context.Respond("Broadcasting finished");
+            }
         });
     }
 }

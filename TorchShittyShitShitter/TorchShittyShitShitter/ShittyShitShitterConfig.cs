@@ -18,15 +18,17 @@ namespace TorchShittyShitShitter
         GpsBroadcaster.IConfig,
         ServerLagObserver.IConfig
     {
-        double _firstIdleSeconds = 120;
+        double _firstIdleSeconds = 180;
         bool _enableBroadcasting = true;
-        bool _enableAdminsOnly = true;
+        bool _adminsOnly = true;
         double _bufferSeconds = 60d;
         int _maxLaggyGridCountPerScan = 3;
         double _gpsLifespanSeconds = 60d;
-        double _mspfPerFactionMemberLimit = 0.3d;
+        double _mspfPerFactionMemberLimit = 3.0d;
         double _simSpeedThreshold = 0.7;
+        bool _exemptNpcFactions = true;
         List<ulong> _mutedPlayerIds;
+        List<string> _exemptFactionTags;
 
         public ShittyShitShitterConfig()
         {
@@ -43,10 +45,10 @@ namespace TorchShittyShitShitter
 
         [XmlElement("EnableAdminsOnly")]
         [Display(Order = 1, Name = "Broadcast to admins only", Description = "Broadcast to admin players only.")]
-        public bool EnableAdminsOnly
+        public bool AdminsOnly
         {
-            get => _enableAdminsOnly;
-            set => SetValue(ref _enableAdminsOnly, value);
+            get => _adminsOnly;
+            set => SetValue(ref _adminsOnly, value);
         }
 
         [XmlElement("FirstIdleSeconds")]
@@ -65,8 +67,16 @@ namespace TorchShittyShitShitter
             set => SetValue(ref _mspfPerFactionMemberLimit, value);
         }
 
+        [XmlElement("SimSpeedThreshold")]
+        [Display(Order = 4, Name = "Threshold sim speed", Description = "Broadcast begins when the server sim speed drops.")]
+        public double SimSpeedThreshold
+        {
+            get => _simSpeedThreshold;
+            set => SetValue(ref _simSpeedThreshold, MathUtils.Clamp(value, 0, 2));
+        }
+
         [XmlElement("MaxLaggyGridCountPerScan")]
-        [Display(Order = 4, Name = "Max GPS count", Description = "Too many GPS entities can cause issues: block the sight of players and drop the server sim.")]
+        [Display(Order = 5, Name = "Max GPS count", Description = "Too many GPS entities can cause issues: block the sight of players and drop the server sim.")]
         public int MaxReportCountPerScan
         {
             get => _maxLaggyGridCountPerScan;
@@ -74,7 +84,7 @@ namespace TorchShittyShitShitter
         }
 
         [XmlElement("BufferSeconds")]
-        [Display(Order = 5, Name = "Window time (seconds)", Description = "Factions that are laggy for a length of time will be broadcast.")]
+        [Display(Order = 6, Name = "Window time (seconds)", Description = "Factions that are laggy for a length of time will be broadcast.")]
         public double BufferSeconds
         {
             get => _bufferSeconds;
@@ -82,23 +92,31 @@ namespace TorchShittyShitShitter
         }
 
         [XmlElement("GpsLifespanSeconds")]
-        [Display(Order = 6, Name = "GPS lifespan (seconds)", Description = "Top grid's GPS will stay active for a length of time even if its faction is no longer laggy.")]
+        [Display(Order = 7, Name = "GPS lifespan (seconds)", Description = "Top grid's GPS will stay active for a length of time even if its faction is no longer laggy.")]
         public double GpsLifespanSeconds
         {
             get => _gpsLifespanSeconds;
             set => SetValue(ref _gpsLifespanSeconds, value);
         }
 
-        [XmlElement("SimSpeedThreshold")]
-        [Display(Order = 7, Name = "Threshold sim speed", Description = "Broadcast begins when the server sim speed drops.")]
-        public double SimSpeedThreshold
+        [XmlElement("GpsLifespanSeconds")]
+        [Display(Order = 8, Name = "Exempt NPC factions", Description = "Ignore NPC factions in scan results.")]
+        public bool ExemptNpcFactions
         {
-            get => _simSpeedThreshold;
-            set => SetValue(ref _simSpeedThreshold, MathUtils.Clamp(value, 0, 2));
+            get => _exemptNpcFactions;
+            set => SetValue(ref _exemptNpcFactions, value);
+        }
+
+        [XmlElement("ExemptFactionTags")]
+        [Display(Order = 9, Name = "Exempt faction tags", Description = "Tags of factions that will not be broadcasted.")]
+        public List<string> ExemptFactionTags
+        {
+            get => _exemptFactionTags;
+            set => SetValue(ref _exemptFactionTags, new HashSet<string>(value).ToList());
         }
 
         [XmlElement("MutedPlayerIds")]
-        [Display(Order = 8, Name = "Muted Players", Description = "Players can mute GPS broadcaster with a command.")]
+        [Display(Order = 10, Name = "Muted players", Description = "Players can mute GPS broadcaster with a command.")]
         public List<ulong> MutedPlayerIds
         {
             get => _mutedPlayerIds;
@@ -108,6 +126,7 @@ namespace TorchShittyShitShitter
         TimeSpan LaggyGridReportBuffer.IConfig.WindowTime => BufferSeconds.Seconds();
         TimeSpan GpsBroadcaster.IConfig.GpsLifespan => _gpsLifespanSeconds.Seconds();
         IEnumerable<ulong> GpsBroadcaster.IConfig.MutedPlayers => _mutedPlayerIds;
+        IEnumerable<string> LaggyGridFinder.IConfig.ExemptFactionTags => _exemptFactionTags;
 
         public void AddMutedPlayer(ulong mutedPlayerId)
         {

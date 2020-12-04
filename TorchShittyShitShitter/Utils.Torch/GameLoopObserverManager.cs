@@ -1,21 +1,26 @@
 ﻿using Torch.API;
 using Torch.Managers;
 using Torch.Managers.PatchManager;
-using Utils.Torch;
 
-namespace TorchShittyShitShitter
+namespace Utils.Torch
 {
-    public sealed class ShittyShitShitterManager : Manager
+    internal sealed class GameLoopObserverManager : Manager
     {
 #pragma warning disable 649
-        [Dependency(Ordered = false)]
+        [DependencyAttribute(Ordered = false)]
         readonly PatchManager _patchMgr;
 #pragma warning restore 649
 
         PatchContext _patchContext;
 
-        public ShittyShitShitterManager(ITorchBase torchInstance) : base(torchInstance)
+        GameLoopObserverManager(ITorchBase torchInstance) : base(torchInstance)
         {
+        }
+
+        public static void Add(ITorchBase torch)
+        {
+            var mngr = new GameLoopObserverManager(torch);
+            torch.Managers.AddManager(mngr);
         }
 
         public override void Attach()

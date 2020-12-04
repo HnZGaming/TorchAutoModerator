@@ -18,18 +18,17 @@ namespace Utils.General
             });
         }
 
-        public static Task MoveToThreadPool()
+        public static Task MoveToThreadPool(CancellationToken canceller = default)
         {
+            canceller.ThrowIfCancellationRequested();
+
             var taskSource = new TaskCompletionSource<byte>();
 
-            try
+            ThreadPool.QueueUserWorkItem(_ =>
             {
-                ThreadPool.QueueUserWorkItem(_ => taskSource.SetResult(0));
-            }
-            catch (Exception e)
-            {
-                taskSource.SetException(e);
-            }
+                canceller.ThrowIfCancellationRequested();
+                taskSource.SetResult(0);
+            });
 
             return taskSource.Task;
         }
@@ -47,18 +46,6 @@ namespace Utils.General
                     // ignored
                 }
             }, self);
-        }
-
-        public static async Task Delay(this CancellationToken self, TimeSpan timeSpan)
-        {
-            try
-            {
-                await Task.Delay(timeSpan, self);
-            }
-            catch (ObjectDisposedException)
-            {
-                throw new OperationCanceledException();
-            }
         }
     }
 }

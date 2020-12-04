@@ -35,7 +35,7 @@ namespace TorchShittyShitShitter.Core
             /// <summary>
             /// Broadcast to admin players only.
             /// </summary>
-            bool EnableAdminsOnly { get; }
+            bool AdminsOnly { get; }
         }
 
         static readonly ILogger Log = LogManager.GetCurrentClassLogger();
@@ -60,7 +60,7 @@ namespace TorchShittyShitShitter.Core
             var playerIds = GetDestinationIdentityIds().ToArray();
             GpsCollection.SendAddOrModify(playerIds, gps, gps.EntityId);
 
-            Log.Debug($"Grid broadcast (to {playerIds.Length} players): {gps.EntityId} \"{gps.Name}\" \"{gps.DisplayName}\"");
+            Log.Debug($"Broadcasting to {playerIds.Length} players: \"{gps.Name}\" (id: {gps.EntityId})");
         }
 
         IEnumerable<long> GetDestinationIdentityIds()
@@ -71,7 +71,7 @@ namespace TorchShittyShitShitter.Core
             foreach (var onlinePlayer in onlinePlayers)
             {
                 if (mutedPlayerIds.Contains(onlinePlayer.SteamId())) continue;
-                if (_config.EnableAdminsOnly && !IsAdmin(onlinePlayer)) continue;
+                if (_config.AdminsOnly && !IsAdmin(onlinePlayer)) continue;
 
                 targetPlayers.Add(onlinePlayer.Identity.IdentityId);
             }
@@ -101,7 +101,7 @@ namespace TorchShittyShitShitter.Core
             while (!canceller.IsCancellationRequested)
             {
                 CleanOldGps();
-                await canceller.Delay(5.Seconds());
+                await Task.Delay(5.Seconds(), canceller);
             }
         }
 
@@ -117,23 +117,20 @@ namespace TorchShittyShitShitter.Core
             }
         }
 
-        public IEnumerable<(long, MyGps)> GetAllCustomGpsEntities()
+        public IEnumerable<MyGps> GetAllCustomGpsEntities()
         {
-            var customGpsCollection = new HashSet<int>(_gpsTimestamps.Items);
-            var keyedCustomGpsCollection = new List<(long, MyGps)>();
+            var keyedCustomGpsCollection = new Dictionary<int, MyGps>();
             var allGpsCollection = GpsCollection.GetPlayerGpss();
-            foreach (var (identityId, playerGpsCollection) in allGpsCollection)
+            foreach (var (_, playerGpsCollection) in allGpsCollection)
             foreach (var (_, gps) in playerGpsCollection)
             {
-                if (customGpsCollection.Contains(gps.Hash))
+                if (!keyedCustomGpsCollection.ContainsKey(gps.Hash))
                 {
-                    keyedCustomGpsCollection.Add((identityId, gps));
+                    keyedCustomGpsCollection.Add(gps.Hash, gps);
                 }
             }
 
-            Log.Debug($"Cleand gps from the last session: {keyedCustomGpsCollection.Select(e => e.Item1).ToStringSeq()}");
-
-            return keyedCustomGpsCollection;
+            return keyedCustomGpsCollection.Values;
         }
     }
 }

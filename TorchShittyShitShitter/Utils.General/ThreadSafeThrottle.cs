@@ -62,7 +62,7 @@ namespace Utils.General
             while (!canceller.IsCancellationRequested)
             {
                 Flush();
-                await canceller.Delay(_throttleInterval);
+                await Task.Delay(_throttleInterval, canceller);
             }
         }
 
