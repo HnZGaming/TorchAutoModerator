@@ -11,7 +11,7 @@ Auto moderation with shit load of configs.
 * `Enable broadcasting` -- Enables GPS broadcasting of laggy grids.
 * `Broadcast to Admins only` -- Broadcasts GPS to Moderators and above only.
 * `First idle seconds` -- First N seconds of the session (warm-up period) to not scan grids.
-* `Threshold ms/f per online member` -- Threshold "lagginess" to start broadcasting grids of a laggy faction. See below for details.
+* `Threshold ms/f per online member` -- Threshold "lagginess" to start broadcasting laggy grids (see below).
 * `MAX GPS count` -- Maximum number of GPS entities to show up at once on players' HUD.
 * `Window time (seconds)` -- N seconds to wait until a laggy faction's grids get broadcasted.
 * `GPS lifespan (seconds)` -- N seconds to keep showing GPS entities after the faction is no longer laggy.
@@ -20,10 +20,10 @@ Auto moderation with shit load of configs.
 
 ## Commands
 
-* `!lg on` -- Enable GPS broadcasting. Equivalent to `Enable broadcasting` confing.
-* `!lg off` -- Disable GPS broadcasting. Equivalent to `Enable broadcasting` confing.
-* `!lg mspf` -- Get or set the current ms/f threshold per online member. Equivalent to `Threshold ms/f per online member` config.
-* `!lg ss` -- Get or set the current sim speed thershold. Equivalent to `Threshold sim speed` config.
+* `!lg on` -- Tick on `Enable broadcasting`.
+* `!lg off` -- Tick off `Enable broadcasting`.
+* `!lg mspf` -- Get or set `Threshold ms/f per online member`.
+* `!lg ss` -- Get or set `Threshold sim speed`.
 * `!lg clear` -- Clear all GPS entities populated by this plugin from all players' HUD.
 * `!lg show` -- Show the list of GPS entities populated by this plugin.
 * `!lg mute` -- (For players) Unsubscribe from GPS broadcasting.
@@ -50,3 +50,4 @@ This plugin will then broacast the laggiest grid of each laggy faction.
 
 Core logic of "scanning" (interpreting profiler result) is defined in separate classes in `TorchShittyShitShitter.Core.Scanners.*` namespace. 
 To add new "scanners", implement an interface `ILagScanner` and register the instance to `ShittyShitShitterPlugin`.
+To remove a scanner, comment it out of the list.
