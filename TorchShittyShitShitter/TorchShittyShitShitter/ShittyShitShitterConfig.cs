@@ -21,9 +21,9 @@ namespace TorchShittyShitShitter
         double _firstIdleSeconds = 180;
         bool _enableBroadcasting = true;
         bool _adminsOnly = true;
-        double _bufferSeconds = 60d;
         int _maxLaggyGridCountPerScan = 3;
-        double _gpsLifespanSeconds = 60d;
+        double _bufferSeconds = 300d;
+        double _gpsLifespanSeconds = 600d;
         double _mspfPerFactionMemberLimit = 3.0d;
         double _simSpeedThreshold = 0.7;
         bool _exemptNpcFactions = true;

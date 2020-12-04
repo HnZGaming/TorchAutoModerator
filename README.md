@@ -57,7 +57,7 @@ A broadcasted grid ("top grid") is the first laggiest grid that's possessed by e
 1. Set `Exempt NPC factions` to your need. Should be ticked on for most cases.
 1. Register admin factions to `Exempt faction tags`.
 1. Measure how long your server takes to "warm up". Every grid appears laggy to the profiler when the server is starting up (for several reasons). Set `First idle seconds` to `180` (3 minutes) to be sure.
-1. Try to begin with a generous configuration. Set `Threshold ms/f per online member` to `3.0` and slowly bring it down. Set `Threshold sim speed` less than `0.7` so that broadcasting will only kick in when the server is under a considerable pressure.
+1. Try to begin with a generous configuration. Set `Threshold ms/f per online member` to `3.0` and slowly lower it down. Set `Threshold sim speed` less than `0.7` so that broadcasting will only kick in when the server is under a considerable pressure.
 1. Set `MAX GPS count` lower than `5` otherwise they can clutter up the HUD of all players.
 1. Run `!lg scan` to manually scan top grids. Set `-buffered` to simulate the production result. Set `-broadcast` to broadcast resulting GPS entities (you should set `Broadcast to Admins only`).
 1. Run `!lg profile` to profile ms/f of factions per their online member count.
@@ -65,10 +65,19 @@ A broadcasted grid ("top grid") is the first laggiest grid that's possessed by e
 
 ## Window Time And GPS Lifespan
 
-`Window time` option defines how much time the plugin should wait until a top grid is broadcasted. 
+`Window time` option defines how long the plugin should wait until a top grid is broadcasted.
 If the top grid's faction "stops being laggy" before the window time, the grid will not be broadcasted.
+A longer window time makes it more generous to laggy factions. A shorter window time can cause broadcasting too often.
+Note that concealment usually takes 30 seconds to 1 minute to kick in.
+Start with `300` (5 minutes) and lower it down.
 
-## Forking & Extending
+`GPS lifespan` option defines how long each GPS will remain in everyone's HUD,
+even if the subject faction stopped being laggy. 
+In other words, a GPS is guaranteed to stay in the HUD for that length of time.
+Should be long enough for "moderators" to arrive on the scene.
+Start with `600` (10 minutes) and tweak it according to your world size.
+
+## Fork & Extend
 
 Core logic of "scanning" (interpreting profiler result) is defined in classes under `TorchShittyShitShitter.Core.Scanners.*` namespace. 
 To add new "scanners", implement an interface `ILagScanner` and register the instance to a list of scanners defined in `ShittyShitShitterPlugin.Init()`.
