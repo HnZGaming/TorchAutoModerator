@@ -50,9 +50,16 @@ namespace TorchShittyShitShitter.Core.Scanners
                 var playerMspf = grids.Sum(g => g.Mspf);
                 if (playerMspf > _config.MspfPerOnlineGroupMember) // laggy single player!
                 {
-                    var (topGrid, gridMspf) = grids[0];
+                    var (topGrid, _) = grids[0];
                     var playerName = VRageUtils.TryGetPlayerById(ownerId, out var p) ? p.DisplayName : null;
-                    var report = new LaggyGridReport(topGrid.EntityId, gridMspf, topGrid.DisplayName, playerName: playerName);
+
+                    var report = new LaggyGridReport(
+                        topGrid.EntityId,
+                        playerMspf,
+                        playerMspf / _config.MspfPerOnlineGroupMember,
+                        topGrid.DisplayName,
+                        playerName: playerName);
+
                     reports.Add(report);
                 }
             }

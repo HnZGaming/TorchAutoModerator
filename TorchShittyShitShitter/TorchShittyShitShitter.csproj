@@ -166,7 +166,8 @@
         <Compile Include="TorchShittyShitShitter.Core.Scanners\UnownedGridScanner.cs" />
         <Compile Include="TorchShittyShitShitter.Core\FactionMemberProfiler.cs" />
         <Compile Include="TorchShittyShitShitter.Core\GpsBroadcaster.cs" />
-        <Compile Include="TorchShittyShitShitter.Core\LaggyGridGpsCreator.cs" />
+        <Compile Include="TorchShittyShitShitter.Core\LaggyGridGpsMaker.cs" />
+        <Compile Include="TorchShittyShitShitter.Core\LaggyGridGpsDescriptionMaker.cs" />
         <Compile Include="TorchShittyShitShitter.Core\LaggyGridReportBuffer.cs" />
         <Compile Include="TorchShittyShitShitter.Core\LaggyGridFinder.cs" />
         <Compile Include="TorchShittyShitShitter.Core\LaggyGridReport.cs" />

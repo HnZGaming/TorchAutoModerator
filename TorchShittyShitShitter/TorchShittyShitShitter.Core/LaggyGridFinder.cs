@@ -40,7 +40,7 @@ namespace TorchShittyShitShitter.Core
             _exemptFactionTags = new HashSet<string>();
         }
 
-        public async Task<IEnumerable<LaggyGridReport>> ScanLaggyGrids(CancellationToken canceller, TimeSpan profileTime)
+        public async Task<IEnumerable<LaggyGridReport>> ScanLaggyGrids(TimeSpan profileTime, CancellationToken canceller)
         {
             Log.Debug("Scanning laggy grids...");
 

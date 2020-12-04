@@ -26,7 +26,12 @@ namespace TorchShittyShitShitter.Core.Scanners
                 {
                     if (gridMspf > _config.MspfPerOnlineGroupMember)
                     {
-                        var report = new LaggyGridReport(grid.EntityId, gridMspf, grid.DisplayName);
+                        var report = new LaggyGridReport(
+                            grid.EntityId,
+                            gridMspf,
+                            gridMspf / _config.MspfPerOnlineGroupMember,
+                            grid.DisplayName);
+
                         reports.Add(report);
                     }
                 }

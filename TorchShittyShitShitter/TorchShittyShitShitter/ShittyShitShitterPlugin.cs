@@ -5,7 +5,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Controls;
 using NLog;
-using Profiler.Basics;
 using Sandbox.Game.Screens.Helpers;
 using Torch;
 using Torch.API;
@@ -27,10 +26,11 @@ namespace TorchShittyShitShitter
         GpsBroadcaster _gpsBroadcaster;
         LaggyGridFinder _gridFinder;
         LaggyGridReportBuffer _gridReportBuffer;
-        LaggyGridGpsCreator _gridCreator;
+        LaggyGridGpsMaker _gridMaker;
         FactionScanner _factionScanner;
         ServerLagObserver _serverLagObserver;
         FactionMemberProfiler _factionMemberProfiler;
+        LaggyGridGpsDescriptionMaker _descriptionMaker;
 
         ShittyShitShitterConfig Config => _config.Data;
 
@@ -82,7 +82,8 @@ namespace TorchShittyShitShitter
             });
 
             _gridReportBuffer = new LaggyGridReportBuffer(Config);
-            _gridCreator = new LaggyGridGpsCreator();
+            _descriptionMaker = new LaggyGridGpsDescriptionMaker(Config);
+            _gridMaker = new LaggyGridGpsMaker(_descriptionMaker);
             _gpsBroadcaster = new GpsBroadcaster(Config);
 
             _serverLagObserver = new ServerLagObserver(Config, 5);
@@ -139,7 +140,7 @@ namespace TorchShittyShitShitter
 
         async Task RunOneInterval(CancellationToken canceller)
         {
-            var gridReports = await FindLaggyGrids(5.Seconds(), true, canceller);
+            var gridReports = await FindLaggyGrids(10.Seconds(), true, canceller);
             await BroadcastLaggyGrids(gridReports, canceller);
         }
 
@@ -153,7 +154,7 @@ namespace TorchShittyShitShitter
         public async Task<IEnumerable<LaggyGridReport>> FindLaggyGrids(TimeSpan profileTime, bool buffered, CancellationToken canceller = default)
         {
             // profile laggy grids
-            var gridReports = await _gridFinder.ScanLaggyGrids(canceller, profileTime);
+            var gridReports = await _gridFinder.ScanLaggyGrids(profileTime, canceller);
 
             // put them in the buffer
             _gridReportBuffer.AddInterval(gridReports);
@@ -181,7 +182,7 @@ namespace TorchShittyShitShitter
             foreach (var (gridReport, i) in gridReports.Select((r, i) => (r, i)))
             {
                 var lagRank = i + 1;
-                if (_gridCreator.TryCreateGps(gridReport, lagRank, out var gps))
+                if (_gridMaker.TryMakeGps(gridReport, lagRank, out var gps))
                 {
                     gpsCollection.Add(gps);
                 }
@@ -198,7 +199,7 @@ namespace TorchShittyShitShitter
 
         public void CleanAllCustomGps()
         {
-            _gpsBroadcaster.CleanAllCustomGps();
+            _gpsBroadcaster.DeleteAllCustomGps();
         }
 
         public IEnumerable<MyGps> GetAllCustomGpsEntities()

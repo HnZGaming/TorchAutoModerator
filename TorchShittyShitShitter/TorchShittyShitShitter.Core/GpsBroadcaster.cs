@@ -84,7 +84,7 @@ namespace TorchShittyShitShitter.Core
             return onlinePlayer.PromoteLevel >= MyPromoteLevel.Moderator;
         }
 
-        public void CleanAllCustomGps()
+        public void DeleteAllCustomGps()
         {
             // wipe all from the tracker
             var removedGpsHashes = _gpsTimestamps.RemoveAll();
@@ -100,12 +100,12 @@ namespace TorchShittyShitShitter.Core
 
             while (!canceller.IsCancellationRequested)
             {
-                CleanOldGps();
+                DeleteExpiredGps();
                 await Task.Delay(5.Seconds(), canceller);
             }
         }
 
-        void CleanOldGps()
+        void DeleteExpiredGps()
         {
             var removedGpsHashes = _gpsTimestamps.RemoveDeprecated(_config.GpsLifespan);
             var removedGpsHashSet = new HashSet<int>(removedGpsHashes);

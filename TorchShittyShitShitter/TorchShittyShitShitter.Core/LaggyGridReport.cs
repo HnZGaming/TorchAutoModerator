@@ -7,12 +7,14 @@
     {
         public LaggyGridReport(long gridId,
             double mspf,
+            double mspfRatio,
             string gridName,
             string factionTag = null,
             string playerName = null)
         {
             GridId = gridId;
             Mspf = mspf;
+            MspfRatio = mspfRatio;
             GridName = gridName;
             FactionTagOrNull = factionTag;
             PlayerNameOrNull = playerName;
@@ -20,6 +22,7 @@
 
         public long GridId { get; }
         public double Mspf { get; }
+        public double MspfRatio { get; }
         public string GridName { get; }
         public string FactionTagOrNull { get; }
         public string PlayerNameOrNull { get; }
@@ -27,7 +30,7 @@
         public override string ToString()
         {
             var name = FactionTagOrNull ?? PlayerNameOrNull ?? GridName;
-            return $"(\"{name}\" (\"{GridName}\"), {Mspf:0.00}ms/f)";
+            return $"\"{name}\" (\"{GridName}\"), {Mspf:0.00}ms/f ({MspfRatio:0.00})";
         }
     }
 }

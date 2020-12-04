@@ -16,7 +16,8 @@ namespace TorchShittyShitShitter
         LaggyGridFinder.IConfig,
         ILagScannerConfig,
         GpsBroadcaster.IConfig,
-        ServerLagObserver.IConfig
+        ServerLagObserver.IConfig,
+        LaggyGridGpsDescriptionMaker.IConfig
     {
         double _firstIdleSeconds = 180;
         bool _enableBroadcasting = true;
@@ -27,6 +28,7 @@ namespace TorchShittyShitShitter
         double _mspfPerFactionMemberLimit = 3.0d;
         double _simSpeedThreshold = 0.7;
         bool _exemptNpcFactions = true;
+        string _gpsDescriptionFormat = "The {rank} laggiest faction ({ratio}). Get 'em!";
         List<ulong> _mutedPlayerIds = new List<ulong>();
         List<string> _exemptFactionTags = new List<string>();
 
@@ -59,7 +61,7 @@ namespace TorchShittyShitShitter
         public double MspfPerOnlineGroupMember
         {
             get => _mspfPerFactionMemberLimit;
-            set => SetValue(ref _mspfPerFactionMemberLimit, value);
+            set => SetValue(ref _mspfPerFactionMemberLimit, Math.Max(value, 0.001d));
         }
 
         [XmlElement("SimSpeedThreshold")]
@@ -67,7 +69,7 @@ namespace TorchShittyShitShitter
         public double SimSpeedThreshold
         {
             get => _simSpeedThreshold;
-            set => SetValue(ref _simSpeedThreshold, MathUtils.Clamp(value, 0, 2));
+            set => SetValue(ref _simSpeedThreshold, MathUtils.Clamp(value, 0d, 2d));
         }
 
         [XmlElement("MaxLaggyGridCountPerScan")]
@@ -102,8 +104,16 @@ namespace TorchShittyShitShitter
             set => SetValue(ref _exemptNpcFactions, value);
         }
 
+        [XmlElement("GpsDescriptionFormat")]
+        [Display(Order = 8, Name = "GPS description format", Description = "{rank} -- rank; ex: \"1st\", \"2nd\". {ratio} -- ratio to ms/f threshold; ex: \"121%\".")]
+        public string GpsDescriptionFormat
+        {
+            get => _gpsDescriptionFormat;
+            set => SetValue(ref _gpsDescriptionFormat, value);
+        }
+
         [XmlElement("ExemptFactionTags")]
-        [Display(Order = 9, Name = "Exempt faction tags", Description = "Tags of factions that will not be broadcasted.")]
+        [Display(Order = 10, Name = "Exempt faction tags", Description = "Tags of factions that will not be broadcasted.")]
         public List<string> ExemptFactionTags
         {
             get => _exemptFactionTags;
@@ -111,7 +121,7 @@ namespace TorchShittyShitShitter
         }
 
         [XmlElement("MutedPlayerIds")]
-        [Display(Order = 10, Name = "Muted players", Description = "Players can mute GPS broadcaster with a command.")]
+        [Display(Order = 11, Name = "Muted players", Description = "Players can mute GPS broadcaster with a command.")]
         public List<ulong> MutedPlayerIds
         {
             get => _mutedPlayerIds;
