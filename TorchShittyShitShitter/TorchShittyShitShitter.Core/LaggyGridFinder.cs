@@ -68,21 +68,10 @@ namespace TorchShittyShitShitter.Core
                 // scan
                 Parallel.ForEach(_scanners, scanner =>
                 {
-                    try
+                    var scan = scanner.Scan(profiledGrids);
+                    foreach (var report in scan)
                     {
-                        var scan = scanner.Scan(profiledGrids);
-                        foreach (var report in scan)
-                        {
-                            reports.Enqueue(report);
-                        }
-                    }
-                    catch (OperationCanceledException)
-                    {
-                        throw;
-                    }
-                    catch (Exception e)
-                    {
-                        Log.Error(e);
+                        reports.Enqueue(report);
                     }
                 });
 

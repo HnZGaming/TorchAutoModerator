@@ -175,6 +175,12 @@ namespace TorchShittyShitShitter
             var result = await Plugin.ProfileFactionMembers(profileTime.Seconds());
             result = result.OrderByDescending(r => r.Mspf).Take(top);
 
+            if (!result.Any())
+            {
+                Context.Respond("No factions found");
+                return;
+            }
+
             var msgBuilder = new StringBuilder();
             foreach (var (faction, count, mspf) in result)
             {
@@ -211,6 +217,12 @@ namespace TorchShittyShitShitter
             Context.Respond($"Scanning (profile time: {profileTime:0.0}s, buffered: {buffered}, broadcast: {broadcast})...");
 
             var reports = await Plugin.FindLaggyGrids(profileTime.Seconds(), buffered);
+
+            if (!reports.Any())
+            {
+                Context.Respond("No laggy grids found");
+                return;
+            }
 
             var msgBuilder = new StringBuilder();
             foreach (var report in reports)

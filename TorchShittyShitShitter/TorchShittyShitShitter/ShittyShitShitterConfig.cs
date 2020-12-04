@@ -27,13 +27,8 @@ namespace TorchShittyShitShitter
         double _mspfPerFactionMemberLimit = 3.0d;
         double _simSpeedThreshold = 0.7;
         bool _exemptNpcFactions = true;
-        List<ulong> _mutedPlayerIds;
-        List<string> _exemptFactionTags;
-
-        public ShittyShitShitterConfig()
-        {
-            _mutedPlayerIds = new List<ulong>();
-        }
+        List<ulong> _mutedPlayerIds = new List<ulong>();
+        List<string> _exemptFactionTags = new List<string>();
 
         [XmlElement("EnableBroadcasting")]
         [Display(Order = 0, Name = "Enable broadcasting", Description = "Tick off to stop broadcasting new GPS entities.")]
