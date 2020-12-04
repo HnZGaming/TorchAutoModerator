@@ -23,7 +23,7 @@ namespace TorchShittyShitShitter
         Persistent<ShittyShitShitterConfig> _config;
         UserControl _userControl;
         CancellationTokenSource _canceller;
-        GpsBroadcaster _gpsBroadcaster;
+        GridGpsBroadcaster _gpsBroadcaster;
         LaggyGridFinder _gridFinder;
         LaggyGridReportBuffer _gridReportBuffer;
         LaggyGridGpsMaker _gridMaker;
@@ -84,7 +84,7 @@ namespace TorchShittyShitShitter
             _gridReportBuffer = new LaggyGridReportBuffer(Config);
             _descriptionMaker = new LaggyGridGpsDescriptionMaker(Config);
             _gridMaker = new LaggyGridGpsMaker(_descriptionMaker);
-            _gpsBroadcaster = new GpsBroadcaster(Config);
+            _gpsBroadcaster = new GridGpsBroadcaster(Config);
 
             _serverLagObserver = new ServerLagObserver(Config, 5);
         }

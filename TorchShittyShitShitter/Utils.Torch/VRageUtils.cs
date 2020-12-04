@@ -2,6 +2,8 @@
 using System.Linq;
 using Sandbox;
 using Sandbox.Game.Entities;
+using Sandbox.Game.Multiplayer;
+using Sandbox.Game.Screens.Helpers;
 using Sandbox.Game.World;
 using Utils.General;
 using VRage.Game.Entity;
@@ -132,5 +134,10 @@ namespace Utils.Torch
         }
 
         public static ulong CurrentGameFrameCount => MySandboxGame.Static.SimulationFrameCounter;
+
+        public static void SendAddGps(this MyGpsCollection self, long identityId, MyGps gps, bool playSound)
+        {
+            self.SendAddGps(identityId, ref gps, gps.EntityId, playSound);
+        }
     }
 }

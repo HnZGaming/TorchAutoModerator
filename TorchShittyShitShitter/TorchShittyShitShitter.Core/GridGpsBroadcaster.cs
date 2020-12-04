@@ -18,7 +18,7 @@ namespace TorchShittyShitShitter.Core
     /// Broadcast GPS entities to online players.
     /// Clean up old GPS entities.
     /// </summary>
-    public sealed class GpsBroadcaster
+    public sealed class GridGpsBroadcaster
     {
         public interface IConfig
         {
@@ -40,12 +40,18 @@ namespace TorchShittyShitShitter.Core
 
         static readonly ILogger Log = LogManager.GetCurrentClassLogger();
         readonly IConfig _config;
-        readonly DeprecationObserver<int> _gpsTimestamps;
+        readonly DeprecationObserver<long> _gpsTimestamps;
 
-        public GpsBroadcaster(IConfig config)
+        // Map from a grid entity ID to the hash of a GPS entity that's tracking the grid.
+        // Trying to use a grid entity ID as a key of a GPS entity
+        // because the hash is useless (bc GPS name is taken into the hash function).
+        readonly Dictionary<long, int> _gridIdGpsHashMap;
+
+        public GridGpsBroadcaster(IConfig config)
         {
             _config = config;
-            _gpsTimestamps = new DeprecationObserver<int>();
+            _gpsTimestamps = new DeprecationObserver<long>();
+            _gridIdGpsHashMap = new Dictionary<long, int>();
         }
 
         static MyGpsCollection GpsCollection => MySession.Static.Gpss;
@@ -55,12 +61,35 @@ namespace TorchShittyShitShitter.Core
             gps.ThrowIfNull(nameof(gps));
 
             // Update this grid's last broadcast time
-            _gpsTimestamps.Add(gps.Hash);
+            _gpsTimestamps.Add(gps.EntityId);
 
-            var playerIds = GetDestinationIdentityIds().ToArray();
-            GpsCollection.SendAddOrModify(playerIds, gps, gps.EntityId);
+            // Delete GPS entities with the same entity ID
+            // but keep the list of their identity IDs -> A.
+            // Send new GPS entities where, 
+            // if a receiver's identity ID is included in A, don't make a ping sound.
 
-            Log.Debug($"Broadcasting to {playerIds.Length} players: \"{gps.Name}\" (id: {gps.EntityId})");
+            var deletedGpss = GpsCollection.Where(g =>
+                _gridIdGpsHashMap.ContainsKey(g.EntityId) &&
+                g.EntityId == gps.EntityId);
+
+            var oldIdentityIds = new HashSet<long>();
+
+            foreach (var (identityId, deletedGps) in deletedGpss)
+            {
+                GpsCollection.SendDelete(identityId, deletedGps.Hash);
+                oldIdentityIds.Add(identityId);
+            }
+
+            var newIdentityIds = GetDestinationIdentityIds().ToArray();
+            foreach (var identityId in newIdentityIds)
+            {
+                var playSound = !oldIdentityIds.Contains(identityId);
+                GpsCollection.SendAddGps(identityId, gps, playSound);
+            }
+
+            _gridIdGpsHashMap[gps.EntityId] = gps.Hash;
+
+            Log.Debug($"Broadcasting to {newIdentityIds.Length} players: \"{gps.Name}\" (id: {gps.EntityId})");
         }
 
         IEnumerable<long> GetDestinationIdentityIds()
@@ -87,11 +116,12 @@ namespace TorchShittyShitShitter.Core
         public void DeleteAllCustomGps()
         {
             // wipe all from the tracker
-            var removedGpsHashes = _gpsTimestamps.RemoveAll();
+            var removedGridIds = _gpsTimestamps.RemoveAll();
+            _gridIdGpsHashMap.Clear();
 
             // delete all custom gps from the world
-            var removedGpsHashSet = new HashSet<int>(removedGpsHashes);
-            GpsCollection.DeleteWhere(gps => removedGpsHashSet.Contains(gps.Hash));
+            var removedGridIdSet = new HashSet<long>(removedGridIds);
+            GpsCollection.DeleteWhere(gps => removedGridIdSet.Contains(gps.EntityId));
         }
 
         public async Task LoopCleaning(CancellationToken canceller)
@@ -107,30 +137,30 @@ namespace TorchShittyShitShitter.Core
 
         void DeleteExpiredGps()
         {
-            var removedGpsHashes = _gpsTimestamps.RemoveDeprecated(_config.GpsLifespan);
-            var removedGpsHashSet = new HashSet<int>(removedGpsHashes);
-            GpsCollection.DeleteWhere(gps => removedGpsHashSet.Contains(gps.Hash));
+            var removedGridIds = _gpsTimestamps.RemoveDeprecated(_config.GpsLifespan);
+            var removedGridIdSet = new HashSet<long>(removedGridIds);
+            GpsCollection.DeleteWhere(gps => removedGridIdSet.Contains(gps.EntityId));
 
-            if (removedGpsHashes.Any())
+            foreach (var removedGridId in removedGridIdSet)
             {
-                Log.Debug($"Cleaned grids gps: {removedGpsHashes.ToStringSeq()}");
+                _gridIdGpsHashMap.Remove(removedGridId);
+            }
+
+            if (removedGridIds.Any())
+            {
+                Log.Debug($"Cleaned grids gps: {removedGridIds.ToStringSeq()}");
             }
         }
 
         public IEnumerable<MyGps> GetAllCustomGpsEntities()
         {
-            var keyedCustomGpsCollection = new Dictionary<int, MyGps>();
-            var allGpsCollection = GpsCollection.GetPlayerGpss();
-            foreach (var (_, playerGpsCollection) in allGpsCollection)
-            foreach (var (_, gps) in playerGpsCollection)
-            {
-                if (!keyedCustomGpsCollection.ContainsKey(gps.Hash))
-                {
-                    keyedCustomGpsCollection.Add(gps.Hash, gps);
-                }
-            }
+            var customGpss = GpsCollection.Where(
+                g => _gridIdGpsHashMap.ContainsKey(g.EntityId));
 
-            return keyedCustomGpsCollection.Values;
+            var gpsMap = customGpss.ToDictionary(
+                p => p.Gps.Hash, p => p.Gps);
+
+            return gpsMap.Values;
         }
     }
 }

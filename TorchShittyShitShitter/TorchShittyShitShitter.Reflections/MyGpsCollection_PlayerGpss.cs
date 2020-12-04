@@ -20,22 +20,28 @@ namespace TorchShittyShitShitter.Reflections
             return (Dictionary<long, Dictionary<int, MyGps>>) _fieldInfo.GetValue(self);
         }
 
-        public static void DeleteWhere(this MyGpsCollection self, Func<MyGps, bool> f)
+        public static IEnumerable<(long IdentityId, MyGps Gps)> Where(
+            this MyGpsCollection self, Func<MyGps, bool> f)
         {
+            var result = new List<(long, MyGps)>();
             var worldGpsCollection = self.GetPlayerGpss();
-            var removedGpsList = new List<(long, int)>();
             foreach (var (identity, gpsCollection) in worldGpsCollection)
             foreach (var (_, gps) in gpsCollection)
             {
                 if (f(gps))
                 {
-                    removedGpsList.Add((identity, gps.Hash));
+                    result.Add((identity, gps));
                 }
             }
 
-            foreach (var (identityId, gpsHash) in removedGpsList)
+            return result;
+        }
+
+        public static void DeleteWhere(this MyGpsCollection self, Func<MyGps, bool> f)
+        {
+            foreach (var (identityId, gps) in self.Where(f))
             {
-                self.SendDelete(identityId, gpsHash);
+                self.SendDelete(identityId, gps.Hash);
             }
         }
 

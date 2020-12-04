@@ -57,7 +57,7 @@ namespace TorchShittyShitShitter.Core
 
             gps = new MyGps(new MyObjectBuilder_Gps.Entry
             {
-                name = $"{gridId}",
+                name = name,
                 DisplayName = name,
                 coords = grid.PositionComp.GetPosition(),
                 showOnHud = true,
