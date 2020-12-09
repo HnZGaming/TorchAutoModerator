@@ -211,7 +211,7 @@ namespace TorchShittyShitShitter
                 if (CommandOption.TryGetOption(arg, out var option))
                 {
                     if (option.TryParseDouble("time", out profileTime) ||
-                        option.IsParameterless("gps", out broadcast) ||
+                        option.IsParameterless("broadcast", out broadcast) ||
                         option.IsParameterless("buffered", out buffered))
                     {
                         continue;
