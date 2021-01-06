@@ -9,7 +9,7 @@ using Utils.General;
 using Utils.Torch;
 using VRage.Game.ModAPI;
 
-namespace TorchShittyShitShitter.Core
+namespace AutoModerator.Core
 {
     public sealed class FactionMemberProfiler
     {

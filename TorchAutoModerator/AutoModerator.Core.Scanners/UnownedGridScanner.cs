@@ -4,7 +4,7 @@ using NLog;
 using Sandbox.Game.Entities;
 using Utils.General;
 
-namespace TorchShittyShitShitter.Core.Scanners
+namespace AutoModerator.Core.Scanners
 {
     public sealed class UnownedGridScanner : ILagScanner
     {

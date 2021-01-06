@@ -4,7 +4,7 @@ using System.Linq;
 using NLog;
 using Utils.General;
 
-namespace TorchShittyShitShitter.Core
+namespace AutoModerator.Core
 {
     /// <summary>
     /// Hold onto laggy grid reports (before submitting to the GPS broadcaster)

@@ -1,6 +1,6 @@
 ﻿using System.Linq;
 
-namespace TorchShittyShitShitter.Core
+namespace AutoModerator.Core
 {
     public sealed class LaggyGridGpsDescriptionMaker
     {

@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 using Sandbox.Game.Multiplayer;
 using Utils.General;
 
-namespace TorchShittyShitShitter.Core
+namespace AutoModerator.Core
 {
     /// <summary>
     /// Observe when the server is laggy.
