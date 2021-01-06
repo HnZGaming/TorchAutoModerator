@@ -18,14 +18,14 @@ namespace AutoModerator
         [Permission(MyPromoteLevel.Admin)]
         public void EnableBroadcasting() => this.CatchAndReport(() =>
         {
-            Plugin.Enabled = true;
+            Plugin.Config.EnableBroadcasting = true;
         });
 
         [Command("off", "Disable broadcasting.")]
         [Permission(MyPromoteLevel.Admin)]
         public void DisableBroadcasting() => this.CatchAndReport(() =>
         {
-            Plugin.Enabled = false;
+            Plugin.Config.EnableBroadcasting = false;
         });
 
         [Command("mspf", "Get or set the current ms/f threshold per online member.")]
@@ -34,19 +34,19 @@ namespace AutoModerator
         {
             if (!Context.Args.Any())
             {
-                var currentThreshold = Plugin.MspfThreshold;
+                var currentThreshold = Plugin.Config.ThresholdMspf;
                 Context.Respond($"{currentThreshold:0.000}mspf per online member");
                 return;
             }
 
             var arg = Context.Args[0];
-            if (!double.TryParse(arg, out var newThreshold))
+            if (!float.TryParse(arg, out var newThreshold))
             {
                 Context.Respond($"Failed to parse threshold value: {arg}", Color.Red);
                 return;
             }
 
-            Plugin.MspfThreshold = newThreshold;
+            Plugin.Config.ThresholdMspf = newThreshold;
             Context.Respond($"Set new threshold: {newThreshold:0.000}mspf per online member");
         });
 
@@ -56,7 +56,7 @@ namespace AutoModerator
         {
             if (!Context.Args.Any())
             {
-                var value = Plugin.SimSpeedThreshold;
+                var value = Plugin.Config.SimSpeedThreshold;
                 Context.Respond($"{value:0.00}ss");
                 return;
             }
@@ -68,7 +68,7 @@ namespace AutoModerator
                 return;
             }
 
-            Plugin.SimSpeedThreshold = newThreshold;
+            Plugin.Config.SimSpeedThreshold = newThreshold;
             Context.Respond($"Set new threshold: {newThreshold:0.000}ss");
         });
 
@@ -78,7 +78,7 @@ namespace AutoModerator
         {
             if (!Context.Args.Any())
             {
-                var value = Plugin.AdminsOnly;
+                var value = Plugin.Config.AdminsOnly;
                 Context.Respond($"{value}");
                 return;
             }
@@ -90,7 +90,7 @@ namespace AutoModerator
                 return;
             }
 
-            Plugin.AdminsOnly = newValue;
+            Plugin.Config.AdminsOnly = newValue;
             Context.Respond($"Set admins-only: {newValue}");
         });
 
@@ -98,14 +98,14 @@ namespace AutoModerator
         [Permission(MyPromoteLevel.Admin)]
         public void ClearCustomGps() => this.CatchAndReport(() =>
         {
-            Plugin.CleanAllCustomGps();
+            Plugin.DeleteAllTrackedGpss();
         });
 
         [Command("show", "Show the list of custom GPS entities.")]
         [Permission(MyPromoteLevel.Admin)]
         public void ShowCustomGpsEntities() => this.CatchAndReport(() =>
         {
-            var gpss = Plugin.GetAllCustomGpsEntities();
+            var gpss = Plugin.GetAllTrackedGpsEntities();
 
             if (!gpss.Any())
             {
@@ -132,7 +132,7 @@ namespace AutoModerator
                 return;
             }
 
-            Plugin.MutePlayer(Context.Player.SteamUserId);
+            Plugin.Config.AddMutedPlayer(Context.Player.SteamUserId);
         });
 
         [Command("unmute", "Unmute broadcasting.")]
@@ -145,56 +145,14 @@ namespace AutoModerator
                 return;
             }
 
-            Plugin.UnmutePlayer(Context.Player.SteamUserId);
+            Plugin.Config.RemoveMutedPlayer(Context.Player.SteamUserId);
         });
 
         [Command("unmute_all", "Force every player to unmute broadcasting.")]
         [Permission(MyPromoteLevel.Admin)]
         public void UnmuteBroadcastsToAll() => this.CatchAndReport(() =>
         {
-            Plugin.UnmuteAll();
-        });
-
-        [Command("profile", "Profile online faction members.")]
-        [Permission(MyPromoteLevel.Admin)]
-        public void ProfileOnlineFactionMembers() => this.CatchAndReport(async () =>
-        {
-            var profileTime = 5d;
-            var top = 10;
-
-            foreach (var arg in Context.Args)
-            {
-                if (CommandOption.TryGetOption(arg, out var option))
-                {
-                    if (option.TryParseDouble("time", out profileTime) ||
-                        option.TryParseInt("top", out top))
-                    {
-                        continue;
-                    }
-
-                    Context.Respond($"Unknown option: {arg}", Color.Red);
-                    return;
-                }
-            }
-
-            Context.Respond($"Profiling (profile time: {profileTime:0.0}s, top: {top} factions)...");
-
-            var result = await Plugin.ProfileFactionMembers(profileTime.Seconds());
-            result = result.OrderByDescending(r => r.Mspf).Take(top);
-
-            if (!result.Any())
-            {
-                Context.Respond("No factions found");
-                return;
-            }
-
-            var msgBuilder = new StringBuilder();
-            foreach (var (faction, count, mspf) in result)
-            {
-                msgBuilder.AppendLine($"> {faction.Tag}: {mspf:0.00}mspf ({count} online players)");
-            }
-
-            Context.Respond($"Finished profiling:\n{msgBuilder}");
+            Plugin.Config.RemoveAllMutedPlayers();
         });
 
         [Command("scan", "Scan laggy grids.")]
@@ -223,7 +181,7 @@ namespace AutoModerator
 
             Context.Respond($"Scanning (profile time: {profileTime:0.0}s, buffered: {buffered}, broadcast: {broadcast})...");
 
-            var reports = await Plugin.FindLaggyGrids(profileTime.Seconds(), buffered);
+            var reports = await Plugin.ScanSpotLaggyGrids(profileTime.Seconds());
 
             if (!reports.Any())
             {
@@ -241,7 +199,7 @@ namespace AutoModerator
 
             if (broadcast)
             {
-                await Plugin.BroadcastLaggyGrids(reports);
+                await Plugin.Broadcast(reports);
                 Context.Respond("Broadcasting finished");
             }
         });

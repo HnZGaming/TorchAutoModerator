@@ -4,15 +4,15 @@
     <PropertyGroup>
         <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
         <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-        <ProjectGuid>{EC211AE3-0BED-46AF-B6D1-B8CE93F31009}</ProjectGuid>
+        <ProjectGuid>{D3F66AD3-9265-4CA7-B865-DEDD0B20A8E7}</ProjectGuid>
         <OutputType>Library</OutputType>
         <AppDesignerFolder>Properties</AppDesignerFolder>
-        <AssemblyName>TorchAutoModerator</AssemblyName>
+        <AssemblyName>TorchEntityGpsBroadcaster</AssemblyName>
         <TargetFrameworkVersion>v4.7.1</TargetFrameworkVersion>
         <FileAlignment>512</FileAlignment>
     </PropertyGroup>
     <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
-        <PlatformTarget>x64</PlatformTarget>
+        <PlatformTarget>AnyCPU</PlatformTarget>
         <DebugSymbols>true</DebugSymbols>
         <DebugType>full</DebugType>
         <Optimize>false</Optimize>
@@ -22,7 +22,7 @@
         <WarningLevel>4</WarningLevel>
     </PropertyGroup>
     <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
-        <PlatformTarget>x64</PlatformTarget>
+        <PlatformTarget>AnyCPU</PlatformTarget>
         <DebugType>pdbonly</DebugType>
         <Optimize>true</Optimize>
         <OutputPath>bin\Release\</OutputPath>
@@ -153,35 +153,24 @@
         </Reference>
     </ItemGroup>
     <ItemGroup>
-        <Reference Include="Profiler">
-            <HintPath>..\extern\Profiler.dll</HintPath>
-        </Reference>
-    </ItemGroup>
-    <ItemGroup>
-        <Compile Include="AutoModerator.Core\GridReportDescriber.cs" />
-        <Compile Include="AutoModerator.Core\GridReportGpsFactory.cs" />
-        <Compile Include="AutoModerator.Core\LaggyGridScanner.cs" />
-        <Compile Include="AutoModerator.Core\TargetPlayerCollector.cs" />
+        <Compile Include="EntityGpsBroadcasters.Core\EntityGpsBroadcaster.cs" />
+        <Compile Include="EntityGpsBroadcasters.Core\EntityIdGpsCollection.cs" />
+        <Compile Include="EntityGpsBroadcasters.Core\MyGpsCollection_PlayerGpss.cs" />
+        <Compile Include="EntityGpsBroadcasters.Core\HashCollectionFile.cs" />
         <Compile Include="Properties\AssemblyInfo.cs" />
-        <Compile Include="AutoModerator.Core\GridReportTimeSeries.cs" />
-        <Compile Include="AutoModerator.Core\GridReporter.cs" />
-        <Compile Include="AutoModerator.Core\GridReport.cs" />
-        <Compile Include="AutoModerator.Core\ServerLagObserver.cs" />
-        <Compile Include="AutoModerator\AutoModeratorCommandModule.cs" />
-        <Compile Include="AutoModerator\AutoModeratorConfig.cs" />
-        <Compile Include="AutoModerator\AutoModeratorPlugin.cs" />
         <Compile Include="Utils.General\AbsJsonConverter.cs" />
         <Compile Include="Utils.General\ActionDisposable.cs" />
         <Compile Include="Utils.General\ActionQueue.cs" />
         <Compile Include="Utils.General\CollectionUtils.cs" />
         <Compile Include="Utils.General\DebugUtils.cs" />
-        <Compile Include="Utils.General\ExpirationObserver.cs" />
+        <Compile Include="Utils.General\DeprecationObserver.cs" />
         <Compile Include="Utils.General\DisposableCollection.cs" />
         <Compile Include="Utils.General\DisposableUtils.cs" />
+        <Compile Include="Utils.General\HttpUrlBuilder.cs" />
         <Compile Include="Utils.General\LangUtils.cs" />
         <Compile Include="Utils.General\MathUtils.cs" />
         <Compile Include="Utils.General\ObjectPool.cs" />
-        <Compile Include="Utils.General\TimeSeries.cs" />
+        <Compile Include="Utils.General\PersistencyObserver.cs" />
         <Compile Include="Utils.General\ReflectionUtils.cs" />
         <Compile Include="Utils.General\StringFloatConverter.cs" />
         <Compile Include="Utils.General\StupidDb.cs" />
@@ -198,15 +187,7 @@
         <Compile Include="Utils.Torch\XmlUtils.cs" />
     </ItemGroup>
     <ItemGroup>
-        <Content Include="manifest.xml" />
-        <Content Include="postbuild.bat" />
-        <Content Include="symutil.bat" />
-    </ItemGroup>
-    <ItemGroup>
-      <ProjectReference Include="..\TorchEntityGpsBroadcaster\TorchEntityGpsBroadcaster.csproj">
-        <Project>{d3f66ad3-9265-4ca7-b865-dedd0b20a8e7}</Project>
-        <Name>TorchEntityGpsBroadcaster</Name>
-      </ProjectReference>
+      <Content Include="symutil.bat" />
     </ItemGroup>
     <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
     <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
@@ -216,10 +197,5 @@
     <Target Name="AfterBuild">
     </Target>
     -->
-    <PropertyGroup>
-        <PostBuildEvent>
-            [ -z "$NoDeploy" ] || $(ProjectDir)postbuild.bat $(ProjectName) $(SolutionDir)
-        </PostBuildEvent>
-    </PropertyGroup>
 
 </Project>

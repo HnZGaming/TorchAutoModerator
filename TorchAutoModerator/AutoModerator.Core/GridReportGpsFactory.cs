@@ -1,9 +1,14 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using NLog;
 using Sandbox;
 using Sandbox.Game.Entities;
 using Sandbox.Game.Screens.Helpers;
+using Utils.General;
+using Utils.Torch;
 using VRage;
 using VRage.Game;
 using VRageMath;
@@ -13,17 +18,36 @@ namespace AutoModerator.Core
     /// <summary>
     /// Create GPS entities for laggy grids.
     /// </summary>
-    public sealed class LaggyGridGpsMaker
+    public sealed class GridReportGpsFactory
     {
         static readonly ILogger Log = LogManager.GetCurrentClassLogger();
-        readonly LaggyGridGpsDescriptionMaker _descriptionMaker;
+        readonly GridReportDescriber _describer;
 
-        public LaggyGridGpsMaker(LaggyGridGpsDescriptionMaker descriptionMaker)
+        public GridReportGpsFactory(GridReportDescriber describer)
         {
-            _descriptionMaker = descriptionMaker;
+            _describer = describer;
         }
 
-        public bool TryMakeGps(LaggyGridReport report, int rank, out MyGps gps)
+        public async Task<IEnumerable<MyGps>> CreateGpss(IEnumerable<GridReport> gridReports, CancellationToken canceller)
+        {
+            // MyGps can be created in the game loop only (idk why)
+            await GameLoopObserver.MoveToGameLoop(canceller);
+
+            // create GPS entities of laggy grids
+            var gpsCollection = new List<MyGps>();
+            foreach (var (gridReport, i) in gridReports.Select((r, i) => (r, i)))
+            {
+                if (TryCreateGps(gridReport, i + 1, out var gps))
+                {
+                    gpsCollection.Add(gps);
+                }
+            }
+
+            await TaskUtils.MoveToThreadPool(canceller);
+            return gpsCollection;
+        }
+
+        bool TryCreateGps(GridReport report, int rank, out MyGps gps)
         {
             // must be called in the game loop
             if (Thread.CurrentThread.ManagedThreadId !=
@@ -52,7 +76,7 @@ namespace AutoModerator.Core
             }
 
             var grid = (MyCubeGrid) entity;
-            var mspfRatio = $"{report.MspfRatio * 100:0}%";
+            var mspfRatio = $"{report.ThresholdNormal * 100:0}%";
             var name = $"{grid.DisplayName} ({mspfRatio})";
 
             gps = new MyGps(new MyObjectBuilder_Gps.Entry
@@ -62,7 +86,7 @@ namespace AutoModerator.Core
                 coords = grid.PositionComp.GetPosition(),
                 showOnHud = true,
                 color = Color.Purple,
-                description = _descriptionMaker.Make(report, rank),
+                description = _describer.Describe(report, rank),
             });
 
             gps.SetEntity(grid);

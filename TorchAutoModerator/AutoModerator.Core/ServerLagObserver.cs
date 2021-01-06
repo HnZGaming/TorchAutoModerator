@@ -42,7 +42,7 @@ namespace AutoModerator.Core
                     _timeline.TryDequeue(out _);
                 }
 
-                var referenceSimSpeed = _timeline.Max();
+                var referenceSimSpeed = _timeline.Max(); // best sim speed
                 IsLaggy = referenceSimSpeed < _config.SimSpeedThreshold;
 
                 await Task.Delay(1.Seconds(), canceller);

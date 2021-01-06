@@ -1,19 +1,18 @@
 ﻿using System.Collections.Generic;
 using System.Runtime.CompilerServices;
-using AutoModerator.Reflections;
 using Sandbox.Game.Multiplayer;
 using Sandbox.Game.Screens.Helpers;
 using Sandbox.Game.World;
 using Utils.Torch;
 
-namespace AutoModerator.Core
+namespace EntityGpsBroadcasters.Core
 {
     /// <summary>
     /// Manage GPS collections using their EntityId.
     /// Intended to properly identify GPS entities whose
     /// hash is not useful (eg. when their name has to change).
     /// </summary>
-    public sealed class EntityIdGpsCollection
+    internal sealed class EntityIdGpsCollection
     {
         readonly Dictionary<long, int> _gridIdToGpsHashMap;
 

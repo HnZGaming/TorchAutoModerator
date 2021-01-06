@@ -6,9 +6,9 @@ using Sandbox.Game.Multiplayer;
 using Sandbox.Game.Screens.Helpers;
 using Torch.Utils;
 
-namespace AutoModerator.Reflections
+namespace EntityGpsBroadcasters.Core
 {
-    public static class MyGpsCollection_PlayerGpss
+    internal static class MyGpsCollection_PlayerGpss
     {
 #pragma warning disable 649
         [ReflectedFieldInfo(typeof(MyGpsCollection), "m_playerGpss")]

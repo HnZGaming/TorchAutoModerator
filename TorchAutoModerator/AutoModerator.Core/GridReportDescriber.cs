@@ -1,8 +1,6 @@
-﻿using System.Linq;
-
-namespace AutoModerator.Core
+﻿namespace AutoModerator.Core
 {
-    public sealed class LaggyGridGpsDescriptionMaker
+    public sealed class GridReportDescriber
     {
         public interface IConfig
         {
@@ -11,14 +9,14 @@ namespace AutoModerator.Core
 
         readonly IConfig _config;
 
-        public LaggyGridGpsDescriptionMaker(IConfig config)
+        public GridReportDescriber(IConfig config)
         {
             _config = config;
         }
 
-        public string Make(LaggyGridReport report, int rank)
+        public string Describe(GridReport report, int rank)
         {
-            var mspfRatio = report.MspfRatio * 100;
+            var mspfRatio = report.ThresholdNormal * 100;
             var rankStr = RankToString(rank);
 
             return _config.GpsDescriptionFormat
@@ -28,11 +26,11 @@ namespace AutoModerator.Core
 
         static string RankToString(int rank)
         {
-            switch ($"{rank}".Last())
+            switch (rank % 10)
             {
-                case '1': return $"{rank}st";
-                case '2': return $"{rank}nd";
-                case '3': return $"{rank}rd";
+                case 1: return $"{rank}st";
+                case 2: return $"{rank}nd";
+                case 3: return $"{rank}rd";
                 default: return $"{rank}th";
             }
         }

@@ -2,43 +2,41 @@
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
-using AutoModerator.Reflections;
-using Sandbox.Game.World;
 
-namespace AutoModerator.Core
+namespace EntityGpsBroadcasters.Core
 {
     /// <summary>
     /// Save GPS hashes to the disk.
     /// Intended to properly delete GPS entities that
     /// accidentally got carried over from the next session.
     /// </summary>
-    public sealed class PersistentGpsHashStore
+    internal sealed class HashCollectionFile
     {
-        readonly string _path;
+        readonly string _filePath;
 
-        public PersistentGpsHashStore(string path)
+        public HashCollectionFile(string filePath)
         {
-            _path = path;
+            _filePath = filePath;
         }
 
         [MethodImpl(MethodImplOptions.Synchronized)]
-        public void UpdateTrackedGpsHashes(IEnumerable<int> gpsHashes)
+        public void UpdateHashCollection(IEnumerable<int> hashes)
         {
             var lines = new List<string>();
-            foreach (var gpsHash in gpsHashes)
+            foreach (var gpsHash in hashes)
             {
                 lines.Add($"{gpsHash}");
             }
 
-            File.WriteAllLines(_path, lines);
+            File.WriteAllLines(_filePath, lines);
         }
 
         [MethodImpl(MethodImplOptions.Synchronized)]
-        IEnumerable<int> GetAllTrackedGpsHashes()
+        public IEnumerable<int> GetHashCollection()
         {
-            if (!File.Exists(_path)) return Enumerable.Empty<int>();
+            if (!File.Exists(_filePath)) return Enumerable.Empty<int>();
 
-            var lines = File.ReadAllLines(_path);
+            var lines = File.ReadAllLines(_filePath);
             var hashes = new HashSet<int>();
             foreach (var line in lines)
             {
@@ -49,13 +47,6 @@ namespace AutoModerator.Core
             }
 
             return hashes;
-        }
-
-        public void DeleteAllTrackedGpssFromGame()
-        {
-            var savedGpsHashes = GetAllTrackedGpsHashes();
-            var savedGpsHashSet = new HashSet<int>(savedGpsHashes);
-            MySession.Static.Gpss.DeleteWhere((_, g) => savedGpsHashSet.Contains(g.Hash));
         }
     }
 }
