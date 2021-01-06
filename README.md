@@ -1,10 +1,9 @@
-# TorchShittyShitShitter
+# TorchAutoModerator
 
 Auto moderation with a shit ton of configs.
 
-Broadcasts GPS of top grids based on the number of online faction members.
-Helps moderate a server with a big number of grids.
-Intended to be used as a supplement to LagGridBroadcaster plugin.
+Broadcasts GPS of top grids based on configurable factors.
+Useful for invoking self policing by players in the server.
 
 ## Dependencies
 
