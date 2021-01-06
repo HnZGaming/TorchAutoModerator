@@ -1,4 +1,4 @@
-﻿namespace TorchShittyShitShitter.Core.Scanners
+﻿namespace AutoModerator.Core.Scanners
 {
     public interface ILagScannerConfig
     {

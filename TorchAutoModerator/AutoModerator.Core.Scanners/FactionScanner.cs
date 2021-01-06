@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -8,7 +7,7 @@ using Sandbox.Game.Entities;
 using Utils.General;
 using VRage.Game.ModAPI;
 
-namespace TorchShittyShitShitter.Core.Scanners
+namespace AutoModerator.Core.Scanners
 {
     public sealed class FactionScanner : ILagScanner
     {

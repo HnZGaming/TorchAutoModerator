@@ -2,15 +2,15 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Xml.Serialization;
+using AutoModerator.Core;
+using AutoModerator.Core.Scanners;
 using Torch;
 using Torch.Views;
-using TorchShittyShitShitter.Core;
-using TorchShittyShitShitter.Core.Scanners;
 using Utils.General;
 
-namespace TorchShittyShitShitter
+namespace AutoModerator
 {
-    public sealed class ShittyShitShitterConfig :
+    public sealed class AutoModeratorConfig :
         ViewModel,
         LaggyGridReportBuffer.IConfig,
         LaggyGridFinder.IConfig,

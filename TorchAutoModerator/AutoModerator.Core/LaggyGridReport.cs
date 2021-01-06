@@ -1,4 +1,4 @@
-﻿namespace TorchShittyShitShitter.Core
+﻿namespace AutoModerator.Core
 {
     /// <summary>
     /// Carry around a laggy grid's metadata.

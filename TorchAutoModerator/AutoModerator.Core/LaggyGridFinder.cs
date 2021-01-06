@@ -5,15 +5,15 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using AutoModerator.Core.Scanners;
 using NLog;
 using Profiler.Basics;
 using Profiler.Core;
 using Sandbox.Game.Entities;
 using Sandbox.Game.World;
-using TorchShittyShitShitter.Core.Scanners;
 using Utils.General;
 
-namespace TorchShittyShitShitter.Core
+namespace AutoModerator.Core
 {
     /// <summary>
     /// Find laggy grids in the game.

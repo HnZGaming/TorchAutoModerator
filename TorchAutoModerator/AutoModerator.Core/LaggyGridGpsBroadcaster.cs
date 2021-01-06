@@ -10,7 +10,7 @@ using Sandbox.Game.World;
 using Utils.General;
 using Utils.Torch;
 
-namespace TorchShittyShitShitter.Core
+namespace AutoModerator.Core
 {
     /// <summary>
     /// Broadcast GPS entities to online players.

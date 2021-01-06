@@ -1,6 +1,6 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TorchShittyShitShitter", "TorchShittyShitShitter\TorchShittyShitShitter.csproj", "{EC211AE3-0BED-46AF-B6D1-B8CE93F31009}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TorchAutoModerator", "TorchAutoModerator\TorchAutoModerator.csproj", "{EC211AE3-0BED-46AF-B6D1-B8CE93F31009}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

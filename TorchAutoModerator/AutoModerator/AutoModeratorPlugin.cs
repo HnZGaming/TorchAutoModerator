@@ -4,23 +4,23 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Controls;
+using AutoModerator.Core;
+using AutoModerator.Core.Scanners;
 using NLog;
 using Sandbox.Game.Screens.Helpers;
 using Torch;
 using Torch.API;
 using Torch.API.Plugins;
-using TorchShittyShitShitter.Core;
-using TorchShittyShitShitter.Core.Scanners;
 using Utils.General;
 using Utils.Torch;
 using VRage.Game.ModAPI;
 
-namespace TorchShittyShitShitter
+namespace AutoModerator
 {
-    public class ShittyShitShitterPlugin : TorchPluginBase, IWpfPlugin
+    public class AutoModeratorPlugin : TorchPluginBase, IWpfPlugin
     {
         static readonly ILogger Log = LogManager.GetCurrentClassLogger();
-        Persistent<ShittyShitShitterConfig> _config;
+        Persistent<AutoModeratorConfig> _config;
         UserControl _userControl;
         CancellationTokenSource _canceller;
         LaggyGridGpsBroadcaster _gpsBroadcaster;
@@ -33,7 +33,7 @@ namespace TorchShittyShitShitter
         LaggyGridGpsDescriptionMaker _descriptionMaker;
         PersistentGpsHashStore _gpsHashStore;
 
-        ShittyShitShitterConfig Config => _config.Data;
+        AutoModeratorConfig Config => _config.Data;
 
         public bool Enabled
         {
@@ -68,7 +68,7 @@ namespace TorchShittyShitShitter
             GameLoopObserverManager.Add(torch);
 
             var configFilePath = this.MakeConfigFilePath();
-            _config = Persistent<ShittyShitShitterConfig>.Load(configFilePath);
+            _config = Persistent<AutoModeratorConfig>.Load(configFilePath);
 
             _canceller = new CancellationTokenSource();
 

@@ -8,7 +8,7 @@ using VRage;
 using VRage.Game;
 using VRageMath;
 
-namespace TorchShittyShitShitter.Core
+namespace AutoModerator.Core
 {
     /// <summary>
     /// Create GPS entities for laggy grids.
