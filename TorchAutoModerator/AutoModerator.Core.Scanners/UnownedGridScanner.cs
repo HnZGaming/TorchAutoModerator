@@ -2,9 +2,10 @@
 using System.Linq;
 using NLog;
 using Sandbox.Game.Entities;
+using TorchShittyShitShitter.Core;
 using Utils.General;
 
-namespace TorchShittyShitShitter.Core.Scanners
+namespace AutoModerator.Core.Scanners
 {
     public sealed class UnownedGridScanner : ILagScanner
     {

@@ -1,5 +1,4 @@
-﻿using System;
-using System.Linq;
+﻿using System.Linq;
 using System.Text;
 using Torch.Commands;
 using Torch.Commands.Permissions;
@@ -8,12 +7,12 @@ using Utils.Torch;
 using VRage.Game.ModAPI;
 using VRageMath;
 
-namespace TorchShittyShitShitter
+namespace AutoModerator
 {
     [Category("lg")]
-    public sealed class ShittyShitShitterCommandModule : CommandModule
+    public sealed class AutoModeratorCommandModule : CommandModule
     {
-        ShittyShitShitterPlugin Plugin => (ShittyShitShitterPlugin) Context.Plugin;
+        AutoModeratorPlugin Plugin => (AutoModeratorPlugin) Context.Plugin;
 
         [Command("on", "Enable broadcasting.")]
         [Permission(MyPromoteLevel.Admin)]

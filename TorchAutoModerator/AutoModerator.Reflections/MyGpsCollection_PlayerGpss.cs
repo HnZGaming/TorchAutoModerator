@@ -6,7 +6,7 @@ using Sandbox.Game.Multiplayer;
 using Sandbox.Game.Screens.Helpers;
 using Torch.Utils;
 
-namespace TorchShittyShitShitter.Reflections
+namespace AutoModerator.Reflections
 {
     public static class MyGpsCollection_PlayerGpss
     {

@@ -1,7 +1,8 @@
 ﻿using System.Collections.Generic;
 using Sandbox.Game.Entities;
+using TorchShittyShitShitter.Core;
 
-namespace TorchShittyShitShitter.Core.Scanners
+namespace AutoModerator.Core.Scanners
 {
     /// <summary>
     /// Extract grids from profiler results to broadcast to online players.

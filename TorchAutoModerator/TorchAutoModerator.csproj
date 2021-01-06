@@ -7,7 +7,7 @@
         <ProjectGuid>{EC211AE3-0BED-46AF-B6D1-B8CE93F31009}</ProjectGuid>
         <OutputType>Library</OutputType>
         <AppDesignerFolder>Properties</AppDesignerFolder>
-        <AssemblyName>TorchShittyShitShitter</AssemblyName>
+        <AssemblyName>TorchAutoModerator</AssemblyName>
         <TargetFrameworkVersion>v4.7.1</TargetFrameworkVersion>
         <FileAlignment>512</FileAlignment>
     </PropertyGroup>
@@ -159,25 +159,25 @@
     </ItemGroup>
     <ItemGroup>
         <Compile Include="Properties\AssemblyInfo.cs" />
-        <Compile Include="TorchShittyShitShitter.Core.Scanners\FactionScanner.cs" />
-        <Compile Include="TorchShittyShitShitter.Core.Scanners\ILagScanner.cs" />
-        <Compile Include="TorchShittyShitShitter.Core.Scanners\ILagScannerConfig.cs" />
-        <Compile Include="TorchShittyShitShitter.Core.Scanners\SinglePlayerScanner.cs" />
-        <Compile Include="TorchShittyShitShitter.Core.Scanners\UnownedGridScanner.cs" />
-        <Compile Include="TorchShittyShitShitter.Core\EntityIdGpsCollection.cs" />
-        <Compile Include="TorchShittyShitShitter.Core\FactionMemberProfiler.cs" />
-        <Compile Include="TorchShittyShitShitter.Core\PersistentGpsHashStore.cs" />
-        <Compile Include="TorchShittyShitShitter.Core\LaggyGridGpsBroadcaster.cs" />
-        <Compile Include="TorchShittyShitShitter.Core\LaggyGridGpsMaker.cs" />
-        <Compile Include="TorchShittyShitShitter.Core\LaggyGridGpsDescriptionMaker.cs" />
-        <Compile Include="TorchShittyShitShitter.Core\LaggyGridReportBuffer.cs" />
-        <Compile Include="TorchShittyShitShitter.Core\LaggyGridFinder.cs" />
-        <Compile Include="TorchShittyShitShitter.Core\LaggyGridReport.cs" />
-        <Compile Include="TorchShittyShitShitter.Core\ServerLagObserver.cs" />
-        <Compile Include="TorchShittyShitShitter.Reflections\MyGpsCollection_PlayerGpss.cs" />
-        <Compile Include="TorchShittyShitShitter\ShittyShitShitterCommandModule.cs" />
-        <Compile Include="TorchShittyShitShitter\ShittyShitShitterConfig.cs" />
-        <Compile Include="TorchShittyShitShitter\ShittyShitShitterPlugin.cs" />
+        <Compile Include="AutoModerator.Core.Scanners\FactionScanner.cs" />
+        <Compile Include="AutoModerator.Core.Scanners\ILagScanner.cs" />
+        <Compile Include="AutoModerator.Core.Scanners\ILagScannerConfig.cs" />
+        <Compile Include="AutoModerator.Core.Scanners\SinglePlayerScanner.cs" />
+        <Compile Include="AutoModerator.Core.Scanners\UnownedGridScanner.cs" />
+        <Compile Include="AutoModerator.Core\EntityIdGpsCollection.cs" />
+        <Compile Include="AutoModerator.Core\FactionMemberProfiler.cs" />
+        <Compile Include="AutoModerator.Core\PersistentGpsHashStore.cs" />
+        <Compile Include="AutoModerator.Core\LaggyGridGpsBroadcaster.cs" />
+        <Compile Include="AutoModerator.Core\LaggyGridGpsMaker.cs" />
+        <Compile Include="AutoModerator.Core\LaggyGridGpsDescriptionMaker.cs" />
+        <Compile Include="AutoModerator.Core\LaggyGridReportBuffer.cs" />
+        <Compile Include="AutoModerator.Core\LaggyGridFinder.cs" />
+        <Compile Include="AutoModerator.Core\LaggyGridReport.cs" />
+        <Compile Include="AutoModerator.Core\ServerLagObserver.cs" />
+        <Compile Include="AutoModerator.Reflections\MyGpsCollection_PlayerGpss.cs" />
+        <Compile Include="AutoModerator\AutoModeratorCommandModule.cs" />
+        <Compile Include="AutoModerator\AutoModeratorConfig.cs" />
+        <Compile Include="AutoModerator\AutoModeratorPlugin.cs" />
         <Compile Include="Utils.General\AbsJsonConverter.cs" />
         <Compile Include="Utils.General\ActionDisposable.cs" />
         <Compile Include="Utils.General\ActionQueue.cs" />

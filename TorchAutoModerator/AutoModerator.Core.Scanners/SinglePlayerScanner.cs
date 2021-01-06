@@ -1,13 +1,13 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using NLog;
 using Sandbox.Game.Entities;
 using Sandbox.Game.World;
+using TorchShittyShitShitter.Core;
 using Utils.General;
 using Utils.Torch;
 
-namespace TorchShittyShitShitter.Core.Scanners
+namespace AutoModerator.Core.Scanners
 {
     public sealed class SinglePlayerScanner : ILagScanner
     {

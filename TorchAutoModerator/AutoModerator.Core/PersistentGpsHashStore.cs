@@ -2,8 +2,8 @@
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using AutoModerator.Reflections;
 using Sandbox.Game.World;
-using TorchShittyShitShitter.Reflections;
 
 namespace TorchShittyShitShitter.Core
 {

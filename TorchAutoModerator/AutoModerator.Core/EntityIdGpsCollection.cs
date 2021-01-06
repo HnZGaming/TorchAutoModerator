@@ -1,9 +1,9 @@
 ﻿using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using AutoModerator.Reflections;
 using Sandbox.Game.Multiplayer;
 using Sandbox.Game.Screens.Helpers;
 using Sandbox.Game.World;
-using TorchShittyShitShitter.Reflections;
 using Utils.Torch;
 
 namespace TorchShittyShitShitter.Core
