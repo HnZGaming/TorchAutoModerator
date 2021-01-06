@@ -178,6 +178,7 @@
         <Compile Include="Utils.General\ExpirationObserver.cs" />
         <Compile Include="Utils.General\DisposableCollection.cs" />
         <Compile Include="Utils.General\DisposableUtils.cs" />
+        <Compile Include="Utils.General\FileLoggingConfigurator.cs" />
         <Compile Include="Utils.General\LangUtils.cs" />
         <Compile Include="Utils.General\MathUtils.cs" />
         <Compile Include="Utils.General\ObjectPool.cs" />

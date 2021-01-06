@@ -14,8 +14,14 @@ namespace AutoModerator
         GridReporter.IConfig,
         ServerLagObserver.IConfig,
         GridReportDescriber.IConfig,
-        TargetPlayerCollector.IConfig, LaggyGridScanner.IConfig
+        TargetPlayerCollector.IConfig,
+        LaggyGridScanner.IConfig,
+        FileLoggingConfigurator.IConfig
     {
+        const string OpGroupName = "Auto Moderator";
+        const string LogGroupName = "Logging";
+        public const string DefaultLogFilePath = "Logs/AutoModerator-${shortdate}.log";
+
         double _firstIdleSeconds = 180;
         bool _enableBroadcasting = true;
         bool _adminsOnly = true;
@@ -29,7 +35,7 @@ namespace AutoModerator
         List<string> _exemptFactionTags = new List<string>();
 
         [XmlElement("EnableBroadcasting")]
-        [Display(Order = 0, Name = "Enable broadcasting")]
+        [Display(Order = 0, Name = "Enable broadcasting", GroupName = OpGroupName)]
         public bool EnableBroadcasting
         {
             get => _enableBroadcasting;
@@ -37,7 +43,7 @@ namespace AutoModerator
         }
 
         [XmlElement("EnableAdminsOnly")]
-        [Display(Order = 1, Name = "Broadcast to admins only")]
+        [Display(Order = 1, Name = "Broadcast to admins only", GroupName = OpGroupName)]
         public bool AdminsOnly
         {
             get => _adminsOnly;
@@ -45,7 +51,7 @@ namespace AutoModerator
         }
 
         [XmlElement("FirstIdleSeconds")]
-        [Display(Order = 2, Name = "First idle seconds")]
+        [Display(Order = 2, Name = "First idle seconds", GroupName = OpGroupName)]
         public double FirstIdleSeconds
         {
             get => _firstIdleSeconds;
@@ -53,7 +59,7 @@ namespace AutoModerator
         }
 
         [XmlElement("ThresholdMspf")]
-        [Display(Order = 3, Name = "Threshold ms/f per grid")]
+        [Display(Order = 3, Name = "Threshold ms/f per grid", GroupName = OpGroupName)]
         public float ThresholdMspf
         {
             get => _mspfThreshold;
@@ -61,7 +67,7 @@ namespace AutoModerator
         }
 
         [XmlElement("SimSpeedThreshold")]
-        [Display(Order = 4, Name = "Threshold sim speed")]
+        [Display(Order = 4, Name = "Threshold sim speed", GroupName = OpGroupName)]
         public double SimSpeedThreshold
         {
             get => _simSpeedThreshold;
@@ -69,7 +75,7 @@ namespace AutoModerator
         }
 
         [XmlElement("MaxLaggyGridCountPerScan")]
-        [Display(Order = 5, Name = "Max GPS count")]
+        [Display(Order = 5, Name = "Max GPS count", GroupName = OpGroupName)]
         public int MaxReportSizePerScan
         {
             get => _maxLaggyGridCountPerScan;
@@ -77,7 +83,7 @@ namespace AutoModerator
         }
 
         [XmlElement("BufferSeconds")]
-        [Display(Order = 6, Name = "Window time (seconds)")]
+        [Display(Order = 6, Name = "Window time (seconds)", GroupName = OpGroupName)]
         public double BufferSeconds
         {
             get => _bufferSeconds;
@@ -85,36 +91,48 @@ namespace AutoModerator
         }
 
         [XmlElement("ExemptNpcFactions")]
-        [Display(Order = 8, Name = "Exempt NPC factions")]
+        [Display(Order = 8, Name = "Exempt NPC factions", GroupName = OpGroupName)]
         public bool ReportNpcFactions
         {
             get => _exemptNpcFactions;
             set => SetValue(ref _exemptNpcFactions, value);
         }
 
-        [XmlElement("GpsDescriptionFormat")]
-        [Display(Order = 8, Name = "GPS description format")]
-        public string GpsDescriptionFormat
-        {
-            get => _gpsDescriptionFormat;
-            set => SetValue(ref _gpsDescriptionFormat, value);
-        }
-
         [XmlElement("ExemptFactionTags")]
-        [Display(Order = 10, Name = "Exempt faction tags")]
+        [Display(Order = 9, Name = "Exempt faction tags", GroupName = OpGroupName)]
         public List<string> ExemptFactionTags
         {
             get => _exemptFactionTags;
             set => SetValue(ref _exemptFactionTags, new HashSet<string>(value).ToList());
         }
 
+        [XmlElement("GpsDescriptionFormat")]
+        [Display(Order = 8, Name = "GPS description format", GroupName = OpGroupName)]
+        public string GpsDescriptionFormat
+        {
+            get => _gpsDescriptionFormat;
+            set => SetValue(ref _gpsDescriptionFormat, value);
+        }
+
         [XmlElement("MutedPlayerIds")]
-        [Display(Order = 11, Name = "Muted players")]
+        [Display(Order = 11, Name = "Muted players", GroupName = OpGroupName)]
         public List<ulong> MutedPlayerIds
         {
             get => _mutedPlayerIds;
             set => SetValue(ref _mutedPlayerIds, new HashSet<ulong>(value).ToList());
         }
+
+        [XmlElement("SuppressWpfOutput")]
+        [Display(Order = 12, Name = "Suppress Console Output", GroupName = LogGroupName)]
+        public bool SuppressWpfOutput { get; }
+
+        [XmlElement("EnableLoggingTrace")]
+        [Display(Order = 13, Name = "Enable Logging Trace", GroupName = LogGroupName)]
+        public bool EnableLoggingTrace { get; }
+
+        [XmlElement("LogFilePath")]
+        [Display(Order = 14, Name = "Log File Path", GroupName = LogGroupName)]
+        public string LogFilePath { get; }
 
         public TimeSpan WindowTime => BufferSeconds.Seconds();
         IEnumerable<ulong> TargetPlayerCollector.IConfig.MutedPlayers => _mutedPlayerIds;

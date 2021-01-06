@@ -23,6 +23,8 @@ namespace AutoModerator
         Persistent<AutoModeratorConfig> _config;
         UserControl _userControl;
         CancellationTokenSource _canceller;
+        FileLoggingConfigurator _fileLoggingConfigurator0;
+        FileLoggingConfigurator _fileLoggingConfigurator1;
 
         GridReportTimeSeries _gridReportTimeSeries;
         GridReporter _gridReporter;
@@ -48,6 +50,12 @@ namespace AutoModerator
             var configFilePath = this.MakeConfigFilePath();
             _config = Persistent<AutoModeratorConfig>.Load(configFilePath);
 
+            _fileLoggingConfigurator0 = new FileLoggingConfigurator("AutoModerator", "AutoModerator.*", AutoModeratorConfig.DefaultLogFilePath);
+            _fileLoggingConfigurator0.Initialize();
+
+            _fileLoggingConfigurator1 = new FileLoggingConfigurator("EntityGpsBroadcasters", "EntityGpsBroadcasters.*", AutoModeratorConfig.DefaultLogFilePath);
+            _fileLoggingConfigurator1.Initialize();
+
             _canceller = new CancellationTokenSource();
 
             var gpsHashFilePath = this.MakeFilePath("gpsHashes.txt");
@@ -60,6 +68,9 @@ namespace AutoModerator
             _gridReportGpsFactory = new GridReportGpsFactory(_gridReportDescriber);
             _targetPlayerCollector = new TargetPlayerCollector(Config);
             _serverLagObserver = new ServerLagObserver(Config, 5);
+
+            Config.PropertyChanged += (_, __) => OnConfigChanged();
+            OnConfigChanged();
         }
 
         void OnGameLoaded()
@@ -76,6 +87,12 @@ namespace AutoModerator
             _config?.Dispose();
             _canceller?.Cancel();
             _canceller?.Dispose();
+        }
+
+        void OnConfigChanged()
+        {
+            _fileLoggingConfigurator0.Reconfigure(Config);
+            _fileLoggingConfigurator1.Reconfigure(Config);
         }
 
         async Task MainLoop(CancellationToken canceller)
