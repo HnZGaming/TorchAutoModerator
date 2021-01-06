@@ -30,9 +30,13 @@ namespace AutoModerator
         float _mspfThreshold = 3.0f;
         double _simSpeedThreshold = 0.7;
         bool _exemptNpcFactions = true;
-        string _gpsDescriptionFormat = "The {rank} laggiest faction ({ratio}). Get 'em!";
+        string _gpsDescriptionFormat = "The {rank} laggiest grid. Get 'em!";
+        string _gpsNameFormat = "{grid} [{faction}] {ratio}";
         List<ulong> _mutedPlayerIds = new List<ulong>();
         List<string> _exemptFactionTags = new List<string>();
+        bool _suppressWpfOutput;
+        bool _enableLoggingTrace;
+        string _logFilePath = DefaultLogFilePath;
 
         [XmlElement("EnableBroadcasting")]
         [Display(Order = 0, Name = "Enable broadcasting", GroupName = OpGroupName)]
@@ -90,20 +94,12 @@ namespace AutoModerator
             set => SetValue(ref _bufferSeconds, value);
         }
 
-        [XmlElement("ExemptNpcFactions")]
-        [Display(Order = 8, Name = "Exempt NPC factions", GroupName = OpGroupName)]
-        public bool ReportNpcFactions
+        [XmlElement("GpsNameFormat")]
+        [Display(Order = 7, Name = "GPS name format", GroupName = OpGroupName)]
+        public string GpsNameFormat
         {
-            get => _exemptNpcFactions;
-            set => SetValue(ref _exemptNpcFactions, value);
-        }
-
-        [XmlElement("ExemptFactionTags")]
-        [Display(Order = 9, Name = "Exempt faction tags", GroupName = OpGroupName)]
-        public List<string> ExemptFactionTags
-        {
-            get => _exemptFactionTags;
-            set => SetValue(ref _exemptFactionTags, new HashSet<string>(value).ToList());
+            get => _gpsNameFormat;
+            set => SetValue(ref _gpsNameFormat, value);
         }
 
         [XmlElement("GpsDescriptionFormat")]
@@ -114,8 +110,24 @@ namespace AutoModerator
             set => SetValue(ref _gpsDescriptionFormat, value);
         }
 
+        [XmlElement("ExemptNpcFactions")]
+        [Display(Order = 9, Name = "Exempt NPC factions", GroupName = OpGroupName)]
+        public bool ReportNpcFactions
+        {
+            get => _exemptNpcFactions;
+            set => SetValue(ref _exemptNpcFactions, value);
+        }
+
+        [XmlElement("ExemptFactionTags")]
+        [Display(Order = 10, Name = "Exempt faction tags", GroupName = OpGroupName)]
+        public List<string> ExemptFactionTags
+        {
+            get => _exemptFactionTags;
+            set => SetValue(ref _exemptFactionTags, new HashSet<string>(value).ToList());
+        }
+
         [XmlElement("MutedPlayerIds")]
-        [Display(Order = 11, Name = "Muted players", GroupName = OpGroupName)]
+        [Display(Order = 12, Name = "Muted players", GroupName = OpGroupName)]
         public List<ulong> MutedPlayerIds
         {
             get => _mutedPlayerIds;
@@ -124,17 +136,29 @@ namespace AutoModerator
 
         [XmlElement("SuppressWpfOutput")]
         [Display(Order = 12, Name = "Suppress Console Output", GroupName = LogGroupName)]
-        public bool SuppressWpfOutput { get; }
+        public bool SuppressWpfOutput
+        {
+            get => _suppressWpfOutput;
+            set => SetValue(ref _suppressWpfOutput, value);
+        }
 
         [XmlElement("EnableLoggingTrace")]
         [Display(Order = 13, Name = "Enable Logging Trace", GroupName = LogGroupName)]
-        public bool EnableLoggingTrace { get; }
+        public bool EnableLoggingTrace
+        {
+            get => _enableLoggingTrace;
+            set => SetValue(ref _enableLoggingTrace, value);
+        }
 
         [XmlElement("LogFilePath")]
         [Display(Order = 14, Name = "Log File Path", GroupName = LogGroupName)]
-        public string LogFilePath { get; }
+        public string LogFilePath
+        {
+            get => _logFilePath;
+            set => SetValue(ref _logFilePath, value);
+        }
 
-        public TimeSpan WindowTime => BufferSeconds.Seconds();
+        TimeSpan LaggyGridScanner.IConfig.WindowTime => BufferSeconds.Seconds();
         IEnumerable<ulong> TargetPlayerCollector.IConfig.MutedPlayers => _mutedPlayerIds;
         IEnumerable<string> GridReporter.IConfig.ExemptFactionTags => _exemptFactionTags;
 

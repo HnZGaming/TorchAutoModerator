@@ -86,7 +86,7 @@ namespace AutoModerator.Core
                 coords = grid.PositionComp.GetPosition(),
                 showOnHud = true,
                 color = Color.Purple,
-                description = _describer.Describe(report, rank),
+                description = _describer.MakeDescription(report, rank),
             });
 
             gps.SetEntity(grid);

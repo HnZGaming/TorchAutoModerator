@@ -114,7 +114,7 @@ namespace AutoModerator
                     _gridReportTimeSeries.AddReports(gridReports);
 
                     // drop old data
-                    var thresholdTimestamp = DateTime.UtcNow - Config.WindowTime; // long enough
+                    var thresholdTimestamp = DateTime.UtcNow - Config.BufferSeconds.Seconds(); // long enough
                     _gridReportTimeSeries.RemoveReportsOlderThan(thresholdTimestamp);
 
                     if (Config.EnableBroadcasting)

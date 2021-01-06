@@ -4,6 +4,7 @@
     {
         public interface IConfig
         {
+            string GpsNameFormat { get; }
             string GpsDescriptionFormat { get; }
         }
 
@@ -14,7 +15,20 @@
             _config = config;
         }
 
-        public string Describe(GridReport report, int rank)
+        public string MakeName(GridReport report, int rank)
+        {
+            var mspfRatio = report.ThresholdNormal * 100;
+            var rankStr = RankToString(rank);
+
+            return _config.GpsNameFormat
+                .Replace("{grid}", report.GridName)
+                .Replace("{player}", report.PlayerNameOrNull ?? "<none>")
+                .Replace("{faction}", report.FactionTagOrNull ?? "<none>")
+                .Replace("{ratio}", $"{mspfRatio:0}%")
+                .Replace("{rank}", rankStr);
+        }
+
+        public string MakeDescription(GridReport report, int rank)
         {
             var mspfRatio = report.ThresholdNormal * 100;
             var rankStr = RankToString(rank);
