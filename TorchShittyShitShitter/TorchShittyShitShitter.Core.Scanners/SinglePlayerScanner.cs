@@ -51,7 +51,7 @@ namespace TorchShittyShitShitter.Core.Scanners
                 if (playerMspf > _config.MspfPerOnlineGroupMember) // laggy single player!
                 {
                     var (topGrid, _) = grids[0];
-                    var playerName = VRageUtils.TryGetPlayerById(ownerId, out var p) ? p.DisplayName : null;
+                    var playerName = MySession.Static.Players.TryGetPlayerById(ownerId, out var p) ? p.DisplayName : null;
 
                     var report = new LaggyGridReport(
                         topGrid.EntityId,
