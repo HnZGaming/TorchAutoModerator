@@ -18,17 +18,17 @@ namespace AutoModerator.Core
     /// <summary>
     /// Create GPS entities for laggy grids.
     /// </summary>
-    public sealed class GridReportGpsFactory
+    public sealed class GridLagReportGpsFactory
     {
         static readonly ILogger Log = LogManager.GetCurrentClassLogger();
-        readonly GridReportDescriber _describer;
+        readonly GridLagReportDescriber _describer;
 
-        public GridReportGpsFactory(GridReportDescriber describer)
+        public GridLagReportGpsFactory(GridLagReportDescriber describer)
         {
             _describer = describer;
         }
 
-        public async Task<IEnumerable<MyGps>> CreateGpss(IEnumerable<GridReport> gridReports, CancellationToken canceller)
+        public async Task<IEnumerable<MyGps>> CreateGpss(IEnumerable<GridLagReport> gridReports, CancellationToken canceller)
         {
             // MyGps can be created in the game loop only (idk why)
             await GameLoopObserver.MoveToGameLoop(canceller);
@@ -47,7 +47,7 @@ namespace AutoModerator.Core
             return gpsCollection;
         }
 
-        bool TryCreateGps(GridReport report, int rank, out MyGps gps)
+        bool TryCreateGps(GridLagReport report, int rank, out MyGps gps)
         {
             // must be called in the game loop
             if (Thread.CurrentThread.ManagedThreadId !=
@@ -76,8 +76,8 @@ namespace AutoModerator.Core
             }
 
             var grid = (MyCubeGrid) entity;
-            var mspfRatio = $"{report.ThresholdNormal * 100:0}%";
-            var name = $"{grid.DisplayName} ({mspfRatio})";
+            var name = _describer.MakeName(report, rank);
+            var description = _describer.MakeDescription(report, rank);
 
             gps = new MyGps(new MyObjectBuilder_Gps.Entry
             {
@@ -86,7 +86,7 @@ namespace AutoModerator.Core
                 coords = grid.PositionComp.GetPosition(),
                 showOnHud = true,
                 color = Color.Purple,
-                description = _describer.MakeDescription(report, rank),
+                description = description,
             });
 
             gps.SetEntity(grid);

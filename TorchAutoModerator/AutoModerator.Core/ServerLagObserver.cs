@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -18,26 +19,26 @@ namespace AutoModerator.Core
         }
 
         readonly IConfig _config;
-        readonly int _bufferSeconds;
+        readonly TimeSpan _buffer;
         readonly Queue<double> _timeline;
 
-        public ServerLagObserver(IConfig config, int bufferSeconds)
+        public ServerLagObserver(IConfig config, TimeSpan buffer)
         {
             _config = config;
-            _bufferSeconds = bufferSeconds;
+            _buffer = buffer;
             _timeline = new Queue<double>();
         }
 
         public bool IsLaggy { get; private set; }
 
-        public async Task LoopObserving(CancellationToken canceller)
+        public async Task Observe(CancellationToken canceller)
         {
             while (!canceller.IsCancellationRequested)
             {
                 var ss = Sync.ServerSimulationRatio;
                 _timeline.Enqueue(ss);
 
-                while (_timeline.Count > _bufferSeconds)
+                while (_timeline.Count > _buffer.TotalSeconds)
                 {
                     _timeline.TryDequeue(out _);
                 }

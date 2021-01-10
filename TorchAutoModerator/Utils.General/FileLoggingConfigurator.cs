@@ -5,7 +5,7 @@ using Utils.Torch;
 
 namespace Utils.General
 {
-    internal class FileLoggingConfigurator
+    internal sealed class FileLoggingConfigurator
     {
         public interface IConfig
         {

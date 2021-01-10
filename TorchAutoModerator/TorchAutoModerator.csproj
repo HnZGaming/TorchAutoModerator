@@ -158,14 +158,16 @@
         </Reference>
     </ItemGroup>
     <ItemGroup>
-        <Compile Include="AutoModerator.Core\GridReportDescriber.cs" />
-        <Compile Include="AutoModerator.Core\GridReportGpsFactory.cs" />
-        <Compile Include="AutoModerator.Core\LaggyGridScanner.cs" />
-        <Compile Include="AutoModerator.Core\TargetPlayerCollector.cs" />
+        <Compile Include="AutoModerator.Core\GridLagProfileTimeline.cs" />
+        <Compile Include="AutoModerator.Core\GridLagReport.cs" />
+        <Compile Include="AutoModerator.Core\GridLagReportDescriber.cs" />
+        <Compile Include="AutoModerator.Core\GridLagReportGpsFactory.cs" />
+        <Compile Include="AutoModerator.Core\GridLagProfileTimeSeries.cs" />
+        <Compile Include="AutoModerator.Core\BroadcastReceiverCollector.cs" />
+        <Compile Include="AutoModerator.Core\Utils.cs" />
         <Compile Include="Properties\AssemblyInfo.cs" />
-        <Compile Include="AutoModerator.Core\GridReportTimeSeries.cs" />
-        <Compile Include="AutoModerator.Core\GridReporter.cs" />
-        <Compile Include="AutoModerator.Core\GridReport.cs" />
+        <Compile Include="AutoModerator.Core\GridLagProfiler.cs" />
+        <Compile Include="AutoModerator.Core\GridLagProfileResult.cs" />
         <Compile Include="AutoModerator.Core\ServerLagObserver.cs" />
         <Compile Include="AutoModerator\AutoModeratorCommandModule.cs" />
         <Compile Include="AutoModerator\AutoModeratorConfig.cs" />
@@ -182,12 +184,15 @@
         <Compile Include="Utils.General\LangUtils.cs" />
         <Compile Include="Utils.General\MathUtils.cs" />
         <Compile Include="Utils.General\ObjectPool.cs" />
-        <Compile Include="Utils.General\TimeSeries.cs" />
         <Compile Include="Utils.General\ReflectionUtils.cs" />
         <Compile Include="Utils.General\StringFloatConverter.cs" />
         <Compile Include="Utils.General\StupidDb.cs" />
         <Compile Include="Utils.General\TaskUtils.cs" />
         <Compile Include="Utils.General\ThreadSafeThrottle.cs" />
+        <Compile Include="Utils.General\TimeSerieses\ITimeSeries.cs" />
+        <Compile Include="Utils.General\TimeSerieses\TaggedTimeSeries.cs" />
+        <Compile Include="Utils.General\TimeSerieses\TimeSeries.cs" />
+        <Compile Include="Utils.General\TimeSerieses\TimestampComparer.cs" />
         <Compile Include="Utils.Torch\CommandErrorResponseGenerator.cs" />
         <Compile Include="Utils.Torch\CommandOption.cs" />
         <Compile Include="Utils.Torch\GameLoopObserver.cs" />

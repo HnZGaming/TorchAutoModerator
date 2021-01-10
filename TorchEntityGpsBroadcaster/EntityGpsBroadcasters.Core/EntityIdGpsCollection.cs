@@ -12,7 +12,7 @@ namespace EntityGpsBroadcasters.Core
     /// Intended to properly identify GPS entities whose
     /// hash is not useful (eg. when their name has to change).
     /// </summary>
-    internal sealed class EntityIdGpsCollection
+    public sealed class EntityIdGpsCollection
     {
         readonly Dictionary<long, int> _gridIdToGpsHashMap;
 
@@ -24,27 +24,27 @@ namespace EntityGpsBroadcasters.Core
         static MyGpsCollection GpsCollection => MySession.Static.Gpss;
 
         [MethodImpl(MethodImplOptions.Synchronized)]
-        public void SendAddOrModifyGps(IEnumerable<long> identityIds, MyGps gps)
+        public void SendAddOrModifyGps(IEnumerable<long> receiverIds, MyGps gps)
         {
-            var identityIdSet = new HashSet<long>(identityIds);
+            var receiverIdSet = new HashSet<long>(receiverIds);
 
             var deletedGpss = GpsCollection.Where((i, g) =>
-                identityIdSet.Contains(i) &&
+                receiverIdSet.Contains(i) &&
                 _gridIdToGpsHashMap.ContainsKey(g.EntityId) &&
                 g.EntityId == gps.EntityId);
 
-            var oldIdentityIds = new HashSet<long>();
+            var oldReceiverIds = new HashSet<long>();
 
-            foreach (var (identityId, deletedGps) in deletedGpss)
+            foreach (var (oldReceiverId, deletedGps) in deletedGpss)
             {
-                GpsCollection.SendDelete(identityId, deletedGps.Hash);
-                oldIdentityIds.Add(identityId);
+                GpsCollection.SendDelete(oldReceiverId, deletedGps.Hash);
+                oldReceiverIds.Add(oldReceiverId);
             }
 
-            foreach (var identityId in identityIdSet)
+            foreach (var receiverId in receiverIdSet)
             {
-                var playSound = !oldIdentityIds.Contains(identityId);
-                GpsCollection.SendAddGps(identityId, gps, playSound);
+                var playSound = !oldReceiverIds.Contains(receiverId);
+                GpsCollection.SendAddGps(receiverId, gps, playSound);
             }
 
             _gridIdToGpsHashMap[gps.EntityId] = gps.Hash;

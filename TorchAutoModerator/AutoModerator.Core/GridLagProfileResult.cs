@@ -5,12 +5,9 @@ using VRage.Game.ModAPI;
 
 namespace AutoModerator.Core
 {
-    /// <summary>
-    /// Carry around a profiled grid's metadata.
-    /// </summary>
-    public class GridReport
+    public sealed class GridLagProfileResult
     {
-        public GridReport(long gridId,
+        GridLagProfileResult(long gridId,
             double thresholdNormal,
             string gridName,
             string factionTag = null,
@@ -29,18 +26,12 @@ namespace AutoModerator.Core
         public string FactionTagOrNull { get; }
         public string PlayerNameOrNull { get; }
 
-        public GridReport WithThresholdNormal(double thresholdNormal)
-        {
-            return new GridReport(GridId, thresholdNormal, GridName, FactionTagOrNull, PlayerNameOrNull);
-        }
-
         public override string ToString()
         {
-            var name = FactionTagOrNull ?? PlayerNameOrNull ?? GridName;
-            return $"\"{name}\" (\"{GridName}\"), {ThresholdNormal * 100f:0.00}%";
+            return $"\"{GridName}\" {ThresholdNormal * 100f:0.00}% [{FactionTagOrNull}] {PlayerNameOrNull}";
         }
 
-        public static GridReport FromGrid(IMyCubeGrid grid, double thresholdNormal)
+        public static GridLagProfileResult FromGrid(IMyCubeGrid grid, double thresholdNormal)
         {
             var playerName = (string) null;
 
@@ -53,7 +44,7 @@ namespace AutoModerator.Core
             var faction = MySession.Static.Factions.GetPlayerFaction(playerId);
             var factionTag = faction?.Tag;
 
-            return new GridReport(grid.EntityId, thresholdNormal, grid.DisplayName, factionTag, playerName);
+            return new GridLagProfileResult(grid.EntityId, thresholdNormal, grid.DisplayName, factionTag, playerName);
         }
     }
 }

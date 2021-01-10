@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using NLog;
@@ -46,6 +47,13 @@ namespace Utils.General
                     // ignored
                 }
             }, canceller);
+        }
+
+        public static Task SpendAtLeast(Stopwatch stopwatch, TimeSpan timeSpan, CancellationToken canceller = default)
+        {
+            var n = (timeSpan - stopwatch.Elapsed).Milliseconds;
+            var m = Math.Max(n, 0);
+            return Task.Delay(TimeSpan.FromMilliseconds(m), canceller);
         }
     }
 }

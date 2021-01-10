@@ -31,7 +31,7 @@ namespace EntityGpsBroadcasters.Core
         }
 
         [MethodImpl(MethodImplOptions.Synchronized)]
-        public void SendAdd(IEnumerable<MyGps> gpss, IEnumerable<long> players)
+        public void SendAddOrModify(IEnumerable<MyGps> gpss, IEnumerable<long> players)
         {
             foreach (var gps in gpss)
             {

@@ -2,7 +2,7 @@
 
 namespace Utils.Torch
 {
-    internal class CommandOption
+    internal sealed class CommandOption
     {
         public const string Prefix = "-";
         static readonly Regex _optionRegex = new Regex($@"{Prefix}(\w+?)=(.+?)(?: |$)");

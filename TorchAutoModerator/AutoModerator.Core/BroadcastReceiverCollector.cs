@@ -5,7 +5,7 @@ using Utils.Torch;
 
 namespace AutoModerator.Core
 {
-    public sealed class TargetPlayerCollector
+    public sealed class BroadcastReceiverCollector
     {
         public interface IConfig
         {
@@ -24,12 +24,12 @@ namespace AutoModerator.Core
 
         readonly IConfig _config;
 
-        public TargetPlayerCollector(IConfig config)
+        public BroadcastReceiverCollector(IConfig config)
         {
             _config = config;
         }
 
-        public IEnumerable<long> GetTargetPlayerIds()
+        public IEnumerable<long> GetReceiverIds()
         {
             var targetPlayers = new List<long>();
             var mutedPlayerIds = new HashSet<ulong>(_config.MutedPlayers);

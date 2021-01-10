@@ -11,24 +11,28 @@ namespace AutoModerator
 {
     public sealed class AutoModeratorConfig :
         ViewModel,
-        GridReporter.IConfig,
+        GridLagProfiler.IConfig,
         ServerLagObserver.IConfig,
-        GridReportDescriber.IConfig,
-        TargetPlayerCollector.IConfig,
-        LaggyGridScanner.IConfig,
-        FileLoggingConfigurator.IConfig
+        GridLagReportDescriber.IConfig,
+        BroadcastReceiverCollector.IConfig,
+        FileLoggingConfigurator.IConfig,
+        GridLagProfileTimeSeries.IConfig
     {
         const string OpGroupName = "Auto Moderator";
+        const string AutoBroadcastGroupName = "Auto Sample & Broadcast";
         const string LogGroupName = "Logging";
         public const string DefaultLogFilePath = "Logs/AutoModerator-${shortdate}.log";
 
-        double _firstIdleSeconds = 180;
+        double _firstIdle = 180;
         bool _enableBroadcasting = true;
+        bool _enableAutoBroadcasting = true;
         bool _adminsOnly = true;
         int _maxLaggyGridCountPerScan = 3;
-        double _bufferSeconds = 300d;
-        float _mspfThreshold = 3.0f;
+        double _window = 300d;
+        double _minLifespan = 600d;
+        double _mspfThreshold = 3.0f;
         double _simSpeedThreshold = 0.7;
+        double _sampleFrequency = 5;
         bool _exemptNpcFactions = true;
         string _gpsDescriptionFormat = "The {rank} laggiest grid. Get 'em!";
         string _gpsNameFormat = "{grid} [{faction}] {ratio}";
@@ -46,6 +50,14 @@ namespace AutoModerator
             set => SetValue(ref _enableBroadcasting, value);
         }
 
+        [XmlElement("EnableAutoBroadcasting")]
+        [Display(Order = 0, Name = "Enable auto sample & broadcast", GroupName = AutoBroadcastGroupName)]
+        public bool EnableAutoBroadcasting
+        {
+            get => _enableAutoBroadcasting;
+            set => SetValue(ref _enableAutoBroadcasting, value);
+        }
+
         [XmlElement("EnableAdminsOnly")]
         [Display(Order = 1, Name = "Broadcast to admins only", GroupName = OpGroupName)]
         public bool AdminsOnly
@@ -55,23 +67,23 @@ namespace AutoModerator
         }
 
         [XmlElement("FirstIdleSeconds")]
-        [Display(Order = 2, Name = "First idle seconds", GroupName = OpGroupName)]
-        public double FirstIdleSeconds
+        [Display(Order = 2, Name = "First idle seconds", GroupName = AutoBroadcastGroupName)]
+        public double FirstIdle
         {
-            get => _firstIdleSeconds;
-            set => SetValue(ref _firstIdleSeconds, value);
+            get => _firstIdle;
+            set => SetValue(ref _firstIdle, value);
         }
 
         [XmlElement("ThresholdMspf")]
         [Display(Order = 3, Name = "Threshold ms/f per grid", GroupName = OpGroupName)]
-        public float ThresholdMspf
+        public double ThresholdMspf
         {
             get => _mspfThreshold;
             set => SetValue(ref _mspfThreshold, Math.Max(value, 0.001f));
         }
 
         [XmlElement("SimSpeedThreshold")]
-        [Display(Order = 4, Name = "Threshold sim speed", GroupName = OpGroupName)]
+        [Display(Order = 4, Name = "Threshold sim speed", GroupName = AutoBroadcastGroupName)]
         public double SimSpeedThreshold
         {
             get => _simSpeedThreshold;
@@ -79,23 +91,39 @@ namespace AutoModerator
         }
 
         [XmlElement("MaxLaggyGridCountPerScan")]
-        [Display(Order = 5, Name = "Max GPS count", GroupName = OpGroupName)]
-        public int MaxReportSizePerScan
+        [Display(Order = 5, Name = "Max GPS count", GroupName = AutoBroadcastGroupName)]
+        public int MaxReportedGridCount
         {
             get => _maxLaggyGridCountPerScan;
             set => SetValue(ref _maxLaggyGridCountPerScan, value);
         }
 
-        [XmlElement("BufferSeconds")]
-        [Display(Order = 6, Name = "Window time (seconds)", GroupName = OpGroupName)]
-        public double BufferSeconds
+        [XmlElement("SampleFrequencySeconds")]
+        [Display(Order = 5, Name = "Sample frequency (seconds)", GroupName = AutoBroadcastGroupName)]
+        public double SampleFrequency
         {
-            get => _bufferSeconds;
-            set => SetValue(ref _bufferSeconds, value);
+            get => _sampleFrequency;
+            set => SetValue(ref _sampleFrequency, value);
+        }
+
+        [XmlElement("BufferSeconds")]
+        [Display(Order = 6, Name = "Sample time (seconds)", GroupName = AutoBroadcastGroupName)]
+        public double Window
+        {
+            get => _window;
+            set => SetValue(ref _window, value);
+        }
+
+        [XmlElement("MinLifespanSeconds")]
+        [Display(Order = 7, Name = "Broadcast time (seconds)", GroupName = AutoBroadcastGroupName)]
+        public double MinLifespan
+        {
+            get => _minLifespan;
+            set => SetValue(ref _minLifespan, value);
         }
 
         [XmlElement("GpsNameFormat")]
-        [Display(Order = 7, Name = "GPS name format", GroupName = OpGroupName)]
+        [Display(Order = 8, Name = "GPS name format", GroupName = OpGroupName)]
         public string GpsNameFormat
         {
             get => _gpsNameFormat;
@@ -103,23 +131,23 @@ namespace AutoModerator
         }
 
         [XmlElement("GpsDescriptionFormat")]
-        [Display(Order = 8, Name = "GPS description format", GroupName = OpGroupName)]
+        [Display(Order = 9, Name = "GPS description format", GroupName = OpGroupName)]
         public string GpsDescriptionFormat
         {
             get => _gpsDescriptionFormat;
             set => SetValue(ref _gpsDescriptionFormat, value);
         }
 
-        [XmlElement("ExemptNpcFactions")]
-        [Display(Order = 9, Name = "Exempt NPC factions", GroupName = OpGroupName)]
-        public bool ReportNpcFactions
+        [XmlElement("IgnoreNpcFactions")]
+        [Display(Order = 10, Name = "Ignore NPC factions", GroupName = OpGroupName)]
+        public bool IgnoreNpcFactions
         {
             get => _exemptNpcFactions;
             set => SetValue(ref _exemptNpcFactions, value);
         }
 
         [XmlElement("ExemptFactionTags")]
-        [Display(Order = 10, Name = "Exempt faction tags", GroupName = OpGroupName)]
+        [Display(Order = 11, Name = "Exempt faction tags", GroupName = OpGroupName)]
         public List<string> ExemptFactionTags
         {
             get => _exemptFactionTags;
@@ -158,9 +186,8 @@ namespace AutoModerator
             set => SetValue(ref _logFilePath, value);
         }
 
-        TimeSpan LaggyGridScanner.IConfig.WindowTime => BufferSeconds.Seconds();
-        IEnumerable<ulong> TargetPlayerCollector.IConfig.MutedPlayers => _mutedPlayerIds;
-        IEnumerable<string> GridReporter.IConfig.ExemptFactionTags => _exemptFactionTags;
+        IEnumerable<ulong> BroadcastReceiverCollector.IConfig.MutedPlayers => _mutedPlayerIds;
+        IEnumerable<string> GridLagProfiler.IConfig.ExemptFactionTags => _exemptFactionTags;
 
         public void AddMutedPlayer(ulong mutedPlayerId)
         {
