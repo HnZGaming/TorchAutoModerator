@@ -103,6 +103,11 @@ namespace Utils.Torch
             return onlinePlayer.PromoteLevel == MyPromoteLevel.None;
         }
 
+        public static bool IsAdmin(this IMyPlayer onlinePlayer)
+        {
+            return onlinePlayer.PromoteLevel == MyPromoteLevel.Admin;
+        }
+
         public static ulong GetAdminSteamId()
         {
             if (!MySandboxGame.ConfigDedicated.Administrators.TryGetFirst(out var adminSteamIdStr)) return 0L;
