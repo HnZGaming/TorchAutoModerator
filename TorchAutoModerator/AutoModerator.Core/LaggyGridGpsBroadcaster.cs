@@ -77,7 +77,7 @@ namespace AutoModerator.Core
             foreach (var onlinePlayer in onlinePlayers)
             {
                 if (mutedPlayerIds.Contains(onlinePlayer.SteamId())) continue;
-                if (_config.AdminsOnly && onlinePlayer.IsNormalPlayer()) continue;
+                if (_config.AdminsOnly && !onlinePlayer.IsAdmin()) continue;
 
                 targetPlayers.Add(onlinePlayer.Identity.IdentityId);
             }
