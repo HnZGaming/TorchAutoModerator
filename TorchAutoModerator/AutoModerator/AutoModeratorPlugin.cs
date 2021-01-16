@@ -1,20 +1,21 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Controls;
 using AutoModerator.Core;
-using EntityGpsBroadcasters.Core;
 using NLog;
 using Profiler.Basics;
 using Profiler.Core;
 using Sandbox.Game.Screens.Helpers;
+using Sandbox.Game.World;
 using Torch;
 using Torch.API;
 using Torch.API.Plugins;
+using TorchEntityGpsBroadcaster.Core;
 using Utils.General;
 using Utils.Torch;
 
@@ -27,17 +28,15 @@ namespace AutoModerator
         Persistent<AutoModeratorConfig> _config;
         UserControl _userControl;
         CancellationTokenSource _canceller;
-        FileLoggingConfigurator _fileLoggingConfigurator0;
-        FileLoggingConfigurator _fileLoggingConfigurator1;
+        FileLoggingConfigurator _fileLoggingConfigurator;
 
-        GridLagProfileTimeSeries _lagTimeSeries;
-        GridLagReportGpsFactory _gpsFactory;
-        GridLagReportDescriber _gpsDescriber;
-        BroadcastReceiverCollector _gpsReceivers;
-        EntityGpsBroadcaster _gpsBroadcaster;
+        EntityLagTimeSeries _lagTimeSeries;
+        Dictionary<long, GridLagProfileResult> _referenceProfileResults;
+        LifespanCollection<long> _autoBroadcastableGridIds;
+        LifespanCollection<long> _manualBroadcastableGridIds;
+        BroadcastListenerCollection _players;
+        EntityIdGpsCollection _gpsCollection;
         ServerLagObserver _lagObserver;
-        ConcurrentDictionary<long, GridLagReport> _lastAutoGrids;
-        GridLagProfileTimeline _manualGrids;
 
         public AutoModeratorConfig Config => _config.Data;
 
@@ -53,92 +52,52 @@ namespace AutoModerator
 
             var configFilePath = this.MakeConfigFilePath();
             _config = Persistent<AutoModeratorConfig>.Load(configFilePath);
-            Config.PropertyChanged += (_, arg) => OnConfigChanged(arg.PropertyName).Forget(Log);
+            Config.PropertyChanged += OnConfigChanged;
 
-            _fileLoggingConfigurator0 = new FileLoggingConfigurator("AutoModerator", "AutoModerator.*", AutoModeratorConfig.DefaultLogFilePath);
-            _fileLoggingConfigurator0.Initialize();
-            _fileLoggingConfigurator0.Reconfigure(Config);
+            _fileLoggingConfigurator = new FileLoggingConfigurator(
+                "AutoModerator",
+                new[] {"AutoModerator.*", "Utils.EntityGps.*"},
+                AutoModeratorConfig.DefaultLogFilePath);
 
-            _fileLoggingConfigurator1 = new FileLoggingConfigurator("EntityGpsBroadcasters", "EntityGpsBroadcasters.*", AutoModeratorConfig.DefaultLogFilePath);
-            _fileLoggingConfigurator1.Initialize();
-            _fileLoggingConfigurator1.Reconfigure(Config);
+            _fileLoggingConfigurator.Initialize();
+            _fileLoggingConfigurator.Configure(Config);
 
             _canceller = new CancellationTokenSource();
 
-            var gpsHashFilePath = this.MakeFilePath("gpsHashes.txt");
-            _gpsBroadcaster = new EntityGpsBroadcaster(gpsHashFilePath);
-            _lagTimeSeries = new GridLagProfileTimeSeries(Config);
-            _gpsDescriber = new GridLagReportDescriber(Config);
-            _gpsFactory = new GridLagReportGpsFactory(_gpsDescriber);
-            _gpsReceivers = new BroadcastReceiverCollector(Config);
-            _lagObserver = new ServerLagObserver(Config, 5.Seconds());
-            _lastAutoGrids = new ConcurrentDictionary<long, GridLagReport>();
-            _manualGrids = new GridLagProfileTimeline();
+            _lagTimeSeries = new EntityLagTimeSeries(Config);
+            _referenceProfileResults = new Dictionary<long, GridLagProfileResult>();
+            _players = new BroadcastListenerCollection(Config);
+            _gpsCollection = new EntityIdGpsCollection("! ");
+            _lagObserver = new ServerLagObserver(5.Seconds());
+            _manualBroadcastableGridIds = new LifespanCollection<long>();
+            _autoBroadcastableGridIds = new LifespanCollection<long>();
         }
 
         void OnGameLoaded()
         {
-            _gpsBroadcaster.SendDeleteAllTrackedGpss();
-
-            var canceller = _canceller.Token;
-            TaskUtils.RunUntilCancelledAsync(MainLoop, canceller).Forget(Log);
-            TaskUtils.RunUntilCancelledAsync(_lagObserver.Observe, canceller).Forget(Log);
+            TaskUtils.RunUntilCancelledAsync(Main, _canceller.Token).Forget(Log);
+            TaskUtils.RunUntilCancelledAsync(_lagObserver.Observe, _canceller.Token).Forget(Log);
         }
 
         void OnGameUnloading()
         {
+            Config.PropertyChanged -= OnConfigChanged;
             _config?.Dispose();
             _canceller?.Cancel();
             _canceller?.Dispose();
         }
 
-        async Task OnConfigChanged(string propertyName)
+        void OnConfigChanged(object _, PropertyChangedEventArgs args)
         {
-            _fileLoggingConfigurator0.Reconfigure(Config);
-            _fileLoggingConfigurator1.Reconfigure(Config);
-
-            await TaskUtils.MoveToThreadPool();
-
-            if (propertyName == nameof(Config.EnableAutoBroadcasting) &&
-                !Config.EnableBroadcasting)
-            {
-                _gpsBroadcaster.SendDeleteAllTrackedGpss();
-            }
-
-            if (propertyName == nameof(Config.EnableAutoBroadcasting) &&
-                !Config.EnableAutoBroadcasting)
-            {
-                // delete auto-broadcasted GPSs
-                _gpsBroadcaster.SendDelete(_lastAutoGrids.Keys);
-                _lastAutoGrids.Clear();
-            }
-
-            if (propertyName == nameof(Config.AdminsOnly) ||
-                propertyName == nameof(Config.MutedPlayerIds))
-            {
-                _manualGrids.RemoveExpired(DateTime.UtcNow);
-
-                // collect the present GPSs
-                var presentReports = new Dictionary<long, GridLagReport>();
-                presentReports.AddRange(_lastAutoGrids);
-                presentReports.AddRange(_manualGrids.MakeReports(DateTime.UtcNow).ToDictionary(r => r.GridId));
-
-                // delete all present GPSs
-                _gpsBroadcaster.SendDelete(presentReports.Keys);
-
-                // broadcast the same GPSs again with an updated set of receivers
-                var gpss = await _gpsFactory.CreateGpss(presentReports.Values, _canceller.Token);
-                var receiverIds = _gpsReceivers.GetReceiverIds();
-                _gpsBroadcaster.SendAddOrModify(gpss, receiverIds);
-            }
+            _fileLoggingConfigurator.Configure(Config);
         }
 
-        async Task MainLoop(CancellationToken canceller)
+        async Task Main(CancellationToken canceller)
         {
-            Log.Info("Started collector loop");
+            Log.Info("started collector loop");
 
             // clear all GPS entities from the last session
-            _gpsBroadcaster.SendDeleteAllTrackedGpss();
+            _gpsCollection.SendDeleteUntrackedGpss();
 
             // Wait for some time during the session startup
             await Task.Delay(Config.FirstIdle.Seconds(), canceller);
@@ -147,86 +106,117 @@ namespace AutoModerator
             {
                 var stopwatch = Stopwatch.StartNew();
 
-                // profile grids & append into the time series
+                // auto profile
                 var mask = new GameEntityMask(null, null, null);
                 using (var profiler = new GridLagProfiler(Config, mask))
                 using (ProfilerResultQueue.Profile(profiler))
                 {
                     profiler.MarkStart();
+                    Log.Debug("auto-profiling...");
 
-                    var profilingTime = Config.SampleFrequency.Seconds();
+                    var profilingTime = Config.ProfileTime.Seconds();
                     await Task.Delay(profilingTime, canceller);
 
-                    var newProfiledGrids = profiler.GetProfileResults(50);
-                    _lagTimeSeries.AddProfileResults(DateTime.UtcNow, newProfiledGrids);
-                    _lagTimeSeries.RemoveOldResults(DateTime.UtcNow);
+                    var profileResults = profiler.GetProfileResults(50).ToArray();
+                    _lagTimeSeries.Update(profileResults.Select(r => (r.GridId, r.ThresholdNormal)));
+                    Log.Debug($"auto-profiled {profileResults.Length} grids");
+
+                    // map grid id -> last profile result
+                    _referenceProfileResults.AddRange(profileResults.Select(r => (r.GridId, r)));
+
+                    // expire old data
+                    var trackedGridIds = CollectionUtils.Merge(
+                        _lagTimeSeries.GridIds,
+                        _autoBroadcastableGridIds.Keys,
+                        _manualBroadcastableGridIds.Keys);
+                    _referenceProfileResults.RemoveRangeExceptWith(trackedGridIds);
+
+                    // keep track of laggy grids & gps lifespan
+                    var laggyGridIds = _lagTimeSeries.GetLaggyGridIds().ToArray();
+                    _autoBroadcastableGridIds.AddOrUpdate(laggyGridIds);
+                    Log.Debug($"found {laggyGridIds.Length} laggy grids");
                 }
 
-                // delete auto GPSs from the last loop
-                _gpsBroadcaster.SendDelete(_lastAutoGrids.Keys);
-                _lastAutoGrids.Clear();
+                // check if the server is laggy
+                var simSpeed = _lagObserver.SimSpeed;
+                var isLaggy = simSpeed < Config.SimSpeedThreshold;
+                Log.Debug($"laggy: {isLaggy} ({simSpeed:0.0}ss)");
 
-                // delete manual GPSs from the last loop
-                _gpsBroadcaster.SendDelete(_manualGrids.GridIds);
-                _manualGrids.RemoveExpired(DateTime.UtcNow);
+                // GPSs should disappear in a set length of time
+                var gpsLifespan = Config.GpsLifespan.Seconds();
+                _autoBroadcastableGridIds.RemoveExpired(gpsLifespan);
+                _manualBroadcastableGridIds.RemoveExpired(gpsLifespan);
 
-                if (Config.EnableBroadcasting)
+                if (Config.EnableBroadcasting && isLaggy)
                 {
+                    var allReports = new Dictionary<long, GridLagReport>();
+
+                    // collect from auto profiler results
                     if (Config.EnableAutoBroadcasting)
                     {
-                        // find grids that should be broadcasted in this interval
-                        var broadcastableGrids = _lagTimeSeries.GetCurrentBroadcastableGrids();
-                        _lastAutoGrids.AddRange(broadcastableGrids.ToDictionary(r => r.GridId));
-
-                        // broadcast
-                        var gpss = await _gpsFactory.CreateGpss(broadcastableGrids, canceller);
-                        var receiverIds = _gpsReceivers.GetReceiverIds();
-                        _gpsBroadcaster.SendAddOrModify(gpss, receiverIds);
+                        var ids = _autoBroadcastableGridIds.GetRemainingTimes().ToArray();
+                        var reports = ids.Select(p => new GridLagReport(Config, _referenceProfileResults[p.Key], p.RemainingTime));
+                        allReports.AddRange(reports.Select(r => (r.GridId, r)));
+                        Log.Debug($"auto-broadcasting {ids.Length} grids");
                     }
 
-                    // manual broadcasting, overwrites auto if any
+                    // collect from manual profiler results (via admin commands)
                     {
-                        var gridReports = _manualGrids.MakeReports(DateTime.UtcNow);
-                        var gpss = await _gpsFactory.CreateGpss(gridReports, canceller);
-                        var receiverIds = _gpsReceivers.GetReceiverIds();
-                        _gpsBroadcaster.SendAddOrModify(gpss, receiverIds);
+                        var ids = _manualBroadcastableGridIds.GetRemainingTimes().ToArray();
+                        var reports = ids.Select(p => new GridLagReport(Config, _referenceProfileResults[p.Key], p.RemainingTime));
+                        allReports.AddRange(reports.Select(r => (r.GridId, r)));
+                        Log.Debug($"manual-broadcasting {ids.Length} grids");
                     }
+
+                    // MyGps can be created in the game loop only (idk why)
+                    await GameLoopObserver.MoveToGameLoop(canceller);
+
+                    // create GPS entities of laggy grids
+                    var gpss = new List<MyGps>();
+                    foreach (var (report, i) in allReports.Values.Select((r, i) => (r, i)))
+                    {
+                        if (report.TryCreateGps(i + 1, out var gps))
+                        {
+                            gpss.Add(gps);
+                        }
+                    }
+
+                    await TaskUtils.MoveToThreadPool(canceller);
+
+                    var targetIds = _players.GetReceiverIdentityIds();
+                    _gpsCollection.SendReplaceAllTrackedGpss(gpss, targetIds);
+                    Log.Debug($"sent gps of {allReports.Count} laggy grids");
+                }
+                else
+                {
+                    _gpsCollection.SendDeleteAllTrackedGpss();
+                    Log.Debug("deleted all tracked gpss");
                 }
 
-                await TaskUtils.SpendAtLeast(stopwatch, 1.Seconds(), canceller);
+                await TaskUtils.DelayMax(stopwatch, 1.Seconds(), canceller);
             }
         }
 
-        public CancellationToken GetCancellationToken()
+        public void BroadcastGpss(IEnumerable<GridLagProfileResult> profileResults)
         {
-            return _canceller.Token;
+            // the next main loop will broadcast GPSs
+            _manualBroadcastableGridIds.AddOrUpdate(profileResults.Select(r => r.GridId));
+            _referenceProfileResults.AddRange(profileResults.Select(r => (r.GridId, r)));
         }
 
-        public GridLagProfiler GetProfiler(GameEntityMask mask)
+        public bool CheckPlayerReceivesGpss(MyPlayer player)
         {
-            return new GridLagProfiler(Config, mask);
+            return _players.CheckReceive(player);
         }
 
-        public async Task Broadcast(IEnumerable<GridLagProfileResult> profileResults, TimeSpan remainingTime)
+        public void DeleteAllGpss()
         {
-            // remember the list so we can schedule countdown
-            _manualGrids.AddProfileResults(profileResults, remainingTime);
-
-            // broadcast
-            var gridReports = profileResults.Select(r => new GridLagReport(r, remainingTime));
-            var gpss = await _gpsFactory.CreateGpss(gridReports, _canceller.Token);
-            var receiverIds = _gpsReceivers.GetReceiverIds();
-            _gpsBroadcaster.SendAddOrModify(gpss, receiverIds);
+            _gpsCollection.SendDeleteAllTrackedGpss();
         }
 
-        public void DeleteAllTrackedGpss()
+        public IEnumerable<MyGps> GetAllGpss()
         {
-            _gpsBroadcaster.SendDeleteAllTrackedGpss();
-        }
-
-        public IEnumerable<MyGps> GetAllTrackedGpsEntities()
-        {
-            return _gpsBroadcaster.GetAllTrackedGpss();
+            return _gpsCollection.GetAllTrackedGpss();
         }
     }
 }

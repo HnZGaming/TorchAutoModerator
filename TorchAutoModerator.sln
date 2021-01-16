@@ -2,7 +2,9 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TorchAutoModerator", "TorchAutoModerator\TorchAutoModerator.csproj", "{EC211AE3-0BED-46AF-B6D1-B8CE93F31009}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TorchEntityGpsBroadcaster", "TorchEntityGpsBroadcaster\TorchEntityGpsBroadcaster.csproj", "{D3F66AD3-9265-4CA7-B865-DEDD0B20A8E7}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Utils.EntityGps", "Utils.EntityGps\Utils.EntityGps.csproj", "{D3F66AD3-9265-4CA7-B865-DEDD0B20A8E7}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Utils.TimeSerieses", "Utils.TimeSerieses\Utils.TimeSerieses.csproj", "{7F42B008-0B81-4DCC-82E6-18125AC9524E}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -18,5 +20,9 @@ Global
 		{D3F66AD3-9265-4CA7-B865-DEDD0B20A8E7}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D3F66AD3-9265-4CA7-B865-DEDD0B20A8E7}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{D3F66AD3-9265-4CA7-B865-DEDD0B20A8E7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7F42B008-0B81-4DCC-82E6-18125AC9524E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7F42B008-0B81-4DCC-82E6-18125AC9524E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7F42B008-0B81-4DCC-82E6-18125AC9524E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7F42B008-0B81-4DCC-82E6-18125AC9524E}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

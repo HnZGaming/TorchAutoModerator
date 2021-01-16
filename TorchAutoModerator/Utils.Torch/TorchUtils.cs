@@ -29,5 +29,10 @@ namespace Utils.Torch
         {
             return LogManager.Configuration.AllTargets.First(t => t.Name == "wpf");
         }
+
+        public static void SendMessage(this IChatManagerServer self, string name, ulong targetSteamId, string message)
+        {
+            self.SendMessageAsOther(name, message, targetSteamId: targetSteamId);
+        }
     }
 }

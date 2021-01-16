@@ -5,7 +5,7 @@ using Utils.Torch;
 
 namespace Utils.General
 {
-    internal sealed class FileLoggingConfigurator
+    internal class FileLoggingConfigurator
     {
         public interface IConfig
         {
@@ -16,55 +16,68 @@ namespace Utils.General
 
         static readonly ILogger Log = LogManager.GetCurrentClassLogger();
         readonly FileTarget _target;
-        readonly LoggingRule _rule;
+        readonly LoggingRule[] _rules;
 
-        public FileLoggingConfigurator(string targetName, string namePattern, string defaultFilePath)
+        public FileLoggingConfigurator(string targetName, string[] namePatterns, string defaultFilePath)
         {
             _target = new FileTarget
             {
                 Name = targetName,
             };
 
-            _rule = new LoggingRule
-            {
-                LoggerNamePattern = namePattern,
-                Final = true,
-            };
-
-            // default config
             _target.FileName = defaultFilePath;
-            _rule.Targets.Add(_target);
-            _rule.Targets.Add(TorchUtils.GetWpfTarget());
-            _rule.EnableLoggingForLevels(LogLevel.Info, LogLevel.Off);
+
+            _rules = new LoggingRule[namePatterns.Length];
+            for (var i = 0; i < namePatterns.Length; i++)
+            {
+                var rule = new LoggingRule
+                {
+                    LoggerNamePattern = namePatterns[i],
+                    Final = true,
+                };
+
+                rule.Targets.Add(_target);
+                rule.Targets.Add(TorchUtils.GetWpfTarget());
+                rule.EnableLoggingForLevels(LogLevel.Info, LogLevel.Off);
+                _rules[i] = rule;
+            }
         }
 
         public void Initialize()
         {
             LogManager.Configuration.AddTarget(_target);
-            LogManager.Configuration.LoggingRules.Insert(0, _rule);
+
+            foreach (var rule in _rules)
+            {
+                LogManager.Configuration.LoggingRules.Insert(0, rule);
+            }
+
             LogManager.Configuration.Reload();
         }
 
-        public void Reconfigure(IConfig config)
+        public void Configure(IConfig config)
         {
             _target.FileName = config.LogFilePath;
 
-            _rule.Targets.Clear();
-            _rule.Targets.Add(_target);
-
-            if (!config.SuppressWpfOutput)
+            foreach (var rule in _rules)
             {
-                _rule.Targets.Add(TorchUtils.GetWpfTarget());
+                rule.Targets.Clear();
+                rule.Targets.Add(_target);
+
+                if (!config.SuppressWpfOutput)
+                {
+                    rule.Targets.Add(TorchUtils.GetWpfTarget());
+                }
+
+                var minLevel = config.EnableLoggingTrace ? LogLevel.Trace : LogLevel.Info;
+                rule.DisableLoggingForLevel(LogLevel.Trace);
+                rule.DisableLoggingForLevel(LogLevel.Debug);
+                rule.EnableLoggingForLevels(minLevel, LogLevel.Off);
+
+                Log.Info($"Reconfigured; pattern={rule.LoggerNamePattern}, wpf={!config.SuppressWpfOutput}, minlevel={minLevel}");
             }
 
-            var minLevel = config.EnableLoggingTrace ? LogLevel.Trace : LogLevel.Info;
-            _rule.DisableLoggingForLevel(LogLevel.Trace);
-            _rule.DisableLoggingForLevel(LogLevel.Debug);
-            _rule.EnableLoggingForLevels(minLevel, LogLevel.Off);
-
             LogManager.ReconfigExistingLoggers();
-
-            Log.Info($"Reconfigured; wpf={!config.SuppressWpfOutput}, minlevel={minLevel}");
         }
     }
 }

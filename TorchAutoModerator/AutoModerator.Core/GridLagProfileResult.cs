@@ -5,6 +5,7 @@ using VRage.Game.ModAPI;
 
 namespace AutoModerator.Core
 {
+    // this class shouldn't hold onto any game entities so it won't mess with the game's GC
     public sealed class GridLagProfileResult
     {
         GridLagProfileResult(long gridId,

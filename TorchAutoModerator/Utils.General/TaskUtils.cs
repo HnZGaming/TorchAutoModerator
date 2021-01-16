@@ -49,11 +49,21 @@ namespace Utils.General
             }, canceller);
         }
 
-        public static Task SpendAtLeast(Stopwatch stopwatch, TimeSpan timeSpan, CancellationToken canceller = default)
+        public static Task DelayMax(Stopwatch stopwatch, TimeSpan timeSpan, CancellationToken canceller = default)
         {
             var n = (timeSpan - stopwatch.Elapsed).Milliseconds;
             var m = Math.Max(n, 0);
             return Task.Delay(TimeSpan.FromMilliseconds(m), canceller);
+        }
+
+        public static async Task Timeout(this Task self, TimeSpan timeout)
+        {
+            var timeoutTask = Task.Delay(timeout);
+            var completeTask = await Task.WhenAny(self, timeoutTask);
+            if (completeTask != self)
+            {
+                throw new TimeoutException();
+            }
         }
     }
 }

@@ -12,11 +12,10 @@ namespace AutoModerator
     public sealed class AutoModeratorConfig :
         ViewModel,
         GridLagProfiler.IConfig,
-        ServerLagObserver.IConfig,
-        GridLagReportDescriber.IConfig,
-        BroadcastReceiverCollector.IConfig,
+        GridLagReport.IConfig,
+        BroadcastListenerCollection.IConfig,
         FileLoggingConfigurator.IConfig,
-        GridLagProfileTimeSeries.IConfig
+        EntityLagTimeSeries.IConfig
     {
         const string OpGroupName = "Auto Moderator";
         const string AutoBroadcastGroupName = "Auto Sample & Broadcast";
@@ -29,7 +28,7 @@ namespace AutoModerator
         bool _adminsOnly = true;
         int _maxLaggyGridCountPerScan = 3;
         double _window = 300d;
-        double _minLifespan = 600d;
+        double _gpsLifespan = 600d;
         double _mspfThreshold = 3.0f;
         double _simSpeedThreshold = 0.7;
         double _sampleFrequency = 5;
@@ -40,6 +39,7 @@ namespace AutoModerator
         List<string> _exemptFactionTags = new List<string>();
         bool _suppressWpfOutput;
         bool _enableLoggingTrace;
+        bool _enableLoggingDebug;
         string _logFilePath = DefaultLogFilePath;
 
         [XmlElement("EnableBroadcasting")]
@@ -67,7 +67,7 @@ namespace AutoModerator
         }
 
         [XmlElement("FirstIdleSeconds")]
-        [Display(Order = 2, Name = "First idle seconds", GroupName = AutoBroadcastGroupName)]
+        [Display(Order = 2, Name = "First idle seconds", GroupName = AutoBroadcastGroupName, Description = "Game is generally laggy for the first minute or two of the session.")]
         public double FirstIdle
         {
             get => _firstIdle;
@@ -76,14 +76,14 @@ namespace AutoModerator
 
         [XmlElement("ThresholdMspf")]
         [Display(Order = 3, Name = "Threshold ms/f per grid", GroupName = OpGroupName)]
-        public double ThresholdMspf
+        public double GridMspfThreshold
         {
             get => _mspfThreshold;
             set => SetValue(ref _mspfThreshold, Math.Max(value, 0.001f));
         }
 
         [XmlElement("SimSpeedThreshold")]
-        [Display(Order = 4, Name = "Threshold sim speed", GroupName = AutoBroadcastGroupName)]
+        [Display(Order = 4, Name = "Sim speed threshold", GroupName = AutoBroadcastGroupName)]
         public double SimSpeedThreshold
         {
             get => _simSpeedThreshold;
@@ -100,15 +100,15 @@ namespace AutoModerator
 
         [XmlElement("SampleFrequencySeconds")]
         [Display(Order = 5, Name = "Sample frequency (seconds)", GroupName = AutoBroadcastGroupName)]
-        public double SampleFrequency
+        public double ProfileTime
         {
             get => _sampleFrequency;
-            set => SetValue(ref _sampleFrequency, value);
+            set => SetValue(ref _sampleFrequency, Math.Max(value, 1));
         }
 
         [XmlElement("BufferSeconds")]
         [Display(Order = 6, Name = "Sample time (seconds)", GroupName = AutoBroadcastGroupName)]
-        public double Window
+        public double LongLaggyWindow
         {
             get => _window;
             set => SetValue(ref _window, value);
@@ -116,10 +116,10 @@ namespace AutoModerator
 
         [XmlElement("MinLifespanSeconds")]
         [Display(Order = 7, Name = "Broadcast time (seconds)", GroupName = AutoBroadcastGroupName)]
-        public double MinLifespan
+        public double GpsLifespan
         {
-            get => _minLifespan;
-            set => SetValue(ref _minLifespan, value);
+            get => _gpsLifespan;
+            set => SetValue(ref _gpsLifespan, value);
         }
 
         [XmlElement("GpsNameFormat")]
@@ -178,6 +178,14 @@ namespace AutoModerator
             set => SetValue(ref _enableLoggingTrace, value);
         }
 
+        [XmlElement("EnableLoggingDebug")]
+        [Display(Order = 13, Name = "Enable Logging Debug", GroupName = LogGroupName)]
+        public bool EnableLoggingDebug
+        {
+            get => _enableLoggingDebug;
+            set => SetValue(ref _enableLoggingDebug, value);
+        }
+
         [XmlElement("LogFilePath")]
         [Display(Order = 14, Name = "Log File Path", GroupName = LogGroupName)]
         public string LogFilePath
@@ -186,7 +194,7 @@ namespace AutoModerator
             set => SetValue(ref _logFilePath, value);
         }
 
-        IEnumerable<ulong> BroadcastReceiverCollector.IConfig.MutedPlayers => _mutedPlayerIds;
+        IEnumerable<ulong> BroadcastListenerCollection.IConfig.MutedPlayers => _mutedPlayerIds;
         IEnumerable<string> GridLagProfiler.IConfig.ExemptFactionTags => _exemptFactionTags;
 
         public void AddMutedPlayer(ulong mutedPlayerId)
@@ -211,5 +219,7 @@ namespace AutoModerator
             _mutedPlayerIds.Clear();
             OnPropertyChanged(nameof(MutedPlayerIds));
         }
+
+        double EntityLagTimeSeries.IConfig.ProfileResultsExpireTime => _window + _gpsLifespan;
     }
 }

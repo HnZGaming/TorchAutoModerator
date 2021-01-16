@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using AutoModerator.Core;
 using Profiler.Basics;
 using Profiler.Core;
 using Sandbox.Game.World;
@@ -14,94 +15,51 @@ using VRageMath;
 
 namespace AutoModerator
 {
-    [Category("lg")]
+    [Category("lag")]
     public sealed class AutoModeratorCommandModule : CommandModule
     {
         AutoModeratorPlugin Plugin => (AutoModeratorPlugin) Context.Plugin;
 
-        [Command("on", "Enable broadcasting.")]
+        [Command("enable", "Enable/disable broadcasting.")]
         [Permission(MyPromoteLevel.Admin)]
-        public void EnableBroadcasting() => this.CatchAndReport(() => { Plugin.Config.EnableBroadcasting = true; });
-
-        [Command("off", "Disable broadcasting.")]
-        [Permission(MyPromoteLevel.Admin)]
-        public void DisableBroadcasting() => this.CatchAndReport(() => { Plugin.Config.EnableBroadcasting = false; });
+        public void GetOrSetEnabled() => this.CatchAndReport(() =>
+        {
+            this.GetOrSetProperty(Plugin.Config, nameof(AutoModeratorConfig.EnableBroadcasting));
+        });
 
         [Command("mspf", "Get or set the current ms/f threshold per online member.")]
         [Permission(MyPromoteLevel.Admin)]
         public void MspfThreshold() => this.CatchAndReport(() =>
         {
-            if (!Context.Args.Any())
-            {
-                var currentThreshold = Plugin.Config.ThresholdMspf;
-                Context.Respond($"{currentThreshold:0.000}mspf per online member");
-                return;
-            }
-
-            var arg = Context.Args[0];
-            if (!float.TryParse(arg, out var newThreshold))
-            {
-                Context.Respond($"Failed to parse threshold value: {arg}", Color.Red);
-                return;
-            }
-
-            Plugin.Config.ThresholdMspf = newThreshold;
-            Context.Respond($"Set new threshold: {newThreshold:0.000}mspf per online member");
+            this.GetOrSetProperty(Plugin.Config, nameof(AutoModeratorConfig.GridMspfThreshold));
         });
 
         [Command("ss", "Get or set the current sim speed threshold.")]
         [Permission(MyPromoteLevel.Admin)]
         public void SimSpeedThreshold() => this.CatchAndReport(() =>
         {
-            if (!Context.Args.Any())
-            {
-                var value = Plugin.Config.SimSpeedThreshold;
-                Context.Respond($"{value:0.00}ss");
-                return;
-            }
-
-            var arg = Context.Args[0];
-            if (!double.TryParse(arg, out var newThreshold))
-            {
-                Context.Respond($"Failed to parse threshold value: {arg}", Color.Red);
-                return;
-            }
-
-            Plugin.Config.SimSpeedThreshold = newThreshold;
-            Context.Respond($"Set new threshold: {newThreshold:0.000}ss");
+            this.GetOrSetProperty(Plugin.Config, nameof(AutoModeratorConfig.SimSpeedThreshold));
         });
 
         [Command("admins-only", "Get or set the current \"admins only\" value.")]
         [Permission(MyPromoteLevel.Admin)]
         public void AdminsOnly() => this.CatchAndReport(() =>
         {
-            if (!Context.Args.Any())
-            {
-                var value = Plugin.Config.AdminsOnly;
-                Context.Respond($"{value}");
-                return;
-            }
-
-            var arg = Context.Args[0];
-            if (!bool.TryParse(arg, out var newValue))
-            {
-                Context.Respond($"Failed to parse bool value: {arg}", Color.Red);
-                return;
-            }
-
-            Plugin.Config.AdminsOnly = newValue;
-            Context.Respond($"Set admins-only: {newValue}");
+            this.GetOrSetProperty(Plugin.Config, nameof(AutoModeratorConfig.AdminsOnly));
         });
 
         [Command("clear", "Clear all custom GPS entities.")]
         [Permission(MyPromoteLevel.Admin)]
-        public void ClearCustomGps() => this.CatchAndReport(() => { Plugin.DeleteAllTrackedGpss(); });
+        public void ClearCustomGps() => this.CatchAndReport(() =>
+        {
+            Plugin.DeleteAllGpss();
+        });
 
         [Command("show", "Show the list of custom GPS entities.")]
         [Permission(MyPromoteLevel.Admin)]
         public void ShowCustomGpsEntities() => this.CatchAndReport(() =>
         {
-            var gpss = Plugin.GetAllTrackedGpsEntities();
+            var gpss = Plugin.GetAllGpss();
 
             if (!gpss.Any())
             {
@@ -118,6 +76,25 @@ namespace AutoModerator
             Context.Respond($"Custom GPS entities: \n{msgBuilder}");
         });
 
+        [Command("check", "Show if the player is receiving a broadcast")]
+        [Permission(MyPromoteLevel.None)]
+        public void CheckReceive(string playerName = null) => this.CatchAndReport(() =>
+        {
+            var player = Context.Player ?? MySession.Static.Players.GetPlayerByName(playerName);
+            if (player == null)
+            {
+                Context.Respond($"Player not found: \"{playerName}\"", Color.Red);
+                return;
+            }
+
+            var doesReceive = Plugin.CheckPlayerReceivesGpss(player as MyPlayer);
+            var msg = doesReceive
+                ? $"Player \"{playerName}\" does receive broadcasts"
+                : $"Player \"{playerName}\" does not receive broadcasts";
+
+            Context.Respond(msg);
+        });
+
         [Command("mute", "Mute broadcasting.")]
         [Permission(MyPromoteLevel.None)]
         public void MuteBroadcastsToPlayer() => this.CatchAndReport(() =>
@@ -129,6 +106,7 @@ namespace AutoModerator
             }
 
             Plugin.Config.AddMutedPlayer(Context.Player.SteamUserId);
+            Context.Respond("Muted broadcasting. It may take some time to take effect.");
         });
 
         [Command("unmute", "Unmute broadcasting.")]
@@ -142,11 +120,15 @@ namespace AutoModerator
             }
 
             Plugin.Config.RemoveMutedPlayer(Context.Player.SteamUserId);
+            Context.Respond("Unmuted broadcasting. It may take some time to take effect.");
         });
 
         [Command("unmute_all", "Force every player to unmute broadcasting.")]
         [Permission(MyPromoteLevel.Admin)]
-        public void UnmuteBroadcastsToAll() => this.CatchAndReport(() => { Plugin.Config.RemoveAllMutedPlayers(); });
+        public void UnmuteBroadcastsToAll() => this.CatchAndReport(() =>
+        {
+            Plugin.Config.RemoveAllMutedPlayers();
+        });
 
         [Command("profile", "Profile laggy grids.")]
         [Permission(MyPromoteLevel.Admin)]
@@ -154,15 +136,13 @@ namespace AutoModerator
         {
             var profileTime = 5;
             var broadcastResults = false;
-            var remainingTimeSecs = 600;
 
             foreach (var arg in Context.Args)
             {
                 if (CommandOption.TryGetOption(arg, out var option))
                 {
                     if (option.TryParseInt("time", out profileTime) ||
-                        option.TryGetParameterlessBool("broadcast", out broadcastResults) ||
-                        option.TryParseInt("keep", out remainingTimeSecs))
+                        option.TryGetParameterlessBool("broadcast", out broadcastResults))
                     {
                         continue;
                     }
@@ -172,10 +152,10 @@ namespace AutoModerator
                 }
             }
 
-            Context.Respond($"Profiling (profile time: {profileTime}s, broadcast: {broadcastResults} for {remainingTimeSecs}s)...");
+            Context.Respond($"Profiling (profile time: {profileTime}s, broadcast: {broadcastResults}...");
 
             var mask = new GameEntityMask(null, null, null);
-            using (var profiler = Plugin.GetProfiler(mask))
+            using (var profiler = new GridLagProfiler(Plugin.Config, mask))
             using (ProfilerResultQueue.Profile(profiler))
             {
                 Context.Respond("Profiling...");
@@ -201,13 +181,13 @@ namespace AutoModerator
 
                 if (broadcastResults)
                 {
-                    await Plugin.Broadcast(profileResults, remainingTimeSecs.Seconds());
-                    Context.Respond("Done broadcasting");
+                    Plugin.BroadcastGpss(profileResults);
+                    Context.Respond("Done broadcasting. It may take some time to take effect.");
                 }
             }
         });
 
-        [Command("me", "Profile player grids.")]
+        [Command("mine", "Profile player grids.")]
         [Permission(MyPromoteLevel.None)]
         public void ProfilePlayer() => this.CatchAndReport(async () =>
         {
@@ -265,14 +245,14 @@ namespace AutoModerator
             msgBuilder.AppendLine();
 
             var mask = new GameEntityMask(playerMask, gridMask, factionMask);
-            using (var gridLagProfiler = Plugin.GetProfiler(mask))
+            using (var gridLagProfiler = new GridLagProfiler(Plugin.Config, mask))
             using (var blockDefProfiler = new BlockDefinitionProfiler(mask))
             using (ProfilerResultQueue.Profile(gridLagProfiler))
             {
                 gridLagProfiler.MarkStart();
                 blockDefProfiler.MarkStart();
 
-                await Task.Delay(profileTime, Plugin.GetCancellationToken());
+                await Task.Delay(profileTime);
 
                 msgBuilder.AppendLine("Performance by grids (% of broadcasting threshold):");
 

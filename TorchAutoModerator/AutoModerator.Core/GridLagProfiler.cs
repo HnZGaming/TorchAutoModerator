@@ -12,7 +12,7 @@ namespace AutoModerator.Core
     {
         public interface IConfig
         {
-            double ThresholdMspf { get; }
+            double GridMspfThreshold { get; }
             bool IgnoreNpcFactions { get; }
             IEnumerable<string> ExemptFactionTags { get; }
         }
@@ -44,15 +44,13 @@ namespace AutoModerator.Core
 
         public IEnumerable<GridLagProfileResult> GetProfileResults(int count)
         {
-            Log.Debug("Scanning grids...");
-
             var result = _gridProfiler.GetResult();
 
             var gridReports = new List<GridLagProfileResult>();
             foreach (var (grid, entity) in result.GetTopEntities(count))
             {
                 var mspf = entity.MainThreadTime / result.TotalFrameCount;
-                var normal = mspf / _config.ThresholdMspf;
+                var normal = mspf / _config.GridMspfThreshold;
                 var gridReport = GridLagProfileResult.FromGrid(grid, normal);
 
                 if (IsExempt(gridReport)) continue;

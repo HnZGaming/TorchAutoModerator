@@ -13,23 +13,16 @@ namespace AutoModerator.Core
     /// </summary>
     public sealed class ServerLagObserver
     {
-        public interface IConfig
-        {
-            double SimSpeedThreshold { get; }
-        }
-
-        readonly IConfig _config;
         readonly TimeSpan _buffer;
         readonly Queue<double> _timeline;
 
-        public ServerLagObserver(IConfig config, TimeSpan buffer)
+        public ServerLagObserver(TimeSpan buffer)
         {
-            _config = config;
             _buffer = buffer;
             _timeline = new Queue<double>();
         }
 
-        public bool IsLaggy { get; private set; }
+        public double SimSpeed { get; private set; }
 
         public async Task Observe(CancellationToken canceller)
         {
@@ -43,8 +36,7 @@ namespace AutoModerator.Core
                     _timeline.TryDequeue(out _);
                 }
 
-                var referenceSimSpeed = _timeline.Max(); // best sim speed
-                IsLaggy = referenceSimSpeed < _config.SimSpeedThreshold;
+                SimSpeed = _timeline.Average();
 
                 await Task.Delay(1.Seconds(), canceller);
             }
