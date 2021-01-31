@@ -160,13 +160,17 @@
     <ItemGroup>
         <Compile Include="AutoModerator.Core\BroadcastListenerCollection.cs" />
         <Compile Include="AutoModerator.Core\EntityLagTimeSeries.cs" />
+        <Compile Include="AutoModerator.Core\GpsUtils.cs" />
+        <Compile Include="AutoModerator.Core\LaggyEntityTracker.cs" />
         <Compile Include="AutoModerator.Core\IEntityGpsSource.cs" />
+        <Compile Include="AutoModerator.Core\IEntityLagSnapshot.cs" />
         <Compile Include="AutoModerator.Core\LifespanDictionary.cs" />
-        <Compile Include="AutoModerator.Grids\GridLagAnalyzer.cs" />
-        <Compile Include="AutoModerator.Grids\GridLagProfileResult.cs" />
+        <Compile Include="AutoModerator.Grids\GridLagSnapshot.cs" />
         <Compile Include="AutoModerator.Grids\GridGpsSource.cs" />
-        <Compile Include="AutoModerator.Grids\GridLagPinCreator.cs" />
-        <Compile Include="AutoModerator.Players\PlayerLagPinCreator.cs" />
+        <Compile Include="AutoModerator.Grids\LaggyGridTracker.cs" />
+        <Compile Include="AutoModerator.Players\LaggyPlayerTracker.cs" />
+        <Compile Include="AutoModerator.Players\PlayerGpsSource.cs" />
+        <Compile Include="AutoModerator.Players\PlayerLagSnapshot.cs" />
         <Compile Include="Properties\AssemblyInfo.cs" />
         <Compile Include="AutoModerator\AutoModeratorCommandModule.cs" />
         <Compile Include="AutoModerator\AutoModeratorConfig.cs" />

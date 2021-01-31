@@ -184,5 +184,10 @@ namespace Utils.General
                 yield return x;
             }
         }
+
+        public static IEnumerable<(T, int)> Indexed<T>(this IEnumerable<T> self)
+        {
+            return self.Select((t, i) => (t, i));
+        }
     }
 }

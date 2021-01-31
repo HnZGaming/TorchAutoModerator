@@ -2,7 +2,6 @@
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using AutoModerator.Grids;
 using Profiler.Basics;
 using Profiler.Core;
 using Sandbox.Game.World;
@@ -123,54 +122,7 @@ namespace AutoModerator
             Plugin.Config.RemoveAllMutedPlayers();
         });
 
-        [Command("profile", "Profile laggy grids.")]
-        [Permission(MyPromoteLevel.Admin)]
-        public void Profile() => this.CatchAndReport(async () =>
-        {
-            var profileTime = 5;
-
-            foreach (var arg in Context.Args)
-            {
-                if (CommandOption.TryGetOption(arg, out var option))
-                {
-                    if (option.TryParseInt("time", out profileTime)) continue;
-
-                    Context.Respond($"Unknown option: {arg}", Color.Red);
-                    return;
-                }
-            }
-
-            Context.Respond($"Profiling (profile time: {profileTime}s...");
-
-            var mask = new GameEntityMask(null, null, null);
-            using (var profiler = new GridProfiler(mask))
-            using (ProfilerResultQueue.Profile(profiler))
-            {
-                Context.Respond("Profiling...");
-
-                profiler.MarkStart();
-
-                await Task.Delay(profileTime.Seconds());
-
-                var profileResults = profiler.GetResult();
-                var lagResults = new GridLagAnalyzer(Plugin.Config).Analyze(profileResults).ToArray();
-                if (!lagResults.Any())
-                {
-                    Context.Respond("No laggy grids found");
-                    return;
-                }
-
-                var msgBuilder = new StringBuilder();
-                foreach (var report in lagResults)
-                {
-                    msgBuilder.AppendLine($"> {report}");
-                }
-
-                Context.Respond($"Done profiling:\n{msgBuilder}");
-            }
-        });
-
-        [Command("mine", "Profile player grids.")]
+        [Command("profile", "Self profiler interface.")]
         [Permission(MyPromoteLevel.None)]
         public void ProfilePlayer() => this.CatchAndReport(async () =>
         {
@@ -181,6 +133,7 @@ namespace AutoModerator
             long? factionMask = null;
             long? gridMask = null;
             var profileTime = 10.Seconds();
+            var top = 3;
             foreach (var arg in Context.Args)
             {
                 if (!CommandOption.TryGetOption(arg, out var option)) continue;
@@ -218,6 +171,11 @@ namespace AutoModerator
                     continue;
                 }
 
+                if (option.TryParseInt("top", out top))
+                {
+                    continue;
+                }
+
                 Context.Respond($"Unknown argument: {arg}", Color.Red);
                 return;
             }
@@ -239,15 +197,14 @@ namespace AutoModerator
 
                 msgBuilder.AppendLine("Performance by grids (% of broadcasting threshold):");
 
-                var profileResults = gridProfiler.GetResult();
-                var lagResults = new GridLagAnalyzer(Plugin.Config).Analyze(profileResults).ToArray();
-                foreach (var profileResult in lagResults)
+                var profileResult = gridProfiler.GetResult();
+                foreach (var (grid, profilerEntry) in profileResult.GetTopEntities(top))
                 {
-                    var gridName = profileResult.GridName;
-                    var playerName = profileResult.PlayerNameOrNull ?? "<none>";
-                    var lag = profileResult.ThresholdNormal;
-                    var lagStr = $"{lag * 100:0}%";
-                    msgBuilder.AppendLine($"\"{gridName}\" {lagStr} by {playerName}");
+                    var gridName = grid.DisplayName;
+                    var mspf = profilerEntry.MainThreadTime / profileResult.TotalTime;
+                    var lagNormal = mspf / Plugin.Config.GridMspfThreshold;
+                    var lagStr = $"{lagNormal * 100:0}%";
+                    msgBuilder.AppendLine($"\"{gridName}\" {lagStr}");
                 }
 
                 msgBuilder.AppendLine();

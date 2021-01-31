@@ -34,8 +34,8 @@ namespace AutoModerator
 
         BroadcastListenerCollection _players;
         EntityIdGpsCollection _gpsCollection;
-        GridLagPinCreator _gridLagPins;
-        GridLagAnalyzer _gridLagAnalyzer;
+        LaggyGridTracker _laggyGridTracker;
+        LaggyPlayerTracker _laggyPlayerTracker;
 
         public AutoModeratorConfig Config => _config.Data;
 
@@ -65,8 +65,8 @@ namespace AutoModerator
 
             _players = new BroadcastListenerCollection(Config);
             _gpsCollection = new EntityIdGpsCollection("<!> ");
-            _gridLagPins = new GridLagPinCreator(Config);
-            _gridLagAnalyzer = new GridLagAnalyzer(Config);
+            _laggyGridTracker = new LaggyGridTracker(Config);
+            _laggyPlayerTracker = new LaggyPlayerTracker(Config);
         }
 
         void OnGameLoaded()
@@ -118,50 +118,54 @@ namespace AutoModerator
 
                     // grids
                     var gridProfileResult = gridProfiler.GetResult();
-                    var gridLagProfileResults = _gridLagAnalyzer.Analyze(gridProfileResult).ToArray();
-                    _gridLagPins.AddProfileInterval(gridLagProfileResults);
-                    Log.Debug($"found {gridLagProfileResults.Count(r => r.ThresholdNormal > 1f)} laggy grids");
-                    Log.Debug($"found {_gridLagPins.PinnedGridCount} pinned grids");
+                    _laggyGridTracker.Update(gridProfileResult);
+                    Log.Debug($"{_laggyGridTracker.LastLaggyEntityCount} laggy grids");
+                    Log.Debug($"{_laggyGridTracker.PinnedEntityCount} pinned grids");
 
                     // todo give players a heads-up when their grids are laggy
-                    // use `gridLagProfileResults`'s laggy grids (not the "pinned" grids which are already broadcasted)
+                    // use `gridLagSnapshots`'s laggy grids (not the "pinned" grids which are already broadcasted)
 
                     // players
+                    var playerProfileResult = playerProfiler.GetResult();
+                    _laggyPlayerTracker.Update(playerProfileResult, gridProfileResult);
+                    Log.Debug($"{_laggyPlayerTracker.LastLaggyEntityCount} laggy players");
+                    Log.Debug($"{_laggyPlayerTracker.PinnedEntityCount} pinned players");
                 }
 
                 if (Config.EnableBroadcasting)
                 {
-                    var allGpsSources = new List<(IEntityGpsSource GpsSource, int Rank)>();
-
-                    // collect from auto grid profiler results
-                    if (Config.EnableGridBroadcasting)
-                    {
-                        var rankedSources = _gridLagPins
-                            .CreateGpsSources(Config)
-                            .OrderByDescending(g => g.LagNormal)
-                            .Take(Config.MaxProfiledGridCount)
-                            .Select((g, i) => ((IEntityGpsSource) g, i))
-                            .ToArray();
-
-                        allGpsSources.AddRange(rankedSources);
-                        Log.Debug($"broadcasting {rankedSources.Length} laggy grids");
-                    }
+                    // entity id -> gps source
+                    var allGpsSources = new Dictionary<long, IEntityGpsSource>();
 
                     if (Config.EnablePlayerBroadcasting)
                     {
-                        //todo
+                        var gpsSources = _laggyPlayerTracker.CreateGpsSources(Config, Config.MaxGpsCount).ToArray();
+                        allGpsSources.AddRangeWithKeys(gpsSources, s => s.AttachedEntityId);
                     }
+
+                    if (Config.EnableGridBroadcasting)
+                    {
+                        var gpsSources = _laggyGridTracker.CreateGpsSources(Config, Config.MaxGpsCount).ToArray();
+                        allGpsSources.AddRangeWithKeys(gpsSources, s => s.AttachedEntityId);
+                    }
+
+                    var broadcastableGpsSources = allGpsSources
+                        .Values
+                        .OrderByDescending(s => s.LagNormal)
+                        .Take(Config.MaxGpsCount)
+                        .ToArray();
 
                     // MyGps can be created in the game loop only (idk why)
                     // this is inside the main loop & you better keep it performant
                     await GameLoopObserver.MoveToGameLoop(canceller);
 
                     var gpss = new List<MyGps>();
-                    foreach (var (report, rank) in allGpsSources)
+                    foreach (var gpsSource in broadcastableGpsSources)
                     {
-                        if (report.TryCreateGps(rank + 1, out var gps))
+                        if (gpsSource.TryCreateGps(out var gps))
                         {
                             gpss.Add(gps);
+                            Log.Trace($"broadcasting: {gpsSource}");
                         }
                     }
 
@@ -169,7 +173,7 @@ namespace AutoModerator
 
                     var targetIds = _players.GetReceiverIdentityIds();
                     _gpsCollection.SendReplaceAllTrackedGpss(gpss, targetIds);
-                    Log.Debug($"broadcasted {allGpsSources.Count} laggy entities");
+                    Log.Debug($"broadcasted {broadcastableGpsSources.Length} laggy entities");
                 }
                 else
                 {
