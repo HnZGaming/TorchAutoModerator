@@ -3,7 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Xml.Serialization;
 using AutoModerator.Core;
-using AutoModerator.Core.Scanners;
+using AutoModerator.Grids;
+using Sandbox.Game.World;
 using Torch;
 using Torch.Views;
 using Utils.General;
@@ -12,36 +13,64 @@ namespace AutoModerator
 {
     public sealed class AutoModeratorConfig :
         ViewModel,
-        LaggyGridReportBuffer.IConfig,
-        LaggyGridFinder.IConfig,
-        ILagScannerConfig,
-        LaggyGridGpsBroadcaster.IConfig,
-        ServerLagObserver.IConfig,
-        LaggyGridGpsDescriptionMaker.IConfig
+        GridGpsSource.IConfig,
+        BroadcastListenerCollection.IConfig,
+        FileLoggingConfigurator.IConfig,
+        GridLagProfiler.IConfig,
+        GridLagMonitor.IConfig
     {
-        double _firstIdleSeconds = 180;
+        const string OpGroupName = "Auto Moderator";
+        const string FuncGroupName = "Profiling & Broadcasting";
+        const string LogGroupName = "Logging";
+        public const string DefaultLogFilePath = "Logs/AutoModerator-${shortdate}.log";
+
+        double _firstIdle = 180;
         bool _enableBroadcasting = true;
+        bool _enableGridBroadcasting = true;
+        bool _enablePlayerBroadcasting = true;
         bool _adminsOnly = true;
         int _maxLaggyGridCountPerScan = 3;
-        double _bufferSeconds = 300d;
-        double _gpsLifespanSeconds = 600d;
-        double _mspfPerFactionMemberLimit = 3.0d;
+        double _gridPinWindow = 300d;
+        double _gridPinLifespan = 600d;
+        double _mspfThreshold = 3.0f;
         double _simSpeedThreshold = 0.7;
+        double _sampleFrequency = 5;
         bool _exemptNpcFactions = true;
-        string _gpsDescriptionFormat = "The {rank} laggiest faction ({ratio}). Get 'em!";
+        string _gpsDescriptionFormat = "The {rank} laggiest grid. Get 'em!";
+        string _gpsNameFormat = "{grid} [{faction}] {ratio}";
         List<ulong> _mutedPlayerIds = new List<ulong>();
         List<string> _exemptFactionTags = new List<string>();
+        bool _suppressWpfOutput;
+        bool _enableLoggingTrace;
+        bool _enableLoggingDebug;
+        string _logFilePath = DefaultLogFilePath;
 
         [XmlElement("EnableBroadcasting")]
-        [Display(Order = 0, Name = "Enable broadcasting", Description = "Tick off to stop broadcasting new GPS entities.")]
+        [Display(Order = 0, Name = "Enable broadcasting", GroupName = OpGroupName)]
         public bool EnableBroadcasting
         {
             get => _enableBroadcasting;
             set => SetValue(ref _enableBroadcasting, value);
         }
 
+        [XmlElement("EnableGridBroadcasting")]
+        [Display(Order = 0, Name = "Enable grid sample & broadcast", GroupName = FuncGroupName)]
+        public bool EnableGridBroadcasting
+        {
+            get => _enableGridBroadcasting;
+            set => SetValue(ref _enableGridBroadcasting, value);
+        }
+
+        [XmlElement("EnablePlayerBroadcasting")]
+        [Display(Order = 0, Name = "Enable player sample & broadcast", GroupName = FuncGroupName)]
+        public bool EnablePlayerBroadcasting
+        {
+            get => _enablePlayerBroadcasting;
+            set => SetValue(ref _enablePlayerBroadcasting, value);
+        }
+
         [XmlElement("EnableAdminsOnly")]
-        [Display(Order = 1, Name = "Broadcast to admins only", Description = "Broadcast to admin players only.")]
+        [Display(Order = 1, Name = "Broadcast to admins only", GroupName = OpGroupName)]
         public bool AdminsOnly
         {
             get => _adminsOnly;
@@ -49,23 +78,23 @@ namespace AutoModerator
         }
 
         [XmlElement("FirstIdleSeconds")]
-        [Display(Order = 2, Name = "First idle seconds", Description = "All grids tend to be laggy during the first couple minutes of a session.")]
-        public double FirstIdleSeconds
+        [Display(Order = 2, Name = "First idle seconds", GroupName = FuncGroupName, Description = "Game is generally laggy for the first minute or two of the session.")]
+        public double FirstIdle
         {
-            get => _firstIdleSeconds;
-            set => SetValue(ref _firstIdleSeconds, value);
+            get => _firstIdle;
+            set => SetValue(ref _firstIdle, value);
         }
 
-        [XmlElement("MspfPerFactionMemberLimit")]
-        [Display(Order = 3, Name = "Threshold ms/f per online member", Description = "\"Lagginess\" is calculated by a faction's sim impact divided by its online member count.")]
-        public double MspfPerOnlineGroupMember
+        [XmlElement("GridMspfThreshold")]
+        [Display(Order = 3, Name = "Grid ms/f threshold", GroupName = FuncGroupName)]
+        public double GridMspfThreshold
         {
-            get => _mspfPerFactionMemberLimit;
-            set => SetValue(ref _mspfPerFactionMemberLimit, Math.Max(value, 0.001d));
+            get => _mspfThreshold;
+            set => SetValue(ref _mspfThreshold, Math.Max(value, 0.001f));
         }
 
         [XmlElement("SimSpeedThreshold")]
-        [Display(Order = 4, Name = "Threshold sim speed", Description = "Broadcast begins when the server sim speed drops.")]
+        [Display(Order = 4, Name = "Sim speed threshold", GroupName = FuncGroupName)]
         public double SimSpeedThreshold
         {
             get => _simSpeedThreshold;
@@ -73,47 +102,63 @@ namespace AutoModerator
         }
 
         [XmlElement("MaxLaggyGridCountPerScan")]
-        [Display(Order = 5, Name = "Max GPS count", Description = "Too many GPS entities can cause issues: block the sight of players and drop the server sim.")]
-        public int MaxReportCountPerScan
+        [Display(Order = 5, Name = "Max GPS count", GroupName = FuncGroupName)]
+        public int MaxReportedGridCount
         {
             get => _maxLaggyGridCountPerScan;
             set => SetValue(ref _maxLaggyGridCountPerScan, value);
         }
 
+        [XmlElement("SampleFrequencySeconds")]
+        [Display(Order = 5, Name = "Sample frequency (seconds)", GroupName = FuncGroupName)]
+        public double ProfileTime
+        {
+            get => _sampleFrequency;
+            set => SetValue(ref _sampleFrequency, Math.Max(value, 1));
+        }
+
         [XmlElement("BufferSeconds")]
-        [Display(Order = 6, Name = "Window time (seconds)", Description = "Factions that are laggy for a length of time will be broadcast.")]
-        public double BufferSeconds
+        [Display(Order = 6, Name = "Grid sample time (seconds)", GroupName = FuncGroupName)]
+        public double GridPinWindow
         {
-            get => _bufferSeconds;
-            set => SetValue(ref _bufferSeconds, value);
+            get => _gridPinWindow;
+            set => SetValue(ref _gridPinWindow, value);
         }
 
-        [XmlElement("GpsLifespanSeconds")]
-        [Display(Order = 7, Name = "GPS lifespan (seconds)", Description = "Top grid's GPS will stay active for a length of time even if its faction is no longer laggy.")]
-        public double GpsLifespanSeconds
+        [XmlElement("MinLifespanSeconds")]
+        [Display(Order = 7, Name = "Grid broadcast time (seconds)", GroupName = FuncGroupName)]
+        public double GridGpsLifespan
         {
-            get => _gpsLifespanSeconds;
-            set => SetValue(ref _gpsLifespanSeconds, value);
+            get => _gridPinLifespan;
+            set => SetValue(ref _gridPinLifespan, value);
         }
 
-        [XmlElement("ExemptNpcFactions")]
-        [Display(Order = 8, Name = "Exempt NPC factions", Description = "Ignore NPC factions in scan results.")]
-        public bool ExemptNpcFactions
+        [XmlElement("GridGpsNameFormat")]
+        [Display(Order = 8, Name = "GPS name format", GroupName = OpGroupName)]
+        public string GridGpsNameFormat
         {
-            get => _exemptNpcFactions;
-            set => SetValue(ref _exemptNpcFactions, value);
+            get => _gpsNameFormat;
+            set => SetValue(ref _gpsNameFormat, value);
         }
 
-        [XmlElement("GpsDescriptionFormat")]
-        [Display(Order = 8, Name = "GPS description format", Description = "{rank} -- rank; ex: \"1st\", \"2nd\". {ratio} -- ratio to ms/f threshold; ex: \"121%\".")]
-        public string GpsDescriptionFormat
+        [XmlElement("GridGpsDescriptionFormat")]
+        [Display(Order = 9, Name = "GPS description format", GroupName = OpGroupName)]
+        public string GridGpsDescriptionFormat
         {
             get => _gpsDescriptionFormat;
             set => SetValue(ref _gpsDescriptionFormat, value);
         }
 
+        [XmlElement("IgnoreNpcFactions")]
+        [Display(Order = 10, Name = "Ignore NPC factions", GroupName = OpGroupName)]
+        public bool IgnoreNpcFactions
+        {
+            get => _exemptNpcFactions;
+            set => SetValue(ref _exemptNpcFactions, value);
+        }
+
         [XmlElement("ExemptFactionTags")]
-        [Display(Order = 10, Name = "Exempt faction tags", Description = "Tags of factions that will not be broadcasted.")]
+        [Display(Order = 11, Name = "Exempt faction tags", GroupName = OpGroupName)]
         public List<string> ExemptFactionTags
         {
             get => _exemptFactionTags;
@@ -121,17 +166,46 @@ namespace AutoModerator
         }
 
         [XmlElement("MutedPlayerIds")]
-        [Display(Order = 11, Name = "Muted players", Description = "Players can mute GPS broadcaster with a command.")]
+        [Display(Order = 12, Name = "Muted players", GroupName = OpGroupName)]
         public List<ulong> MutedPlayerIds
         {
             get => _mutedPlayerIds;
             set => SetValue(ref _mutedPlayerIds, new HashSet<ulong>(value).ToList());
         }
 
-        TimeSpan LaggyGridReportBuffer.IConfig.WindowTime => BufferSeconds.Seconds();
-        TimeSpan LaggyGridGpsBroadcaster.IConfig.GpsLifespan => _gpsLifespanSeconds.Seconds();
-        IEnumerable<ulong> LaggyGridGpsBroadcaster.IConfig.MutedPlayers => _mutedPlayerIds;
-        IEnumerable<string> LaggyGridFinder.IConfig.ExemptFactionTags => _exemptFactionTags;
+        [XmlElement("SuppressWpfOutput")]
+        [Display(Order = 12, Name = "Suppress Console Output", GroupName = LogGroupName)]
+        public bool SuppressWpfOutput
+        {
+            get => _suppressWpfOutput;
+            set => SetValue(ref _suppressWpfOutput, value);
+        }
+
+        [XmlElement("EnableLoggingTrace")]
+        [Display(Order = 13, Name = "Enable Logging Trace", GroupName = LogGroupName)]
+        public bool EnableLoggingTrace
+        {
+            get => _enableLoggingTrace;
+            set => SetValue(ref _enableLoggingTrace, value);
+        }
+
+        [XmlElement("EnableLoggingDebug")]
+        [Display(Order = 13, Name = "Enable Logging Debug", GroupName = LogGroupName)]
+        public bool EnableLoggingDebug
+        {
+            get => _enableLoggingDebug;
+            set => SetValue(ref _enableLoggingDebug, value);
+        }
+
+        [XmlElement("LogFilePath")]
+        [Display(Order = 14, Name = "Log File Path", GroupName = LogGroupName)]
+        public string LogFilePath
+        {
+            get => _logFilePath;
+            set => SetValue(ref _logFilePath, value);
+        }
+
+        IEnumerable<ulong> BroadcastListenerCollection.IConfig.MutedPlayers => _mutedPlayerIds;
 
         public void AddMutedPlayer(ulong mutedPlayerId)
         {
@@ -155,5 +229,17 @@ namespace AutoModerator
             _mutedPlayerIds.Clear();
             OnPropertyChanged(nameof(MutedPlayerIds));
         }
+
+        double GridLagProfiler.IConfig.MspfThreshold => GridMspfThreshold;
+
+        public bool IsFactionExempt(string factionTag)
+        {
+            var exemptByNpc = MySession.Static.Factions.IsNpcFaction(factionTag) && IgnoreNpcFactions;
+            var exemptByTag = ExemptFactionTags.Contains(factionTag.ToLower());
+            return exemptByNpc || exemptByTag;
+        }
+
+        TimeSpan GridLagMonitor.IConfig.PinWindow => _gridPinWindow.Seconds();
+        TimeSpan GridLagMonitor.IConfig.PinLifespan => _gridPinLifespan.Seconds();
     }
 }

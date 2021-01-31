@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -12,38 +13,30 @@ namespace AutoModerator.Core
     /// </summary>
     public sealed class ServerLagObserver
     {
-        public interface IConfig
-        {
-            double SimSpeedThreshold { get; }
-        }
-
-        readonly IConfig _config;
-        readonly int _bufferSeconds;
+        readonly TimeSpan _buffer;
         readonly Queue<double> _timeline;
 
-        public ServerLagObserver(IConfig config, int bufferSeconds)
+        public ServerLagObserver(TimeSpan buffer)
         {
-            _config = config;
-            _bufferSeconds = bufferSeconds;
+            _buffer = buffer;
             _timeline = new Queue<double>();
         }
 
-        public bool IsLaggy { get; private set; }
+        public double SimSpeed { get; private set; }
 
-        public async Task LoopObserving(CancellationToken canceller)
+        public async Task Observe(CancellationToken canceller)
         {
             while (!canceller.IsCancellationRequested)
             {
                 var ss = Sync.ServerSimulationRatio;
                 _timeline.Enqueue(ss);
 
-                while (_timeline.Count > _bufferSeconds)
+                while (_timeline.Count > _buffer.TotalSeconds)
                 {
                     _timeline.TryDequeue(out _);
                 }
 
-                var referenceSimSpeed = _timeline.Max();
-                IsLaggy = referenceSimSpeed < _config.SimSpeedThreshold;
+                SimSpeed = _timeline.Average();
 
                 await Task.Delay(1.Seconds(), canceller);
             }

@@ -1,5 +1,11 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
+using AutoModerator.Grids;
+using Profiler.Basics;
+using Profiler.Core;
+using Sandbox.Game.World;
 using Torch.Commands;
 using Torch.Commands.Permissions;
 using Utils.General;
@@ -9,103 +15,51 @@ using VRageMath;
 
 namespace AutoModerator
 {
-    [Category("lg")]
+    [Category("lag")]
     public sealed class AutoModeratorCommandModule : CommandModule
     {
         AutoModeratorPlugin Plugin => (AutoModeratorPlugin) Context.Plugin;
 
-        [Command("on", "Enable broadcasting.")]
+        [Command("enable", "Enable/disable broadcasting.")]
         [Permission(MyPromoteLevel.Admin)]
-        public void EnableBroadcasting() => this.CatchAndReport(() =>
+        public void GetOrSetEnabled() => this.CatchAndReport(() =>
         {
-            Plugin.Enabled = true;
+            this.GetOrSetProperty(Plugin.Config, nameof(AutoModeratorConfig.EnableBroadcasting));
         });
 
-        [Command("off", "Disable broadcasting.")]
+        [Command("grid_mspf", "Get or set the current ms/f threshold per online member.")]
         [Permission(MyPromoteLevel.Admin)]
-        public void DisableBroadcasting() => this.CatchAndReport(() =>
+        public void GridMspfThreshold() => this.CatchAndReport(() =>
         {
-            Plugin.Enabled = false;
-        });
-
-        [Command("mspf", "Get or set the current ms/f threshold per online member.")]
-        [Permission(MyPromoteLevel.Admin)]
-        public void MspfThreshold() => this.CatchAndReport(() =>
-        {
-            if (!Context.Args.Any())
-            {
-                var currentThreshold = Plugin.MspfThreshold;
-                Context.Respond($"{currentThreshold:0.000}mspf per online member");
-                return;
-            }
-
-            var arg = Context.Args[0];
-            if (!double.TryParse(arg, out var newThreshold))
-            {
-                Context.Respond($"Failed to parse threshold value: {arg}", Color.Red);
-                return;
-            }
-
-            Plugin.MspfThreshold = newThreshold;
-            Context.Respond($"Set new threshold: {newThreshold:0.000}mspf per online member");
+            this.GetOrSetProperty(Plugin.Config, nameof(AutoModeratorConfig.GridMspfThreshold));
         });
 
         [Command("ss", "Get or set the current sim speed threshold.")]
         [Permission(MyPromoteLevel.Admin)]
         public void SimSpeedThreshold() => this.CatchAndReport(() =>
         {
-            if (!Context.Args.Any())
-            {
-                var value = Plugin.SimSpeedThreshold;
-                Context.Respond($"{value:0.00}ss");
-                return;
-            }
-
-            var arg = Context.Args[0];
-            if (!double.TryParse(arg, out var newThreshold))
-            {
-                Context.Respond($"Failed to parse threshold value: {arg}", Color.Red);
-                return;
-            }
-
-            Plugin.SimSpeedThreshold = newThreshold;
-            Context.Respond($"Set new threshold: {newThreshold:0.000}ss");
+            this.GetOrSetProperty(Plugin.Config, nameof(AutoModeratorConfig.SimSpeedThreshold));
         });
 
         [Command("admins-only", "Get or set the current \"admins only\" value.")]
         [Permission(MyPromoteLevel.Admin)]
         public void AdminsOnly() => this.CatchAndReport(() =>
         {
-            if (!Context.Args.Any())
-            {
-                var value = Plugin.AdminsOnly;
-                Context.Respond($"{value}");
-                return;
-            }
-
-            var arg = Context.Args[0];
-            if (!bool.TryParse(arg, out var newValue))
-            {
-                Context.Respond($"Failed to parse bool value: {arg}", Color.Red);
-                return;
-            }
-
-            Plugin.AdminsOnly = newValue;
-            Context.Respond($"Set admins-only: {newValue}");
+            this.GetOrSetProperty(Plugin.Config, nameof(AutoModeratorConfig.AdminsOnly));
         });
 
         [Command("clear", "Clear all custom GPS entities.")]
         [Permission(MyPromoteLevel.Admin)]
         public void ClearCustomGps() => this.CatchAndReport(() =>
         {
-            Plugin.CleanAllCustomGps();
+            Plugin.DeleteAllGpss();
         });
 
         [Command("show", "Show the list of custom GPS entities.")]
         [Permission(MyPromoteLevel.Admin)]
         public void ShowCustomGpsEntities() => this.CatchAndReport(() =>
         {
-            var gpss = Plugin.GetAllCustomGpsEntities();
+            var gpss = Plugin.GetAllGpss();
 
             if (!gpss.Any())
             {
@@ -122,6 +76,25 @@ namespace AutoModerator
             Context.Respond($"Custom GPS entities: \n{msgBuilder}");
         });
 
+        [Command("check", "Show if the player is receiving a broadcast")]
+        [Permission(MyPromoteLevel.None)]
+        public void CheckReceive(string playerName = null) => this.CatchAndReport(() =>
+        {
+            var player = Context.Player ?? MySession.Static.Players.GetPlayerByName(playerName);
+            if (player == null)
+            {
+                Context.Respond($"Player not found: \"{playerName}\"", Color.Red);
+                return;
+            }
+
+            var doesReceive = Plugin.CheckPlayerReceivesGpss(player as MyPlayer);
+            var msg = doesReceive
+                ? $"Player \"{playerName}\" does receive broadcasts"
+                : $"Player \"{playerName}\" does not receive broadcasts";
+
+            Context.Respond(msg);
+        });
+
         [Command("mute", "Mute broadcasting.")]
         [Permission(MyPromoteLevel.None)]
         public void MuteBroadcastsToPlayer() => this.CatchAndReport(() =>
@@ -132,7 +105,8 @@ namespace AutoModerator
                 return;
             }
 
-            Plugin.MutePlayer(Context.Player.SteamUserId);
+            Plugin.Config.AddMutedPlayer(Context.Player.SteamUserId);
+            Context.Respond("Muted broadcasting. It may take some time to take effect.");
         });
 
         [Command("unmute", "Unmute broadcasting.")]
@@ -145,104 +119,155 @@ namespace AutoModerator
                 return;
             }
 
-            Plugin.UnmutePlayer(Context.Player.SteamUserId);
+            Plugin.Config.RemoveMutedPlayer(Context.Player.SteamUserId);
+            Context.Respond("Unmuted broadcasting. It may take some time to take effect.");
         });
 
         [Command("unmute_all", "Force every player to unmute broadcasting.")]
         [Permission(MyPromoteLevel.Admin)]
         public void UnmuteBroadcastsToAll() => this.CatchAndReport(() =>
         {
-            Plugin.UnmuteAll();
+            Plugin.Config.RemoveAllMutedPlayers();
         });
 
-        [Command("profile", "Profile online faction members.")]
+        [Command("profile", "Profile laggy grids.")]
         [Permission(MyPromoteLevel.Admin)]
-        public void ProfileOnlineFactionMembers() => this.CatchAndReport(async () =>
+        public void Profile() => this.CatchAndReport(async () =>
         {
-            var profileTime = 5d;
-            var top = 10;
+            var profileTime = 5;
 
             foreach (var arg in Context.Args)
             {
                 if (CommandOption.TryGetOption(arg, out var option))
                 {
-                    if (option.TryParseDouble("time", out profileTime) ||
-                        option.TryParseInt("top", out top))
-                    {
-                        continue;
-                    }
+                    if (option.TryParseInt("time", out profileTime)) continue;
 
                     Context.Respond($"Unknown option: {arg}", Color.Red);
                     return;
                 }
             }
 
-            Context.Respond($"Profiling (profile time: {profileTime:0.0}s, top: {top} factions)...");
+            Context.Respond($"Profiling (profile time: {profileTime}s...");
 
-            var result = await Plugin.ProfileFactionMembers(profileTime.Seconds());
-            result = result.OrderByDescending(r => r.Mspf).Take(top);
-
-            if (!result.Any())
+            var mask = new GameEntityMask(null, null, null);
+            using (var profiler = new GridLagProfiler(Plugin.Config, mask))
+            using (ProfilerResultQueue.Profile(profiler))
             {
-                Context.Respond("No factions found");
-                return;
-            }
+                Context.Respond("Profiling...");
 
-            var msgBuilder = new StringBuilder();
-            foreach (var (faction, count, mspf) in result)
-            {
-                msgBuilder.AppendLine($"> {faction.Tag}: {mspf:0.00}mspf ({count} online players)");
-            }
+                profiler.MarkStart();
 
-            Context.Respond($"Finished profiling:\n{msgBuilder}");
-        });
+                await Task.Delay(profileTime.Seconds());
 
-        [Command("scan", "Scan laggy grids.")]
-        [Permission(MyPromoteLevel.Admin)]
-        public void ScanLaggyGrids() => this.CatchAndReport(async () =>
-        {
-            var profileTime = 5d;
-            var broadcast = false;
-            var buffered = false;
-
-            foreach (var arg in Context.Args)
-            {
-                if (CommandOption.TryGetOption(arg, out var option))
+                var profileResults = profiler.GetTopProfileResults(4);
+                if (!profileResults.Any())
                 {
-                    if (option.TryParseDouble("time", out profileTime) ||
-                        option.IsParameterless("broadcast", out broadcast) ||
-                        option.IsParameterless("buffered", out buffered))
-                    {
-                        continue;
-                    }
-
-                    Context.Respond($"Unknown option: {arg}", Color.Red);
+                    Context.Respond("No laggy grids found");
                     return;
                 }
+
+                var msgBuilder = new StringBuilder();
+                foreach (var report in profileResults)
+                {
+                    msgBuilder.AppendLine($"> {report}");
+                }
+
+                Context.Respond($"Done profiling:\n{msgBuilder}");
             }
+        });
 
-            Context.Respond($"Scanning (profile time: {profileTime:0.0}s, buffered: {buffered}, broadcast: {broadcast})...");
+        [Command("mine", "Profile player grids.")]
+        [Permission(MyPromoteLevel.None)]
+        public void ProfilePlayer() => this.CatchAndReport(async () =>
+        {
+            Context.Player.ThrowIfNull("must be called by a player");
 
-            var reports = await Plugin.FindLaggyGrids(profileTime.Seconds(), buffered);
-
-            if (!reports.Any())
+            // parse all options
+            long? playerMask = Context.Player.IdentityId;
+            long? factionMask = null;
+            long? gridMask = null;
+            var profileTime = 10.Seconds();
+            foreach (var arg in Context.Args)
             {
-                Context.Respond("No laggy grids found");
+                if (!CommandOption.TryGetOption(arg, out var option)) continue;
+
+                if (option.IsParameterless("faction"))
+                {
+                    var faction = MySession.Static.Factions.GetPlayerFaction(Context.Player.IdentityId);
+                    if (faction == null)
+                    {
+                        Context.Respond("Faction not found", Color.Red);
+                        return;
+                    }
+
+                    factionMask = faction.FactionId;
+                    playerMask = null;
+                    continue;
+                }
+
+                if (option.IsParameterless("this"))
+                {
+                    var grid = Context.Player?.Controller?.ControlledEntity?.Entity;
+                    if (grid == null)
+                    {
+                        Context.Respond("Grid not found", Color.Red);
+                        return;
+                    }
+
+                    gridMask = grid.EntityId;
+                    continue;
+                }
+
+                if (option.TryParseInt("time", out var time))
+                {
+                    profileTime = time.Seconds();
+                    continue;
+                }
+
+                Context.Respond($"Unknown argument: {arg}", Color.Red);
                 return;
             }
 
+            Context.Respond($"Profiling for {profileTime.TotalSeconds} seconds...");
+
             var msgBuilder = new StringBuilder();
-            foreach (var report in reports)
-            {
-                msgBuilder.AppendLine($"> {report}");
-            }
+            msgBuilder.AppendLine();
 
-            Context.Respond($"Finished scanning:\n{msgBuilder}");
-
-            if (broadcast)
+            var mask = new GameEntityMask(playerMask, gridMask, factionMask);
+            using (var gridLagProfiler = new GridLagProfiler(Plugin.Config, mask))
+            using (var blockDefProfiler = new BlockDefinitionProfiler(mask))
+            using (ProfilerResultQueue.Profile(gridLagProfiler))
             {
-                await Plugin.BroadcastLaggyGrids(reports);
-                Context.Respond("Broadcasting finished");
+                gridLagProfiler.MarkStart();
+                blockDefProfiler.MarkStart();
+
+                await Task.Delay(profileTime);
+
+                msgBuilder.AppendLine("Performance by grids (% of broadcasting threshold):");
+
+                var profileResults = gridLagProfiler.GetTopProfileResults(4);
+                foreach (var profileResult in profileResults)
+                {
+                    var gridName = profileResult.GridName;
+                    var playerName = profileResult.PlayerNameOrNull ?? "<none>";
+                    var lag = profileResult.ThresholdNormal;
+                    var lagStr = $"{lag * 100:0}%";
+                    msgBuilder.AppendLine($"\"{gridName}\" {lagStr} by {playerName}");
+                }
+
+                msgBuilder.AppendLine();
+                msgBuilder.AppendLine("Performance by blocks (% of total):");
+
+                var blockDefProfilerResult = blockDefProfiler.GetResult();
+                foreach (var (blockDef, profileEntity) in blockDefProfilerResult.GetTopEntities(4))
+                {
+                    var blockName = blockDef.BlockPairName;
+                    var lag = profileEntity.TotalTime / blockDefProfilerResult.TotalTime;
+                    var lagStr = $"{lag * 100:0}%";
+                    msgBuilder.AppendLine($"{blockName} {lagStr}");
+                }
+
+                Context.Respond(msgBuilder.ToString());
             }
         });
     }
