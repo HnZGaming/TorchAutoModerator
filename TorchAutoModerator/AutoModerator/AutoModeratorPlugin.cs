@@ -34,7 +34,8 @@ namespace AutoModerator
         BroadcastListenerCollection _players;
         EntityIdGpsCollection _gpsCollection;
         ServerLagObserver _lagObserver;
-        GridLagMonitor _gridLagMonitor;
+        GridLagPinCreator _gridLagPinCreator;
+        GridLagAnalyzer _gridLagAnalyzer;
 
         public AutoModeratorConfig Config => _config.Data;
 
@@ -65,7 +66,8 @@ namespace AutoModerator
             _players = new BroadcastListenerCollection(Config);
             _gpsCollection = new EntityIdGpsCollection("<!> ");
             _lagObserver = new ServerLagObserver(5.Seconds());
-            _gridLagMonitor = new GridLagMonitor(Config);
+            _gridLagPinCreator = new GridLagPinCreator(Config);
+            _gridLagAnalyzer = new GridLagAnalyzer(Config);
         }
 
         void OnGameLoaded()
@@ -111,28 +113,28 @@ namespace AutoModerator
                 {
                     // auto profile
                     var mask = new GameEntityMask(null, null, null);
-                    using (var gridProfiler = new GridLagProfiler(Config, mask))
+                    using (var gridProfiler = new GridProfiler(mask))
                     using (ProfilerResultQueue.Profile(gridProfiler))
                     {
                         gridProfiler.MarkStart();
                         Log.Debug("auto-profiling...");
 
-                        var profilingTime = Config.ProfileTime.Seconds();
-                        await Task.Delay(profilingTime, canceller);
+                        await Task.Delay(Config.ProfileTime.Seconds(), canceller);
+                        Log.Debug("auto-profile done");
 
                         // grids
-                        var gridProfileResults = gridProfiler.GetTopProfileResults(50).ToArray();
-                        _gridLagMonitor.AddProfileInterval(gridProfileResults);
-                        Log.Debug($"auto-profiled {gridProfileResults.Length} grids");
-                        Log.Debug($"found {gridProfileResults.Count(r => r.ThresholdNormal > 1f)} laggy grids");
-                        Log.Debug($"found {_gridLagMonitor.PinnedGridCount} pinned grids");
+                        var gridProfileResult = gridProfiler.GetResult();
+                        var gridLagProfileResults = _gridLagAnalyzer.Analyze(gridProfileResult).ToArray();
+                        _gridLagPinCreator.AddProfileInterval(gridLagProfileResults);
+                        Log.Debug($"found {gridLagProfileResults.Count(r => r.ThresholdNormal > 1f)} laggy grids");
+                        Log.Debug($"found {_gridLagPinCreator.PinnedGridCount} pinned grids");
 
                         // todo give players a heads-up when their grids are laggy
                         // use `gridProfileResults`'s laggy grids (not the "pinned" grids which are already broadcasted)
                     }
                 }
 
-                _gridLagMonitor.Update();
+                _gridLagPinCreator.Update();
 
                 if (Config.EnableBroadcasting)
                 {
@@ -141,10 +143,10 @@ namespace AutoModerator
                     // collect from auto grid profiler results
                     if (Config.EnableGridBroadcasting)
                     {
-                        var rankedSources = _gridLagMonitor
+                        var rankedSources = _gridLagPinCreator
                             .CreateGpsSources(Config)
                             .OrderByDescending(g => g.LagNormal)
-                            .Take(Config.MaxReportedGridCount)
+                            .Take(Config.MaxProfiledGridCount)
                             .Select((g, i) => ((IEntityGpsSource) g, i))
                             .ToArray();
 

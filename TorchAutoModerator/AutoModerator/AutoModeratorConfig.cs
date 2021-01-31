@@ -16,8 +16,8 @@ namespace AutoModerator
         GridGpsSource.IConfig,
         BroadcastListenerCollection.IConfig,
         FileLoggingConfigurator.IConfig,
-        GridLagProfiler.IConfig,
-        GridLagMonitor.IConfig
+        GridLagPinCreator.IConfig,
+        GridLagAnalyzer.IConfig
     {
         const string OpGroupName = "Auto Moderator";
         const string FuncGroupName = "Profiling & Broadcasting";
@@ -103,7 +103,7 @@ namespace AutoModerator
 
         [XmlElement("MaxLaggyGridCountPerScan")]
         [Display(Order = 5, Name = "Max GPS count", GroupName = FuncGroupName)]
-        public int MaxReportedGridCount
+        public int MaxProfiledGridCount
         {
             get => _maxLaggyGridCountPerScan;
             set => SetValue(ref _maxLaggyGridCountPerScan, value);
@@ -127,7 +127,7 @@ namespace AutoModerator
 
         [XmlElement("MinLifespanSeconds")]
         [Display(Order = 7, Name = "Grid broadcast time (seconds)", GroupName = FuncGroupName)]
-        public double GridGpsLifespan
+        public double GridPinLifespan
         {
             get => _gridPinLifespan;
             set => SetValue(ref _gridPinLifespan, value);
@@ -230,16 +230,11 @@ namespace AutoModerator
             OnPropertyChanged(nameof(MutedPlayerIds));
         }
 
-        double GridLagProfiler.IConfig.MspfThreshold => GridMspfThreshold;
-
         public bool IsFactionExempt(string factionTag)
         {
             var exemptByNpc = MySession.Static.Factions.IsNpcFaction(factionTag) && IgnoreNpcFactions;
             var exemptByTag = ExemptFactionTags.Contains(factionTag.ToLower());
             return exemptByNpc || exemptByTag;
         }
-
-        TimeSpan GridLagMonitor.IConfig.PinWindow => _gridPinWindow.Seconds();
-        TimeSpan GridLagMonitor.IConfig.PinLifespan => _gridPinLifespan.Seconds();
     }
 }

@@ -150,7 +150,7 @@ namespace AutoModerator
             Context.Respond($"Profiling (profile time: {profileTime}s...");
 
             var mask = new GameEntityMask(null, null, null);
-            using (var profiler = new GridLagProfiler(Plugin.Config, mask))
+            using (var profiler = new GridProfiler(mask))
             using (ProfilerResultQueue.Profile(profiler))
             {
                 Context.Respond("Profiling...");
@@ -159,15 +159,16 @@ namespace AutoModerator
 
                 await Task.Delay(profileTime.Seconds());
 
-                var profileResults = profiler.GetTopProfileResults(4);
-                if (!profileResults.Any())
+                var profileResults = profiler.GetResult();
+                var lagResults = new GridLagAnalyzer(Plugin.Config).Analyze(profileResults).ToArray();
+                if (!lagResults.Any())
                 {
                     Context.Respond("No laggy grids found");
                     return;
                 }
 
                 var msgBuilder = new StringBuilder();
-                foreach (var report in profileResults)
+                foreach (var report in lagResults)
                 {
                     msgBuilder.AppendLine($"> {report}");
                 }
@@ -234,19 +235,20 @@ namespace AutoModerator
             msgBuilder.AppendLine();
 
             var mask = new GameEntityMask(playerMask, gridMask, factionMask);
-            using (var gridLagProfiler = new GridLagProfiler(Plugin.Config, mask))
+            using (var gridProfiler = new GridProfiler(mask))
             using (var blockDefProfiler = new BlockDefinitionProfiler(mask))
-            using (ProfilerResultQueue.Profile(gridLagProfiler))
+            using (ProfilerResultQueue.Profile(gridProfiler))
             {
-                gridLagProfiler.MarkStart();
+                gridProfiler.MarkStart();
                 blockDefProfiler.MarkStart();
 
                 await Task.Delay(profileTime);
 
                 msgBuilder.AppendLine("Performance by grids (% of broadcasting threshold):");
 
-                var profileResults = gridLagProfiler.GetTopProfileResults(4);
-                foreach (var profileResult in profileResults)
+                var profileResults = gridProfiler.GetResult();
+                var lagResults = new GridLagAnalyzer(Plugin.Config).Analyze(profileResults).ToArray();
+                foreach (var profileResult in lagResults)
                 {
                     var gridName = profileResult.GridName;
                     var playerName = profileResult.PlayerNameOrNull ?? "<none>";

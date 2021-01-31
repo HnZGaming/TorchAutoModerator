@@ -163,10 +163,10 @@
         <Compile Include="AutoModerator.Core\IEntityGpsSource.cs" />
         <Compile Include="AutoModerator.Core\LifespanDictionary.cs" />
         <Compile Include="AutoModerator.Core\ServerLagObserver.cs" />
-        <Compile Include="AutoModerator.Grids\GridLagProfiler.cs" />
+        <Compile Include="AutoModerator.Grids\GridLagAnalyzer.cs" />
         <Compile Include="AutoModerator.Grids\GridLagProfileResult.cs" />
         <Compile Include="AutoModerator.Grids\GridGpsSource.cs" />
-        <Compile Include="AutoModerator.Grids\GridLagMonitor.cs" />
+        <Compile Include="AutoModerator.Grids\GridLagPinCreator.cs" />
         <Compile Include="Properties\AssemblyInfo.cs" />
         <Compile Include="AutoModerator\AutoModeratorCommandModule.cs" />
         <Compile Include="AutoModerator\AutoModeratorConfig.cs" />

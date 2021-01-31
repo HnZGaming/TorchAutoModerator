@@ -8,12 +8,12 @@ using Utils.General;
 
 namespace AutoModerator.Grids
 {
-    public sealed class GridLagMonitor
+    public sealed class GridLagPinCreator
     {
         public interface IConfig
         {
-            TimeSpan PinWindow { get; }
-            TimeSpan PinLifespan { get; }
+            double GridPinWindow { get; }
+            double GridPinLifespan { get; }
         }
 
         static readonly ILogger Log = LogManager.GetCurrentClassLogger();
@@ -22,7 +22,7 @@ namespace AutoModerator.Grids
         readonly LifespanDictionary<long> _pinnedGridIds;
         readonly Dictionary<long, GridLagProfileResult> _lastProfileResults;
 
-        public GridLagMonitor(IConfig config)
+        public GridLagPinCreator(IConfig config)
         {
             _config = config;
             _lagTimeSeries = new EntityLagTimeSeries();
@@ -41,12 +41,12 @@ namespace AutoModerator.Grids
         }
 
         [MethodImpl(MethodImplOptions.Synchronized)]
-        public void AddProfileInterval(IEnumerable<GridLagProfileResult> profileResults)
+        public void AddProfileInterval(IEnumerable<GridLagProfileResult> results)
         {
-            _lagTimeSeries.AddInterval(profileResults.Select(r => (r.GridId, r.ThresholdNormal)));
+            _lagTimeSeries.AddInterval(results.Select(r => (r.GridId, r.ThresholdNormal)));
 
             // map grid id -> last profile result
-            _lastProfileResults.AddRangeWithKeys(profileResults, r => r.GridId);
+            _lastProfileResults.AddRangeWithKeys(results, r => r.GridId);
 
             // expire old data
             var trackedGridIds = _lagTimeSeries.EntityIds.Concat(_pinnedGridIds.Keys);
@@ -60,16 +60,16 @@ namespace AutoModerator.Grids
         [MethodImpl(MethodImplOptions.Synchronized)]
         public void Update()
         {
-            _lagTimeSeries.RemovePointsOlderThan(DateTime.UtcNow - _config.PinWindow);
+            _lagTimeSeries.RemovePointsOlderThan(DateTime.UtcNow - _config.GridPinWindow.Seconds());
 
-            _pinnedGridIds.Lifespan = _config.PinLifespan;
+            _pinnedGridIds.Lifespan = _config.GridPinLifespan.Seconds();
             _pinnedGridIds.RemoveExpired();
         }
 
         [MethodImpl(MethodImplOptions.Synchronized)]
         public IEnumerable<GridGpsSource> CreateGpsSources(GridGpsSource.IConfig config)
         {
-            _pinnedGridIds.Lifespan = _config.PinLifespan;
+            _pinnedGridIds.Lifespan = _config.GridPinLifespan.Seconds();
             foreach (var (gridId, remainingTime) in _pinnedGridIds.GetRemainingTimes())
             {
                 var lastProfileResult = _lastProfileResults[gridId];
