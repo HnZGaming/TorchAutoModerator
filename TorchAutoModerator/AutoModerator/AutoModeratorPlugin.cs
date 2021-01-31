@@ -65,7 +65,7 @@ namespace AutoModerator
             _players = new BroadcastListenerCollection(Config);
             _gpsCollection = new EntityIdGpsCollection("<!> ");
             _lagObserver = new ServerLagObserver(5.Seconds());
-            _gridLagMonitor = new GridLagMonitor();
+            _gridLagMonitor = new GridLagMonitor(Config);
         }
 
         void OnGameLoaded()
@@ -98,40 +98,43 @@ namespace AutoModerator
             // Wait for some time during the session startup
             await Task.Delay(Config.FirstIdle.Seconds(), canceller);
 
+            // MAIN LOOP
             while (!canceller.IsCancellationRequested)
             {
                 var stopwatch = Stopwatch.StartNew();
-
-                // auto profile
-                var mask = new GameEntityMask(null, null, null);
-                using (var gridProfiler = new GridLagProfiler(Config, mask))
-                using (ProfilerResultQueue.Profile(gridProfiler))
-                {
-                    gridProfiler.MarkStart();
-                    Log.Debug("auto-profiling...");
-
-                    var profilingTime = Config.ProfileTime.Seconds();
-                    await Task.Delay(profilingTime, canceller);
-
-                    // grids
-                    var gridProfileResults = gridProfiler.GetTopProfileResults(50).ToArray();
-                    _gridLagMonitor.AddProfileInterval(gridProfileResults);
-                    _gridLagMonitor.RemovePointsOlderThan(Config.GridPinWindow.Seconds());
-                    _gridLagMonitor.RemoveGpsSourcesOlderThan(Config.GridGpsLifespan.Seconds());
-                    Log.Debug($"auto-profiled {gridProfileResults.Length} grids");
-                    Log.Debug($"found {gridProfileResults.Count(r => r.ThresholdNormal > 1f)} laggy grids");
-                    Log.Debug($"found {_gridLagMonitor.PinnedGridCount} pinned grids");
-
-                    // todo give players a heads-up when their grids are laggy
-                    // use `gridProfileResults`'s laggy grids (not the "pinned" grids which are already broadcasted)
-                }
 
                 // check if the server is laggy
                 var simSpeed = _lagObserver.SimSpeed;
                 var isLaggy = simSpeed < Config.SimSpeedThreshold;
                 Log.Debug($"laggy: {isLaggy} ({simSpeed:0.0}ss)");
+                if (isLaggy)
+                {
+                    // auto profile
+                    var mask = new GameEntityMask(null, null, null);
+                    using (var gridProfiler = new GridLagProfiler(Config, mask))
+                    using (ProfilerResultQueue.Profile(gridProfiler))
+                    {
+                        gridProfiler.MarkStart();
+                        Log.Debug("auto-profiling...");
 
-                if (Config.EnableBroadcasting && isLaggy)
+                        var profilingTime = Config.ProfileTime.Seconds();
+                        await Task.Delay(profilingTime, canceller);
+
+                        // grids
+                        var gridProfileResults = gridProfiler.GetTopProfileResults(50).ToArray();
+                        _gridLagMonitor.AddProfileInterval(gridProfileResults);
+                        Log.Debug($"auto-profiled {gridProfileResults.Length} grids");
+                        Log.Debug($"found {gridProfileResults.Count(r => r.ThresholdNormal > 1f)} laggy grids");
+                        Log.Debug($"found {_gridLagMonitor.PinnedGridCount} pinned grids");
+
+                        // todo give players a heads-up when their grids are laggy
+                        // use `gridProfileResults`'s laggy grids (not the "pinned" grids which are already broadcasted)
+                    }
+                }
+
+                _gridLagMonitor.Update();
+
+                if (Config.EnableBroadcasting)
                 {
                     var allGpsSources = new List<(IEntityGpsSource GpsSource, int Rank)>();
 

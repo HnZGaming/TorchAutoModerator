@@ -17,6 +17,7 @@ namespace AutoModerator.Core
 
         public IEnumerable<K> Keys => _self.Keys;
         public int Count => _self.Count;
+        public TimeSpan Lifespan { private get; set; }
 
         [MethodImpl(MethodImplOptions.Synchronized)]
         public void AddOrUpdate(IEnumerable<K> keys)
@@ -29,11 +30,11 @@ namespace AutoModerator.Core
         }
 
         [MethodImpl(MethodImplOptions.Synchronized)]
-        public void RemoveExpired(TimeSpan lifespan)
+        public void RemoveExpired()
         {
             foreach (var (key, startTime) in _self.ToArray())
             {
-                var endTime = startTime + lifespan;
+                var endTime = startTime + Lifespan;
                 if (endTime < DateTime.UtcNow)
                 {
                     _self.Remove(key);
@@ -44,9 +45,9 @@ namespace AutoModerator.Core
         [MethodImpl(MethodImplOptions.Synchronized)]
         public IEnumerable<(K Key, TimeSpan RemainingTime)> GetRemainingTimes()
         {
-            foreach (var (key, endTime) in _self)
+            foreach (var (key, startTime) in _self)
             {
-                var remainingTime = endTime - DateTime.UtcNow;
+                var remainingTime = startTime + Lifespan - DateTime.UtcNow;
                 yield return (key, remainingTime);
             }
         }

@@ -16,7 +16,8 @@ namespace AutoModerator
         GridGpsSource.IConfig,
         BroadcastListenerCollection.IConfig,
         FileLoggingConfigurator.IConfig,
-        GridLagProfiler.IConfig
+        GridLagProfiler.IConfig,
+        GridLagMonitor.IConfig
     {
         const string OpGroupName = "Auto Moderator";
         const string FuncGroupName = "Profiling & Broadcasting";
@@ -30,7 +31,7 @@ namespace AutoModerator
         bool _adminsOnly = true;
         int _maxLaggyGridCountPerScan = 3;
         double _gridPinWindow = 300d;
-        double _gridGpsLifespan = 600d;
+        double _gridPinLifespan = 600d;
         double _mspfThreshold = 3.0f;
         double _simSpeedThreshold = 0.7;
         double _sampleFrequency = 5;
@@ -128,8 +129,8 @@ namespace AutoModerator
         [Display(Order = 7, Name = "Grid broadcast time (seconds)", GroupName = FuncGroupName)]
         public double GridGpsLifespan
         {
-            get => _gridGpsLifespan;
-            set => SetValue(ref _gridGpsLifespan, value);
+            get => _gridPinLifespan;
+            set => SetValue(ref _gridPinLifespan, value);
         }
 
         [XmlElement("GridGpsNameFormat")]
@@ -237,5 +238,8 @@ namespace AutoModerator
             var exemptByTag = ExemptFactionTags.Contains(factionTag.ToLower());
             return exemptByNpc || exemptByTag;
         }
+
+        TimeSpan GridLagMonitor.IConfig.PinWindow => _gridPinWindow.Seconds();
+        TimeSpan GridLagMonitor.IConfig.PinLifespan => _gridPinLifespan.Seconds();
     }
 }
