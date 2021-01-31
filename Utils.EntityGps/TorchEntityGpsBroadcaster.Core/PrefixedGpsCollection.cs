@@ -42,6 +42,14 @@ namespace TorchEntityGpsBroadcaster.Core
             return gpss.Cast<MyGps>().Where(g => IsOurs(g));
         }
 
+        public void SendDeleteAllGpss()
+        {
+            foreach (var (identityId, gps) in GetAllGpss().ToArray())
+            {
+                Native.SendDelete(identityId, gps.Hash);
+            }
+        }
+
         public void SendAddGps(long identityId, MyGps gps, bool playSound)
         {
             MarkOurs(ref gps);

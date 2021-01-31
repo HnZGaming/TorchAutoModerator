@@ -4,30 +4,21 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
 using NLog;
-using Utils.General;
 using Utils.TimeSerieses;
 
 namespace AutoModerator.Core
 {
     internal sealed class EntityLagTimeSeries
     {
-        public interface IConfig
-        {
-            double LongLaggyWindow { get; }
-            double ProfileResultsExpireTime { get; }
-        }
-
         static readonly ILogger Log = LogManager.GetCurrentClassLogger();
-        readonly IConfig _config;
         readonly TaggedTimeSeries<long, double> _taggedTimeSeries;
 
-        public EntityLagTimeSeries(IConfig config)
+        public EntityLagTimeSeries()
         {
-            _config = config;
             _taggedTimeSeries = new TaggedTimeSeries<long, double>();
         }
 
-        public IEnumerable<long> GridIds => _taggedTimeSeries.Tags;
+        public IEnumerable<long> EntityIds => _taggedTimeSeries.Tags;
 
         [MethodImpl(MethodImplOptions.Synchronized)]
         public void Clear()
@@ -36,13 +27,13 @@ namespace AutoModerator.Core
         }
 
         [MethodImpl(MethodImplOptions.Synchronized)]
-        public void Update(IEnumerable<(long EntityId, double ProfiledNormal)> profileResults)
+        public void AddInterval(IEnumerable<(long EntityId, double ProfiledNormal)> profileResults)
         {
-            var timestamp = DateTime.UtcNow;
+            var now = DateTime.UtcNow;
 
             foreach (var (entityId, profiledNormal) in profileResults)
             {
-                _taggedTimeSeries.AddPoint(entityId, timestamp, profiledNormal);
+                _taggedTimeSeries.AddPoint(entityId, now, profiledNormal);
             }
 
             // append zero to time series that didn't have new input
@@ -51,17 +42,19 @@ namespace AutoModerator.Core
             {
                 if (!profileResultMap.ContainsKey(existingGridId))
                 {
-                    _taggedTimeSeries.AddPoint(existingGridId, timestamp, 0);
+                    _taggedTimeSeries.AddPoint(existingGridId, now, 0);
                 }
             }
-
-            // keep the time series small
-            var removeFrom = timestamp - _config.ProfileResultsExpireTime.Seconds();
-            _taggedTimeSeries.RemovePointsOlderThan(removeFrom);
         }
 
         [MethodImpl(MethodImplOptions.Synchronized)]
-        public IEnumerable<long> GetLaggyGridIds()
+        public void RemovePointsOlderThan(DateTime timestamp)
+        {
+            _taggedTimeSeries.RemovePointsOlderThan(timestamp);
+        }
+
+        [MethodImpl(MethodImplOptions.Synchronized)]
+        public IEnumerable<long> GetLaggyEntityIds()
         {
             foreach (var (gridId, timeSeries) in _taggedTimeSeries.GetAllTimeSeries())
             {
@@ -76,15 +69,12 @@ namespace AutoModerator.Core
         {
             if (timeSeries.Count == 0) return false;
 
-            var now = DateTime.UtcNow;
-            var capTimestamp = now - _config.LongLaggyWindow.Seconds();
-
             var sumNormal = 0d;
             var sumCount = 0;
             for (var i = timeSeries.Count - 1; i >= 0; i--)
             {
+                // if you wanna do something more complex you might use the timestamp
                 var (timestamp, normal) = timeSeries.GetPointAt(i);
-                if (timestamp < capTimestamp) break;
 
                 sumNormal += normal;
                 sumCount += 1;
@@ -95,11 +85,11 @@ namespace AutoModerator.Core
         }
 
         [MethodImpl(MethodImplOptions.Synchronized)]
-        public string ToString(long gridId, string timestampFormat, int width)
+        public string ToString(long entityId, string timestampFormat, int width)
         {
-            if (!_taggedTimeSeries.TryGetTimeSeries(gridId, out var timeSeries))
+            if (!_taggedTimeSeries.TryGetTimeSeries(entityId, out var timeSeries))
             {
-                throw new Exception($"time series not found: {gridId}");
+                throw new Exception($"time series not found: {entityId}");
             }
 
             var sb = new StringBuilder();

@@ -158,14 +158,16 @@
         </Reference>
     </ItemGroup>
     <ItemGroup>
-        <Compile Include="AutoModerator.Core\LifespanCollection.cs" />
-        <Compile Include="AutoModerator.Core\GridLagReport.cs" />
-        <Compile Include="AutoModerator.Core\EntityLagTimeSeries.cs" />
         <Compile Include="AutoModerator.Core\BroadcastListenerCollection.cs" />
-        <Compile Include="Properties\AssemblyInfo.cs" />
-        <Compile Include="AutoModerator.Core\GridLagProfiler.cs" />
-        <Compile Include="AutoModerator.Core\GridLagProfileResult.cs" />
+        <Compile Include="AutoModerator.Core\EntityLagTimeSeries.cs" />
+        <Compile Include="AutoModerator.Core\IEntityGpsSource.cs" />
+        <Compile Include="AutoModerator.Core\LifespanDictionary.cs" />
         <Compile Include="AutoModerator.Core\ServerLagObserver.cs" />
+        <Compile Include="AutoModerator.Grids\GridLagProfiler.cs" />
+        <Compile Include="AutoModerator.Grids\GridLagProfileResult.cs" />
+        <Compile Include="AutoModerator.Grids\GridGpsSource.cs" />
+        <Compile Include="AutoModerator.Grids\GridLagMonitor.cs" />
+        <Compile Include="Properties\AssemblyInfo.cs" />
         <Compile Include="AutoModerator\AutoModeratorCommandModule.cs" />
         <Compile Include="AutoModerator\AutoModeratorConfig.cs" />
         <Compile Include="AutoModerator\AutoModeratorPlugin.cs" />
@@ -189,11 +191,11 @@
         <Compile Include="Utils.General\StupidDb.cs" />
         <Compile Include="Utils.General\TaskUtils.cs" />
         <Compile Include="Utils.General\ThreadSafeThrottle.cs" />
-        <Compile Include="Utils.Torch\ReportGenerator.cs" />
         <Compile Include="Utils.Torch\CommandModuleUtils.cs" />
         <Compile Include="Utils.Torch\CommandOption.cs" />
         <Compile Include="Utils.Torch\GameLoopObserver.cs" />
         <Compile Include="Utils.Torch\GameLoopObserverManager.cs" />
+        <Compile Include="Utils.Torch\ReportGenerator.cs" />
         <Compile Include="Utils.Torch\TorchPluginUtils.cs" />
         <Compile Include="Utils.Torch\TorchUtils.cs" />
         <Compile Include="Utils.Torch\ViewUtils.cs" />

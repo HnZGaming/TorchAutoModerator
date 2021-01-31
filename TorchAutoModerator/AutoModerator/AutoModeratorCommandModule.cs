@@ -2,7 +2,7 @@
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using AutoModerator.Core;
+using AutoModerator.Grids;
 using Profiler.Basics;
 using Profiler.Core;
 using Sandbox.Game.World;
@@ -27,9 +27,9 @@ namespace AutoModerator
             this.GetOrSetProperty(Plugin.Config, nameof(AutoModeratorConfig.EnableBroadcasting));
         });
 
-        [Command("mspf", "Get or set the current ms/f threshold per online member.")]
+        [Command("grid_mspf", "Get or set the current ms/f threshold per online member.")]
         [Permission(MyPromoteLevel.Admin)]
-        public void MspfThreshold() => this.CatchAndReport(() =>
+        public void GridMspfThreshold() => this.CatchAndReport(() =>
         {
             this.GetOrSetProperty(Plugin.Config, nameof(AutoModeratorConfig.GridMspfThreshold));
         });
@@ -135,24 +135,19 @@ namespace AutoModerator
         public void Profile() => this.CatchAndReport(async () =>
         {
             var profileTime = 5;
-            var broadcastResults = false;
 
             foreach (var arg in Context.Args)
             {
                 if (CommandOption.TryGetOption(arg, out var option))
                 {
-                    if (option.TryParseInt("time", out profileTime) ||
-                        option.TryGetParameterlessBool("broadcast", out broadcastResults))
-                    {
-                        continue;
-                    }
+                    if (option.TryParseInt("time", out profileTime)) continue;
 
                     Context.Respond($"Unknown option: {arg}", Color.Red);
                     return;
                 }
             }
 
-            Context.Respond($"Profiling (profile time: {profileTime}s, broadcast: {broadcastResults}...");
+            Context.Respond($"Profiling (profile time: {profileTime}s...");
 
             var mask = new GameEntityMask(null, null, null);
             using (var profiler = new GridLagProfiler(Plugin.Config, mask))
@@ -164,7 +159,7 @@ namespace AutoModerator
 
                 await Task.Delay(profileTime.Seconds());
 
-                var profileResults = profiler.GetProfileResults(4);
+                var profileResults = profiler.GetTopProfileResults(4);
                 if (!profileResults.Any())
                 {
                     Context.Respond("No laggy grids found");
@@ -178,12 +173,6 @@ namespace AutoModerator
                 }
 
                 Context.Respond($"Done profiling:\n{msgBuilder}");
-
-                if (broadcastResults)
-                {
-                    Plugin.BroadcastGpss(profileResults);
-                    Context.Respond("Done broadcasting. It may take some time to take effect.");
-                }
             }
         });
 
@@ -256,7 +245,7 @@ namespace AutoModerator
 
                 msgBuilder.AppendLine("Performance by grids (% of broadcasting threshold):");
 
-                var profileResults = gridLagProfiler.GetProfileResults(4);
+                var profileResults = gridLagProfiler.GetTopProfileResults(4);
                 foreach (var profileResult in profileResults)
                 {
                     var gridName = profileResult.GridName;

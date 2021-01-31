@@ -6,16 +6,17 @@ using System.Runtime.CompilerServices;
 
 namespace AutoModerator.Core
 {
-    public class LifespanCollection<K>
+    public class LifespanDictionary<K>
     {
         readonly IDictionary<K, DateTime> _self;
 
-        public LifespanCollection()
+        public LifespanDictionary()
         {
             _self = new ConcurrentDictionary<K, DateTime>();
         }
 
         public IEnumerable<K> Keys => _self.Keys;
+        public int Count => _self.Count;
 
         [MethodImpl(MethodImplOptions.Synchronized)]
         public void AddOrUpdate(IEnumerable<K> keys)

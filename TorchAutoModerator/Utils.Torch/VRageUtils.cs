@@ -163,5 +163,12 @@ namespace Utils.Torch
             return grid.BigOwners.TryGetFirst(out var ownerId) &&
                    MySession.Static.Players.TryGetPlayerById(ownerId, out player);
         }
+
+        public static bool IsNpcFaction(this MyFactionCollection self, string factionTag)
+        {
+            var faction = self.TryGetFactionByTag(factionTag);
+            if (faction == null) return false;
+            return faction.IsEveryoneNpc();
+        }
     }
 }

@@ -3,7 +3,7 @@ using Utils.General;
 using Utils.Torch;
 using VRage.Game.ModAPI;
 
-namespace AutoModerator.Core
+namespace AutoModerator.Grids
 {
     // this class shouldn't hold onto any game entities so it won't mess with the game's GC
     public sealed class GridLagProfileResult

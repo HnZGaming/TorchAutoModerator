@@ -93,11 +93,11 @@ namespace Utils.General
             }
         }
 
-        public static void AddRange<K, V>(this IDictionary<K, V> self, IEnumerable<(K, V)> other)
+        public static void AddRangeWithKeys<K, V>(this IDictionary<K, V> self, IEnumerable<V> other, Func<V, K> makeKey)
         {
-            foreach (var (key, value) in other)
+            foreach (var value in other)
             {
-                self[key] = value;
+                self[makeKey(value)] = value;
             }
         }
 
