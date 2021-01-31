@@ -34,13 +34,6 @@ namespace AutoModerator
             this.GetOrSetProperty(Plugin.Config, nameof(AutoModeratorConfig.GridMspfThreshold));
         });
 
-        [Command("ss", "Get or set the current sim speed threshold.")]
-        [Permission(MyPromoteLevel.Admin)]
-        public void SimSpeedThreshold() => this.CatchAndReport(() =>
-        {
-            this.GetOrSetProperty(Plugin.Config, nameof(AutoModeratorConfig.SimSpeedThreshold));
-        });
-
         [Command("admins-only", "Get or set the current \"admins only\" value.")]
         [Permission(MyPromoteLevel.Admin)]
         public void AdminsOnly() => this.CatchAndReport(() =>

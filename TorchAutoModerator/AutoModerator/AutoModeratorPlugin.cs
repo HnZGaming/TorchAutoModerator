@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using System.Windows.Controls;
 using AutoModerator.Core;
 using AutoModerator.Grids;
+using AutoModerator.Players;
 using NLog;
 using Profiler.Basics;
 using Profiler.Core;
@@ -33,8 +34,7 @@ namespace AutoModerator
 
         BroadcastListenerCollection _players;
         EntityIdGpsCollection _gpsCollection;
-        ServerLagObserver _lagObserver;
-        GridLagPinCreator _gridLagPinCreator;
+        GridLagPinCreator _gridLagPins;
         GridLagAnalyzer _gridLagAnalyzer;
 
         public AutoModeratorConfig Config => _config.Data;
@@ -65,15 +65,13 @@ namespace AutoModerator
 
             _players = new BroadcastListenerCollection(Config);
             _gpsCollection = new EntityIdGpsCollection("<!> ");
-            _lagObserver = new ServerLagObserver(5.Seconds());
-            _gridLagPinCreator = new GridLagPinCreator(Config);
+            _gridLagPins = new GridLagPinCreator(Config);
             _gridLagAnalyzer = new GridLagAnalyzer(Config);
         }
 
         void OnGameLoaded()
         {
             TaskUtils.RunUntilCancelledAsync(Main, _canceller.Token).Forget(Log);
-            TaskUtils.RunUntilCancelledAsync(_lagObserver.Observe, _canceller.Token).Forget(Log);
         }
 
         void OnGameUnloading()
@@ -105,36 +103,31 @@ namespace AutoModerator
             {
                 var stopwatch = Stopwatch.StartNew();
 
-                // check if the server is laggy
-                var simSpeed = _lagObserver.SimSpeed;
-                var isLaggy = simSpeed < Config.SimSpeedThreshold;
-                Log.Debug($"laggy: {isLaggy} ({simSpeed:0.0}ss)");
-                if (isLaggy)
+                // auto profile
+                var mask = new GameEntityMask(null, null, null);
+                using (var gridProfiler = new GridProfiler(mask))
+                using (var playerProfiler = new PlayerProfiler(mask))
+                using (ProfilerResultQueue.Profile(gridProfiler))
+                using (ProfilerResultQueue.Profile(playerProfiler))
                 {
-                    // auto profile
-                    var mask = new GameEntityMask(null, null, null);
-                    using (var gridProfiler = new GridProfiler(mask))
-                    using (ProfilerResultQueue.Profile(gridProfiler))
-                    {
-                        gridProfiler.MarkStart();
-                        Log.Debug("auto-profiling...");
+                    gridProfiler.MarkStart();
+                    Log.Debug("auto-profiling...");
 
-                        await Task.Delay(Config.ProfileTime.Seconds(), canceller);
-                        Log.Debug("auto-profile done");
+                    await Task.Delay(Config.ProfileTime.Seconds(), canceller);
+                    Log.Debug("auto-profile done");
 
-                        // grids
-                        var gridProfileResult = gridProfiler.GetResult();
-                        var gridLagProfileResults = _gridLagAnalyzer.Analyze(gridProfileResult).ToArray();
-                        _gridLagPinCreator.AddProfileInterval(gridLagProfileResults);
-                        Log.Debug($"found {gridLagProfileResults.Count(r => r.ThresholdNormal > 1f)} laggy grids");
-                        Log.Debug($"found {_gridLagPinCreator.PinnedGridCount} pinned grids");
+                    // grids
+                    var gridProfileResult = gridProfiler.GetResult();
+                    var gridLagProfileResults = _gridLagAnalyzer.Analyze(gridProfileResult).ToArray();
+                    _gridLagPins.AddProfileInterval(gridLagProfileResults);
+                    Log.Debug($"found {gridLagProfileResults.Count(r => r.ThresholdNormal > 1f)} laggy grids");
+                    Log.Debug($"found {_gridLagPins.PinnedGridCount} pinned grids");
 
-                        // todo give players a heads-up when their grids are laggy
-                        // use `gridProfileResults`'s laggy grids (not the "pinned" grids which are already broadcasted)
-                    }
+                    // todo give players a heads-up when their grids are laggy
+                    // use `gridLagProfileResults`'s laggy grids (not the "pinned" grids which are already broadcasted)
+
+                    // players
                 }
-
-                _gridLagPinCreator.Update();
 
                 if (Config.EnableBroadcasting)
                 {
@@ -143,7 +136,7 @@ namespace AutoModerator
                     // collect from auto grid profiler results
                     if (Config.EnableGridBroadcasting)
                     {
-                        var rankedSources = _gridLagPinCreator
+                        var rankedSources = _gridLagPins
                             .CreateGpsSources(Config)
                             .OrderByDescending(g => g.LagNormal)
                             .Take(Config.MaxProfiledGridCount)

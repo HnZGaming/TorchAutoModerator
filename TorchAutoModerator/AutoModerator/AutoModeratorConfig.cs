@@ -33,7 +33,6 @@ namespace AutoModerator
         double _gridPinWindow = 300d;
         double _gridPinLifespan = 600d;
         double _mspfThreshold = 3.0f;
-        double _simSpeedThreshold = 0.7;
         double _sampleFrequency = 5;
         bool _exemptNpcFactions = true;
         string _gpsDescriptionFormat = "The {rank} laggiest grid. Get 'em!";
@@ -91,14 +90,6 @@ namespace AutoModerator
         {
             get => _mspfThreshold;
             set => SetValue(ref _mspfThreshold, Math.Max(value, 0.001f));
-        }
-
-        [XmlElement("SimSpeedThreshold")]
-        [Display(Order = 4, Name = "Sim speed threshold", GroupName = FuncGroupName)]
-        public double SimSpeedThreshold
-        {
-            get => _simSpeedThreshold;
-            set => SetValue(ref _simSpeedThreshold, MathUtils.Clamp(value, 0d, 2d));
         }
 
         [XmlElement("MaxLaggyGridCountPerScan")]

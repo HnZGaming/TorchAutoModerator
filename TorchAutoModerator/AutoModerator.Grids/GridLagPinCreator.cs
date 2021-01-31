@@ -55,15 +55,11 @@ namespace AutoModerator.Grids
             // keep track of laggy grids & gps lifespan
             var laggyGridIds = _lagTimeSeries.GetLaggyEntityIds().ToArray();
             _pinnedGridIds.AddOrUpdate(laggyGridIds);
-        }
 
-        [MethodImpl(MethodImplOptions.Synchronized)]
-        public void Update()
-        {
-            _lagTimeSeries.RemovePointsOlderThan(DateTime.UtcNow - _config.GridPinWindow.Seconds());
-
+            // clean up old data
             _pinnedGridIds.Lifespan = _config.GridPinLifespan.Seconds();
             _pinnedGridIds.RemoveExpired();
+            _lagTimeSeries.RemovePointsOlderThan(DateTime.UtcNow - _config.GridPinWindow.Seconds());
         }
 
         [MethodImpl(MethodImplOptions.Synchronized)]
