@@ -3,35 +3,34 @@ using AutoModerator.Core;
 using Sandbox.Game.Screens.Helpers;
 using Torch.Utils;
 
-namespace AutoModerator.Grids
+namespace AutoModerator.Players
 {
-    // this class shouldn't hold onto any game entities so it won't mess with the game's GC
-    public sealed class GridGpsSource : IEntityGpsSource
+    public sealed class PlayerGpsSource : IEntityGpsSource
     {
         public interface IConfig
         {
-            string GridGpsNameFormat { get; }
-            string GridGpsDescriptionFormat { get; }
+            string PlayerGpsNameFormat { get; }
+            string PlayerGpsDescriptionFormat { get; }
             string GpsColor { get; }
         }
 
         readonly IConfig _config;
-        readonly string _gridName;
-        readonly string _factionTagOrNull;
-        readonly string _playerNameOrNull;
         readonly TimeSpan _remainingTime;
         readonly int _rank;
+        readonly long _playerId;
+        readonly string _playerNameOrNull;
+        readonly string _factionTagOrNull;
 
-        public GridGpsSource(IConfig config, GridLagSnapshot snapshot, TimeSpan remainingTime, int rank)
+        public PlayerGpsSource(IConfig config, PlayerLagSnapshot snapshot, TimeSpan remainingTime, int rank)
         {
             _config = config;
-            AttachedEntityId = snapshot.EntityId;
-            LagNormal = snapshot.LagNormal;
-            _gridName = snapshot.GridName;
-            _factionTagOrNull = snapshot.FactionTagOrNull;
-            _playerNameOrNull = snapshot.PlayerNameOrNull;
             _remainingTime = remainingTime;
             _rank = rank;
+            AttachedEntityId = snapshot.SignatureGridId; //note
+            LagNormal = snapshot.LagNormal;
+            _playerId = snapshot.EntityId;
+            _playerNameOrNull = snapshot.PlayerName;
+            _factionTagOrNull = snapshot.FactionTagOrNull;
         }
 
         public long AttachedEntityId { get; }
@@ -41,8 +40,8 @@ namespace AutoModerator.Grids
         {
             if (GpsUtils.TryGetGridById(AttachedEntityId, out var grid))
             {
-                var name = ToString(_config.GridGpsNameFormat);
-                var description = ToString(_config.GridGpsDescriptionFormat);
+                var name = ToString(_config.PlayerGpsNameFormat);
+                var description = ToString(_config.PlayerGpsDescriptionFormat);
                 var color = ColorUtils.TranslateColor(_config.GpsColor);
                 gps = GpsUtils.CreateGridGps(grid, name, description, color);
                 return true;
@@ -55,7 +54,6 @@ namespace AutoModerator.Grids
         string ToString(string format)
         {
             return format
-                .Replace("{grid}", _gridName)
                 .Replace("{player}", _playerNameOrNull ?? "<none>")
                 .Replace("{faction}", _factionTagOrNull ?? "<none>")
                 .Replace("{ratio}", $"{LagNormal * 100:0}%")
@@ -70,7 +68,7 @@ namespace AutoModerator.Grids
             var factionTag = _factionTagOrNull ?? "<single>";
             var playerName = _playerNameOrNull ?? "<none>";
             var rank = GpsUtils.RankToString(_rank);
-            return $"\"{_gridName}\" ({AttachedEntityId}) [{factionTag}] {playerName}{normal} ({rank}) {remainingTime}";
+            return $"[{factionTag}] {playerName} ({_playerId}) {normal} ({rank}) {remainingTime}";
         }
     }
 }

@@ -184,5 +184,15 @@ namespace Utils.General
                 yield return x;
             }
         }
+
+        public static IEnumerable<(T, int)> Indexed<T>(this IEnumerable<T> self)
+        {
+            return self.Select((t, i) => (t, i));
+        }
+
+        public static IEnumerable<T> WhereNot<T>(this IEnumerable<T> self, Func<T, bool> f)
+        {
+            return self.Where(t => !f(t));
+        }
     }
 }
