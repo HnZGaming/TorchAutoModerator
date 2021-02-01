@@ -79,7 +79,8 @@ namespace AutoModerator.Core
 
         public static string RankToString(int rank)
         {
-            switch ((rank + 1) % 10)
+            rank += 1;
+            switch (rank % 10)
             {
                 case 1: return $"{rank}st";
                 case 2: return $"{rank}nd";

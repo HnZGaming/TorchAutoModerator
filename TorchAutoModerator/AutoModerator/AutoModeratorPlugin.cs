@@ -111,8 +111,8 @@ namespace AutoModerator
                 using (ProfilerResultQueue.Profile(playerProfiler))
                 {
                     gridProfiler.MarkStart();
+                    playerProfiler.MarkStart();
                     Log.Debug("auto-profiling...");
-
                     await Task.Delay(Config.ProfileTime.Seconds(), canceller);
                     Log.Debug("auto-profile done");
 

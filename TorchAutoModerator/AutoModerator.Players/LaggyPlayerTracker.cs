@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Runtime.CompilerServices;
 using AutoModerator.Core;
 using NLog;
 using Profiler.Basics;
@@ -43,16 +42,21 @@ namespace AutoModerator.Players
                 laggiestGrids[playerId] = grid.EntityId;
             }
 
+            var laggiestPlayerMspf = double.MinValue;
+
             var snapshots = new List<PlayerLagSnapshot>();
-            foreach (var (player, profilerEntry) in playerProfileResult.GetTopEntities(20))
+            foreach (var (player, profilerEntry) in playerProfileResult.GetTopEntities(50))
             {
                 var mspf = profilerEntry.MainThreadTime / playerProfileResult.TotalTime;
-                var lagNormal = mspf / _config.PlayerMspfThreshold;
-                var signatureGridId = laggiestGrids.GetValueOrDefault(player.IdentityId, 0);
-                var snapshot = PlayerLagSnapshot.FromPlayer(player, lagNormal, signatureGridId);
+                var lag = mspf / _config.PlayerMspfThreshold;
+                var gridId = laggiestGrids.GetValueOrDefault(player.IdentityId, 0);
+                var snapshot = PlayerLagSnapshot.FromPlayer(player, lag, gridId);
                 snapshots.Add(snapshot);
+
+                laggiestPlayerMspf = Math.Max(laggiestPlayerMspf, mspf);
             }
 
+            Log.Trace($"laggiest player mspf: {laggiestPlayerMspf:0.000}");
             Update(snapshots);
         }
 

@@ -194,7 +194,7 @@ namespace AutoModerator
         [Display(Order = 8, Name = "GPS text color", GroupName = FuncGroupName)]
         public string GpsColor
         {
-            get => _gpsColor = "";
+            get => _gpsColor;
             set => SetValue(ref _gpsColor, value);
         }
 

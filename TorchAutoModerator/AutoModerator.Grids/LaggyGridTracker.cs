@@ -32,15 +32,20 @@ namespace AutoModerator.Grids
 
         public void Update(BaseProfilerResult<MyCubeGrid> profileResult)
         {
+            var laggiestGridMspf = double.MinValue;
+
             var snapshots = new List<GridLagSnapshot>();
-            foreach (var (grid, profileEntity) in profileResult.GetTopEntities())
+            foreach (var (grid, profileEntity) in profileResult.GetTopEntities(50))
             {
                 var mspf = profileEntity.MainThreadTime / profileResult.TotalFrameCount;
-                var normal = mspf / _config.GridMspfThreshold;
-                var snapshot = GridLagSnapshot.FromGrid(grid, normal);
+                var lag = mspf / _config.GridMspfThreshold;
+                var snapshot = GridLagSnapshot.FromGrid(grid, lag);
                 snapshots.Add(snapshot);
+
+                laggiestGridMspf = Math.Max(laggiestGridMspf, mspf);
             }
 
+            Log.Trace($"laggiest grid mspf: {laggiestGridMspf:0.000}");
             Update(snapshots);
         }
 

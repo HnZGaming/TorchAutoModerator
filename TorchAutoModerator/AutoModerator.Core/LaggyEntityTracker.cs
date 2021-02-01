@@ -42,7 +42,7 @@ namespace AutoModerator.Core
         protected void Update(IEnumerable<S> snapshots)
         {
             // skip exempt factions
-            snapshots = snapshots.Where(s =>
+            snapshots = snapshots.WhereNot(s =>
                 s.FactionTagOrNull is string factionTag &&
                 IsFactionExempt(factionTag));
 
