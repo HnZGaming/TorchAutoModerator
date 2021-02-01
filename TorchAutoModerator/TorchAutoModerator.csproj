@@ -159,6 +159,7 @@
     </ItemGroup>
     <ItemGroup>
         <Compile Include="AutoModerator.Core\BroadcastListenerCollection.cs" />
+        <Compile Include="AutoModerator.Core\EntityGpsCreator.cs" />
         <Compile Include="AutoModerator.Core\EntityLagTimeSeries.cs" />
         <Compile Include="AutoModerator.Core\GpsUtils.cs" />
         <Compile Include="AutoModerator.Core\LaggyEntityTracker.cs" />

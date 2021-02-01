@@ -36,6 +36,7 @@ namespace AutoModerator
         EntityIdGpsCollection _gpsCollection;
         LaggyGridTracker _laggyGridTracker;
         LaggyPlayerTracker _laggyPlayerTracker;
+        EntityGpsCreator _entityGpsCreator;
 
         public AutoModeratorConfig Config => _config.Data;
 
@@ -67,6 +68,7 @@ namespace AutoModerator
             _gpsCollection = new EntityIdGpsCollection("<!> ");
             _laggyGridTracker = new LaggyGridTracker(Config);
             _laggyPlayerTracker = new LaggyPlayerTracker(Config);
+            _entityGpsCreator = new EntityGpsCreator();
         }
 
         void OnGameLoaded()
@@ -152,28 +154,12 @@ namespace AutoModerator
                     var broadcastableGpsSources = allGpsSources
                         .Values
                         .OrderByDescending(s => s.LagNormal)
-                        .Take(Config.MaxGpsCount)
-                        .ToArray();
+                        .Take(Config.MaxGpsCount);
 
-                    // MyGps can be created in the game loop only (idk why)
-                    // this is inside the main loop & you better keep it performant
-                    await GameLoopObserver.MoveToGameLoop(canceller);
-
-                    var gpss = new List<MyGps>();
-                    foreach (var gpsSource in broadcastableGpsSources)
-                    {
-                        if (gpsSource.TryCreateGps(out var gps))
-                        {
-                            gpss.Add(gps);
-                            Log.Trace($"broadcasting: {gpsSource}");
-                        }
-                    }
-
-                    await TaskUtils.MoveToThreadPool(canceller);
-
+                    var gpss = await _entityGpsCreator.Create(broadcastableGpsSources, canceller);
                     var targetIds = _players.GetReceiverIdentityIds();
                     _gpsCollection.SendReplaceAllTrackedGpss(gpss, targetIds);
-                    Log.Debug($"broadcasted {broadcastableGpsSources.Length} laggy entities");
+                    Log.Debug($"broadcasted {gpss.Count} laggy entities");
                 }
                 else
                 {

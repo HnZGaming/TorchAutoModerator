@@ -19,18 +19,25 @@ namespace AutoModerator
     {
         AutoModeratorPlugin Plugin => (AutoModeratorPlugin) Context.Plugin;
 
-        [Command("enable", "Enable/disable broadcasting.")]
+        [Command("broadcast", "Enable/disable broadcasting.")]
         [Permission(MyPromoteLevel.Admin)]
         public void GetOrSetEnabled() => this.CatchAndReport(() =>
         {
             this.GetOrSetProperty(Plugin.Config, nameof(AutoModeratorConfig.EnableBroadcasting));
         });
 
-        [Command("grid_mspf", "Get or set the current ms/f threshold per online member.")]
+        [Command("grid_mspf", "Get or set the current ms/f threshold per grid.")]
         [Permission(MyPromoteLevel.Admin)]
         public void GridMspfThreshold() => this.CatchAndReport(() =>
         {
             this.GetOrSetProperty(Plugin.Config, nameof(AutoModeratorConfig.GridMspfThreshold));
+        });
+
+        [Command("player_mspf", "Get or set the current ms/f threshold per player.")]
+        [Permission(MyPromoteLevel.Admin)]
+        public void PlayerMspfThreshold() => this.CatchAndReport(() =>
+        {
+            this.GetOrSetProperty(Plugin.Config, nameof(AutoModeratorConfig.PlayerMspfThreshold));
         });
 
         [Command("admins-only", "Get or set the current \"admins only\" value.")]
@@ -40,16 +47,16 @@ namespace AutoModerator
             this.GetOrSetProperty(Plugin.Config, nameof(AutoModeratorConfig.AdminsOnly));
         });
 
-        [Command("clear", "Clear all custom GPS entities.")]
+        [Command("clear_gps", "Clear all custom GPS entities.")]
         [Permission(MyPromoteLevel.Admin)]
-        public void ClearCustomGps() => this.CatchAndReport(() =>
+        public void ClearGpss() => this.CatchAndReport(() =>
         {
             Plugin.DeleteAllGpss();
         });
 
-        [Command("show", "Show the list of custom GPS entities.")]
+        [Command("show_gps", "Show the list of custom GPS entities.")]
         [Permission(MyPromoteLevel.Admin)]
-        public void ShowCustomGpsEntities() => this.CatchAndReport(() =>
+        public void ShowGpss() => this.CatchAndReport(() =>
         {
             var gpss = Plugin.GetAllGpss();
 
@@ -79,8 +86,7 @@ namespace AutoModerator
                 return;
             }
 
-            var doesReceive = Plugin.CheckPlayerReceivesGpss(player as MyPlayer);
-            var msg = doesReceive
+            var msg = Plugin.CheckPlayerReceivesGpss(player as MyPlayer)
                 ? $"Player \"{playerName}\" does receive broadcasts"
                 : $"Player \"{playerName}\" does not receive broadcasts";
 
@@ -130,34 +136,19 @@ namespace AutoModerator
 
             // parse all options
             long? playerMask = Context.Player.IdentityId;
-            long? factionMask = null;
             long? gridMask = null;
             var profileTime = 10.Seconds();
-            var top = 3;
+            var count = 3;
             foreach (var arg in Context.Args)
             {
                 if (!CommandOption.TryGetOption(arg, out var option)) continue;
-
-                if (option.IsParameterless("faction"))
-                {
-                    var faction = MySession.Static.Factions.GetPlayerFaction(Context.Player.IdentityId);
-                    if (faction == null)
-                    {
-                        Context.Respond("Faction not found", Color.Red);
-                        return;
-                    }
-
-                    factionMask = faction.FactionId;
-                    playerMask = null;
-                    continue;
-                }
 
                 if (option.IsParameterless("this"))
                 {
                     var grid = Context.Player?.Controller?.ControlledEntity?.Entity;
                     if (grid == null)
                     {
-                        Context.Respond("Grid not found", Color.Red);
+                        Context.Respond("You're not sitting in a control seat", Color.Red);
                         return;
                     }
 
@@ -171,7 +162,7 @@ namespace AutoModerator
                     continue;
                 }
 
-                if (option.TryParseInt("top", out top))
+                if (option.TryParseInt("count", out count))
                 {
                     continue;
                 }
@@ -185,7 +176,7 @@ namespace AutoModerator
             var msgBuilder = new StringBuilder();
             msgBuilder.AppendLine();
 
-            var mask = new GameEntityMask(playerMask, gridMask, factionMask);
+            var mask = new GameEntityMask(playerMask, gridMask, null);
             using (var gridProfiler = new GridProfiler(mask))
             using (var blockDefProfiler = new BlockDefinitionProfiler(mask))
             using (ProfilerResultQueue.Profile(gridProfiler))
@@ -195,10 +186,10 @@ namespace AutoModerator
 
                 await Task.Delay(profileTime);
 
-                msgBuilder.AppendLine("Performance by grids (% of broadcasting threshold):");
+                msgBuilder.AppendLine("Grid lags (% of threshold):");
 
                 var profileResult = gridProfiler.GetResult();
-                foreach (var (grid, profilerEntry) in profileResult.GetTopEntities(top))
+                foreach (var (grid, profilerEntry) in profileResult.GetTopEntities(count))
                 {
                     var gridName = grid.DisplayName;
                     var mspf = profilerEntry.MainThreadTime / profileResult.TotalTime;
@@ -208,7 +199,7 @@ namespace AutoModerator
                 }
 
                 msgBuilder.AppendLine();
-                msgBuilder.AppendLine("Performance by blocks (% of total):");
+                msgBuilder.AppendLine("Block type lags (% of total):");
 
                 var blockDefProfilerResult = blockDefProfiler.GetResult();
                 foreach (var (blockDef, profileEntity) in blockDefProfilerResult.GetTopEntities(4))
