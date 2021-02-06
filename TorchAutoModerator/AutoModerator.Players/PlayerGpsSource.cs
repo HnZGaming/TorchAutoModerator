@@ -1,4 +1,5 @@
 ﻿using System;
+using AutoModerator.Broadcast;
 using AutoModerator.Core;
 using Sandbox.Game.Screens.Helpers;
 using Torch.Utils;

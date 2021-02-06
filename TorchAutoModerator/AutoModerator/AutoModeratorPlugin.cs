@@ -2,11 +2,10 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Controls;
-using AutoModerator.Core;
+using AutoModerator.Broadcast;
 using AutoModerator.Grids;
 using AutoModerator.Players;
 using NLog;
@@ -17,7 +16,6 @@ using Sandbox.Game.World;
 using Torch;
 using Torch.API;
 using Torch.API.Plugins;
-using TorchEntityGpsBroadcaster.Core;
 using Utils.General;
 using Utils.Torch;
 
@@ -32,11 +30,10 @@ namespace AutoModerator
         CancellationTokenSource _canceller;
         FileLoggingConfigurator _fileLoggingConfigurator;
 
-        BroadcastListenerCollection _players;
-        EntityIdGpsCollection _gpsCollection;
         LaggyGridTracker _laggyGridTracker;
         LaggyPlayerTracker _laggyPlayerTracker;
-        EntityGpsCreator _entityGpsCreator;
+        LaggyEntityBroadcaster _laggyEntityBroadcaster;
+        BroadcastListenerCollection _gpsReceivers;
 
         public AutoModeratorConfig Config => _config.Data;
 
@@ -63,12 +60,11 @@ namespace AutoModerator
             _fileLoggingConfigurator.Configure(Config);
 
             _canceller = new CancellationTokenSource();
-
-            _players = new BroadcastListenerCollection(Config);
-            _gpsCollection = new EntityIdGpsCollection("<!> ");
             _laggyGridTracker = new LaggyGridTracker(Config);
             _laggyPlayerTracker = new LaggyPlayerTracker(Config);
-            _entityGpsCreator = new EntityGpsCreator();
+
+            _gpsReceivers = new BroadcastListenerCollection(Config);
+            _laggyEntityBroadcaster = new LaggyEntityBroadcaster(_gpsReceivers);
         }
 
         void OnGameLoaded()
@@ -94,8 +90,7 @@ namespace AutoModerator
         {
             Log.Info("started collector loop");
 
-            // clear all GPS entities from the last session
-            _gpsCollection.SendDeleteAllGpss();
+            _laggyEntityBroadcaster.ClearAllGpss();
 
             // Wait for some time during the session startup
             await Task.Delay(Config.FirstIdle.Seconds(), canceller);
@@ -124,9 +119,6 @@ namespace AutoModerator
                     Log.Debug($"{_laggyGridTracker.LastLaggyEntityCount} laggy grids");
                     Log.Debug($"{_laggyGridTracker.PinnedEntityCount} pinned grids");
 
-                    // todo give players a heads-up when their grids are laggy
-                    // use `gridLagSnapshots`'s laggy grids (not the "pinned" grids which are already broadcasted)
-
                     // players
                     var playerProfileResult = playerProfiler.GetResult();
                     _laggyPlayerTracker.Update(playerProfileResult, gridProfileResult);
@@ -134,36 +126,31 @@ namespace AutoModerator
                     Log.Debug($"{_laggyPlayerTracker.PinnedEntityCount} pinned players");
                 }
 
+                if (Config.EnableAlert)
+                {
+                }
+
                 if (Config.EnableBroadcasting)
                 {
-                    // entity id -> gps source
-                    var allGpsSources = new Dictionary<long, IEntityGpsSource>();
+                    _laggyEntityBroadcaster.InitializeInterval();
 
                     if (Config.EnablePlayerBroadcasting)
                     {
-                        var gpsSources = _laggyPlayerTracker.CreateGpsSources(Config, Config.MaxGpsCount).ToArray();
-                        allGpsSources.AddRangeWithKeys(gpsSources, s => s.AttachedEntityId);
+                        var gpsSources = _laggyPlayerTracker.CreateGpsSources(Config, Config.MaxGpsCount);
+                        _laggyEntityBroadcaster.AddGpsSourceRange(gpsSources);
                     }
 
                     if (Config.EnableGridBroadcasting)
                     {
-                        var gpsSources = _laggyGridTracker.CreateGpsSources(Config, Config.MaxGpsCount).ToArray();
-                        allGpsSources.AddRangeWithKeys(gpsSources, s => s.AttachedEntityId);
+                        var gpsSources = _laggyGridTracker.CreateGpsSources(Config, Config.MaxGpsCount);
+                        _laggyEntityBroadcaster.AddGpsSourceRange(gpsSources);
                     }
 
-                    var broadcastableGpsSources = allGpsSources
-                        .Values
-                        .OrderByDescending(s => s.LagNormal)
-                        .Take(Config.MaxGpsCount);
-
-                    var gpss = await _entityGpsCreator.Create(broadcastableGpsSources, canceller);
-                    var targetIds = _players.GetReceiverIdentityIds();
-                    _gpsCollection.SendReplaceAllTrackedGpss(gpss, targetIds);
-                    Log.Debug($"broadcasted {gpss.Count} laggy entities");
+                    await _laggyEntityBroadcaster.SendIntervalGpss(Config.MaxGpsCount, canceller);
                 }
                 else
                 {
-                    _gpsCollection.SendDeleteAllGpss();
+                    _laggyEntityBroadcaster.ClearAllGpss();
                     Log.Debug("deleted all tracked gpss");
                 }
 
@@ -173,17 +160,17 @@ namespace AutoModerator
 
         public bool CheckPlayerReceivesGpss(MyPlayer player)
         {
-            return _players.CheckReceive(player);
+            return _gpsReceivers.CheckReceive(player);
         }
 
         public void DeleteAllGpss()
         {
-            _gpsCollection.SendDeleteAllGpss();
+            _laggyEntityBroadcaster.ClearAllGpss();
         }
 
         public IEnumerable<MyGps> GetAllGpss()
         {
-            return _gpsCollection.GetAllTrackedGpss();
+            return _laggyEntityBroadcaster.GetAllGpss();
         }
     }
 }

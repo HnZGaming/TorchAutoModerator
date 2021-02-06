@@ -5,7 +5,7 @@ using Sandbox.Game.World;
 using Utils.Torch;
 using VRage.Game.ModAPI;
 
-namespace AutoModerator.Core
+namespace AutoModerator.Broadcast
 {
     public sealed class BroadcastListenerCollection
     {

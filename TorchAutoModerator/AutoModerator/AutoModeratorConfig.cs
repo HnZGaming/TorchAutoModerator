@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Xml.Serialization;
+using AutoModerator.Broadcast;
 using AutoModerator.Core;
 using AutoModerator.Grids;
 using AutoModerator.Players;
@@ -22,12 +23,14 @@ namespace AutoModerator
         PlayerGpsSource.IConfig
     {
         const string OpGroupName = "Auto Moderator";
-        const string FuncGroupName = "Profiling & Broadcasting";
-        const string GridFuncGroupName = FuncGroupName + " (Grids)";
-        const string PlayerFuncGroupName = FuncGroupName + " (Players)";
+        const string BroadcastGroupName = "Broadcasting";
+        const string GridBroadcastGroupName = BroadcastGroupName + " (Grids)";
+        const string PlayerBroadcastGroupName = BroadcastGroupName + " (Players)";
+        const string AlertGroupName = "Alerts";
         const string LogGroupName = "Logging";
         public const string DefaultLogFilePath = "Logs/AutoModerator-${shortdate}.log";
 
+        bool _enableAlert = true;
         double _firstIdle = 180;
         bool _enableBroadcasting = true;
         bool _enableGridBroadcasting = true;
@@ -54,8 +57,16 @@ namespace AutoModerator
         bool _enableLoggingDebug;
         string _logFilePath = DefaultLogFilePath;
 
+        [XmlElement("EnableAlert")]
+        [Display(Order = 0, Name = "Enable alerts", GroupName = AlertGroupName)]
+        public bool EnableAlert
+        {
+            get => _enableAlert;
+            set => SetValue(ref _enableAlert, value);
+        }
+
         [XmlElement("EnableBroadcasting")]
-        [Display(Order = 0, Name = "Enable broadcasting", GroupName = OpGroupName)]
+        [Display(Order = 0, Name = "Enable broadcasting", GroupName = BroadcastGroupName)]
         public bool EnableBroadcasting
         {
             get => _enableBroadcasting;
@@ -63,7 +74,7 @@ namespace AutoModerator
         }
 
         [XmlElement("EnableGridBroadcasting")]
-        [Display(Order = 0, Name = "Enable grid sample & broadcast", GroupName = GridFuncGroupName)]
+        [Display(Order = 0, Name = "Enable grid sample & broadcast", GroupName = GridBroadcastGroupName)]
         public bool EnableGridBroadcasting
         {
             get => _enableGridBroadcasting;
@@ -71,7 +82,7 @@ namespace AutoModerator
         }
 
         [XmlElement("EnablePlayerBroadcasting")]
-        [Display(Order = 0, Name = "Enable player sample & broadcast", GroupName = PlayerFuncGroupName)]
+        [Display(Order = 0, Name = "Enable player sample & broadcast", GroupName = PlayerBroadcastGroupName)]
         public bool EnablePlayerBroadcasting
         {
             get => _enablePlayerBroadcasting;
@@ -79,7 +90,7 @@ namespace AutoModerator
         }
 
         [XmlElement("EnableAdminsOnly")]
-        [Display(Order = 1, Name = "Broadcast to admins only", GroupName = OpGroupName)]
+        [Display(Order = 1, Name = "Broadcast to admins only", GroupName = BroadcastGroupName)]
         public bool AdminsOnly
         {
             get => _adminsOnly;
@@ -87,7 +98,7 @@ namespace AutoModerator
         }
 
         [XmlElement("FirstIdleSeconds")]
-        [Display(Order = 2, Name = "First idle seconds", GroupName = FuncGroupName, Description = "Game is generally laggy for the first minute or two of the session.")]
+        [Display(Order = 2, Name = "First idle seconds", GroupName = OpGroupName, Description = "Game is generally laggy for the first minute or two of the session.")]
         public double FirstIdle
         {
             get => _firstIdle;
@@ -95,7 +106,7 @@ namespace AutoModerator
         }
 
         [XmlElement("GridMspfThreshold")]
-        [Display(Order = 3, Name = "Grid ms/f threshold", GroupName = GridFuncGroupName)]
+        [Display(Order = 3, Name = "Grid ms/f threshold", GroupName = GridBroadcastGroupName)]
         public double GridMspfThreshold
         {
             get => _gridMspfThreshold;
@@ -103,7 +114,7 @@ namespace AutoModerator
         }
 
         [XmlElement("MaxGpsCount")]
-        [Display(Order = 5, Name = "Max GPS count", GroupName = FuncGroupName)]
+        [Display(Order = 5, Name = "Max GPS count", GroupName = BroadcastGroupName)]
         public int MaxGpsCount
         {
             get => _maxLaggyGpsCountPerScan;
@@ -111,7 +122,7 @@ namespace AutoModerator
         }
 
         [XmlElement("SampleFrequencySeconds")]
-        [Display(Order = 5, Name = "Sample frequency (seconds)", GroupName = FuncGroupName)]
+        [Display(Order = 5, Name = "Sample frequency (seconds)", GroupName = BroadcastGroupName)]
         public double ProfileTime
         {
             get => _sampleFrequency;
@@ -119,7 +130,7 @@ namespace AutoModerator
         }
 
         [XmlElement("GridPinWindow")]
-        [Display(Order = 6, Name = "Sample time (seconds)", GroupName = GridFuncGroupName)]
+        [Display(Order = 6, Name = "Sample time (seconds)", GroupName = GridBroadcastGroupName)]
         public double GridPinWindow
         {
             get => _gridPinWindow;
@@ -127,7 +138,7 @@ namespace AutoModerator
         }
 
         [XmlElement("GridPinLifespan")]
-        [Display(Order = 7, Name = "Broadcast time (seconds)", GroupName = GridFuncGroupName)]
+        [Display(Order = 7, Name = "Broadcast time (seconds)", GroupName = GridBroadcastGroupName)]
         public double GridPinLifespan
         {
             get => _gridPinLifespan;
@@ -135,7 +146,7 @@ namespace AutoModerator
         }
 
         [XmlElement("GridGpsNameFormat")]
-        [Display(Order = 8, Name = "GPS name format", GroupName = GridFuncGroupName)]
+        [Display(Order = 8, Name = "GPS name format", GroupName = GridBroadcastGroupName)]
         public string GridGpsNameFormat
         {
             get => _gridGpsNameFormat;
@@ -143,7 +154,7 @@ namespace AutoModerator
         }
 
         [XmlElement("GridGpsDescriptionFormat")]
-        [Display(Order = 9, Name = "GPS description format", GroupName = GridFuncGroupName)]
+        [Display(Order = 9, Name = "GPS description format", GroupName = GridBroadcastGroupName)]
         public string GridGpsDescriptionFormat
         {
             get => _gridGpsDescriptionFormat;
@@ -151,7 +162,7 @@ namespace AutoModerator
         }
 
         [XmlElement("PlayerMspfThreshold")]
-        [Display(Order = 3, Name = "ms/f threshold", GroupName = PlayerFuncGroupName)]
+        [Display(Order = 3, Name = "ms/f threshold", GroupName = PlayerBroadcastGroupName)]
         public double PlayerMspfThreshold
         {
             get => _playerMspfThreshold;
@@ -159,7 +170,7 @@ namespace AutoModerator
         }
 
         [XmlElement("PlayerPinWindow")]
-        [Display(Order = 6, Name = "Sample time (seconds)", GroupName = PlayerFuncGroupName)]
+        [Display(Order = 6, Name = "Sample time (seconds)", GroupName = PlayerBroadcastGroupName)]
         public double PlayerPinWindow
         {
             get => _playerPinWindow;
@@ -167,7 +178,7 @@ namespace AutoModerator
         }
 
         [XmlElement("PlayerPinLifespan")]
-        [Display(Order = 7, Name = "Broadcast time (seconds)", GroupName = PlayerFuncGroupName)]
+        [Display(Order = 7, Name = "Broadcast time (seconds)", GroupName = PlayerBroadcastGroupName)]
         public double PlayerPinLifespan
         {
             get => _playerPinLifespan;
@@ -175,7 +186,7 @@ namespace AutoModerator
         }
 
         [XmlElement("PlayerGpsNameFormat")]
-        [Display(Order = 8, Name = "GPS name format", GroupName = PlayerFuncGroupName)]
+        [Display(Order = 8, Name = "GPS name format", GroupName = PlayerBroadcastGroupName)]
         public string PlayerGpsNameFormat
         {
             get => _playerGpsNameFormat;
@@ -183,7 +194,7 @@ namespace AutoModerator
         }
 
         [XmlElement("PlayerGpsDescriptionFormat")]
-        [Display(Order = 8, Name = "GPS description format", GroupName = PlayerFuncGroupName)]
+        [Display(Order = 8, Name = "GPS description format", GroupName = PlayerBroadcastGroupName)]
         public string PlayerGpsDescriptionFormat
         {
             get => _playerGpsDescriptionFormat;
@@ -191,7 +202,7 @@ namespace AutoModerator
         }
 
         [XmlElement("GpsColor")]
-        [Display(Order = 8, Name = "GPS text color", GroupName = FuncGroupName)]
+        [Display(Order = 8, Name = "GPS text color", GroupName = BroadcastGroupName)]
         public string GpsColor
         {
             get => _gpsColor;
@@ -215,7 +226,7 @@ namespace AutoModerator
         }
 
         [XmlElement("MutedPlayerIds")]
-        [Display(Order = 12, Name = "Muted players", GroupName = OpGroupName)]
+        [Display(Order = 12, Name = "Muted players", GroupName = BroadcastGroupName)]
         public List<ulong> MutedPlayerIds
         {
             get => _mutedPlayerIds;

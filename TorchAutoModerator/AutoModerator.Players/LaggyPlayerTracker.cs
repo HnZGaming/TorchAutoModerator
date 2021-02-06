@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using AutoModerator.Broadcast;
 using AutoModerator.Core;
 using NLog;
 using Profiler.Basics;

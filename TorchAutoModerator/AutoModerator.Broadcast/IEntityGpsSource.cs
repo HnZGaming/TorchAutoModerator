@@ -1,6 +1,6 @@
 ﻿using Sandbox.Game.Screens.Helpers;
 
-namespace AutoModerator.Core
+namespace AutoModerator.Broadcast
 {
     public interface IEntityGpsSource
     {

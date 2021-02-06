@@ -8,7 +8,7 @@ using VRage;
 using VRage.Game;
 using VRageMath;
 
-namespace AutoModerator.Core
+namespace AutoModerator.Broadcast
 {
     public static class GpsUtils
     {

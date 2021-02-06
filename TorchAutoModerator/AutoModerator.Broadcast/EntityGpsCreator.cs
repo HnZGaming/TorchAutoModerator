@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using NLog;
@@ -7,7 +6,7 @@ using Sandbox.Game.Screens.Helpers;
 using Utils.General;
 using Utils.Torch;
 
-namespace AutoModerator.Core
+namespace AutoModerator.Broadcast
 {
     public sealed class EntityGpsCreator
     {

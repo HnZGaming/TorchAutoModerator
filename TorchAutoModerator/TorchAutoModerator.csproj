@@ -158,12 +158,13 @@
         </Reference>
     </ItemGroup>
     <ItemGroup>
-        <Compile Include="AutoModerator.Core\BroadcastListenerCollection.cs" />
-        <Compile Include="AutoModerator.Core\EntityGpsCreator.cs" />
+        <Compile Include="AutoModerator.Broadcast\BroadcastListenerCollection.cs" />
+        <Compile Include="AutoModerator.Broadcast\EntityGpsCreator.cs" />
+        <Compile Include="AutoModerator.Broadcast\GpsUtils.cs" />
+        <Compile Include="AutoModerator.Broadcast\IEntityGpsSource.cs" />
+        <Compile Include="AutoModerator.Broadcast\LaggyEntityBroadcaster.cs" />
         <Compile Include="AutoModerator.Core\EntityLagTimeSeries.cs" />
-        <Compile Include="AutoModerator.Core\GpsUtils.cs" />
         <Compile Include="AutoModerator.Core\LaggyEntityTracker.cs" />
-        <Compile Include="AutoModerator.Core\IEntityGpsSource.cs" />
         <Compile Include="AutoModerator.Core\IEntityLagSnapshot.cs" />
         <Compile Include="AutoModerator.Core\LifespanDictionary.cs" />
         <Compile Include="AutoModerator.Grids\GridLagSnapshot.cs" />
