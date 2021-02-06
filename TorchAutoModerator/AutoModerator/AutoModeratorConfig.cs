@@ -2,8 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Xml.Serialization;
-using AutoModerator.Broadcast;
-using AutoModerator.Core;
+using AutoModerator.Broadcasts;
 using AutoModerator.Grids;
 using AutoModerator.Players;
 using Sandbox.Game.World;
@@ -18,19 +17,19 @@ namespace AutoModerator
         GridGpsSource.IConfig,
         BroadcastListenerCollection.IConfig,
         FileLoggingConfigurator.IConfig,
-        LaggyGridTracker.IConfig,
-        LaggyPlayerTracker.IConfig,
+        GridLagSnapshotCreator.IConfig,
+        PlayerLagSnapshotCreator.IConfig,
         PlayerGpsSource.IConfig
     {
         const string OpGroupName = "Auto Moderator";
         const string BroadcastGroupName = "Broadcasting";
         const string GridBroadcastGroupName = BroadcastGroupName + " (Grids)";
         const string PlayerBroadcastGroupName = BroadcastGroupName + " (Players)";
-        const string AlertGroupName = "Alerts";
+        const string SelfModGroupName = "Alerts";
         const string LogGroupName = "Logging";
         public const string DefaultLogFilePath = "Logs/AutoModerator-${shortdate}.log";
 
-        bool _enableAlert = true;
+        bool _enableSelfModeration = true;
         double _firstIdle = 180;
         bool _enableBroadcasting = true;
         bool _enableGridBroadcasting = true;
@@ -44,6 +43,7 @@ namespace AutoModerator
         double _playerPinWindow = 300d;
         double _playerPinLifespan = 600d;
         double _sampleFrequency = 5;
+        double _selfModerationMspf = 0.7d;
         bool _exemptNpcFactions = true;
         string _gridGpsNameFormat = "[{faction}] {grid} {ratio} ({time})";
         string _gridGpsDescriptionFormat = "The {rank} laggiest grid. Get 'em!";
@@ -57,12 +57,20 @@ namespace AutoModerator
         bool _enableLoggingDebug;
         string _logFilePath = DefaultLogFilePath;
 
-        [XmlElement("EnableAlert")]
-        [Display(Order = 0, Name = "Enable alerts", GroupName = AlertGroupName)]
-        public bool EnableAlert
+        [XmlElement("EnableSelfModeration")]
+        [Display(Order = 0, Name = "Enable self moderation", GroupName = SelfModGroupName)]
+        public bool EnableSelfModeration
         {
-            get => _enableAlert;
-            set => SetValue(ref _enableAlert, value);
+            get => _enableSelfModeration;
+            set => SetValue(ref _enableSelfModeration, value);
+        }
+
+        [XmlElement("SelfModerationMspf")]
+        [Display(Order = 0, Name = "Self moderation ms/f threshold", GroupName = SelfModGroupName)]
+        public double SelfModerationMspf
+        {
+            get => _selfModerationMspf;
+            set => SetValue(ref _selfModerationMspf, value);
         }
 
         [XmlElement("EnableBroadcasting")]
@@ -74,7 +82,7 @@ namespace AutoModerator
         }
 
         [XmlElement("EnableGridBroadcasting")]
-        [Display(Order = 0, Name = "Enable grid sample & broadcast", GroupName = GridBroadcastGroupName)]
+        [Display(Order = 0, Name = "Enable grid broadcast", GroupName = GridBroadcastGroupName)]
         public bool EnableGridBroadcasting
         {
             get => _enableGridBroadcasting;
@@ -82,7 +90,7 @@ namespace AutoModerator
         }
 
         [XmlElement("EnablePlayerBroadcasting")]
-        [Display(Order = 0, Name = "Enable player sample & broadcast", GroupName = PlayerBroadcastGroupName)]
+        [Display(Order = 0, Name = "Enable player broadcast", GroupName = PlayerBroadcastGroupName)]
         public bool EnablePlayerBroadcasting
         {
             get => _enablePlayerBroadcasting;
@@ -105,7 +113,7 @@ namespace AutoModerator
             set => SetValue(ref _firstIdle, value);
         }
 
-        [XmlElement("GridMspfThreshold")]
+        [XmlElement("MspfThreshold")]
         [Display(Order = 3, Name = "Grid ms/f threshold", GroupName = GridBroadcastGroupName)]
         public double GridMspfThreshold
         {
@@ -203,7 +211,7 @@ namespace AutoModerator
 
         [XmlElement("GpsColor")]
         [Display(Order = 8, Name = "GPS text color", GroupName = BroadcastGroupName)]
-        public string GpsColor
+        public string GpsColorCode
         {
             get => _gpsColor;
             set => SetValue(ref _gpsColor, value);

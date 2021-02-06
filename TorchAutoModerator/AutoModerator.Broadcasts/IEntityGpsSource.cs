@@ -1,11 +1,9 @@
 ﻿using Sandbox.Game.Screens.Helpers;
 
-namespace AutoModerator.Broadcast
+namespace AutoModerator.Broadcasts
 {
     public interface IEntityGpsSource
     {
-        long AttachedEntityId { get; }
-        double LagNormal { get; }
         bool TryCreateGps(out MyGps gps);
     }
 }

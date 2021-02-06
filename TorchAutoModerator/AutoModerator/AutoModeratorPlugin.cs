@@ -1,13 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Diagnostics;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Controls;
-using AutoModerator.Broadcast;
+using AutoModerator.Broadcasts;
+using AutoModerator.Core;
 using AutoModerator.Grids;
 using AutoModerator.Players;
+using AutoModerator.Quests;
 using NLog;
 using Profiler.Basics;
 using Profiler.Core;
@@ -30,14 +32,17 @@ namespace AutoModerator
         CancellationTokenSource _canceller;
         FileLoggingConfigurator _fileLoggingConfigurator;
 
-        LaggyGridTracker _laggyGridTracker;
-        LaggyPlayerTracker _laggyPlayerTracker;
-        LaggyEntityBroadcaster _laggyEntityBroadcaster;
+        LaggyEntityTracker _laggyGrids;
+        LaggyEntityTracker _laggyPlayers;
+        GridLagSnapshotCreator _gridLagSnapshotCreator;
+        PlayerLagSnapshotCreator _playerLagSnapshotCreator;
+        EntityGpsBroadcaster _entityGpsBroadcaster;
         BroadcastListenerCollection _gpsReceivers;
-
-        public AutoModeratorConfig Config => _config.Data;
+        SelfModerationQuestCollection _selfModerationQuests;
+        Dictionary<long, long> _playerLaggiestGrids;
 
         UserControl IWpfPlugin.GetControl() => _config.GetOrCreateUserControl(ref _userControl);
+        public AutoModeratorConfig Config => _config.Data;
 
         public override void Init(ITorchBase torch)
         {
@@ -60,11 +65,14 @@ namespace AutoModerator
             _fileLoggingConfigurator.Configure(Config);
 
             _canceller = new CancellationTokenSource();
-            _laggyGridTracker = new LaggyGridTracker(Config);
-            _laggyPlayerTracker = new LaggyPlayerTracker(Config);
-
+            _laggyGrids = new LaggyEntityTracker(new LaggyGridTrackerConfig(Config));
+            _laggyPlayers = new LaggyEntityTracker(new LaggyPlayerTrackerConfig(Config));
+            _gridLagSnapshotCreator = new GridLagSnapshotCreator(Config);
+            _playerLagSnapshotCreator = new PlayerLagSnapshotCreator(Config);
             _gpsReceivers = new BroadcastListenerCollection(Config);
-            _laggyEntityBroadcaster = new LaggyEntityBroadcaster(_gpsReceivers);
+            _entityGpsBroadcaster = new EntityGpsBroadcaster();
+            _selfModerationQuests = new SelfModerationQuestCollection();
+            _playerLaggiestGrids = new Dictionary<long, long>();
         }
 
         void OnGameLoaded()
@@ -90,7 +98,7 @@ namespace AutoModerator
         {
             Log.Info("started collector loop");
 
-            _laggyEntityBroadcaster.ClearAllGpss();
+            _entityGpsBroadcaster.ClearGpss();
 
             // Wait for some time during the session startup
             await Task.Delay(Config.FirstIdle.Seconds(), canceller);
@@ -98,8 +106,6 @@ namespace AutoModerator
             // MAIN LOOP
             while (!canceller.IsCancellationRequested)
             {
-                var stopwatch = Stopwatch.StartNew();
-
                 // auto profile
                 var mask = new GameEntityMask(null, null, null);
                 using (var gridProfiler = new GridProfiler(mask))
@@ -107,54 +113,86 @@ namespace AutoModerator
                 using (ProfilerResultQueue.Profile(gridProfiler))
                 using (ProfilerResultQueue.Profile(playerProfiler))
                 {
+                    Log.Debug("auto-profiling...");
                     gridProfiler.MarkStart();
                     playerProfiler.MarkStart();
-                    Log.Debug("auto-profiling...");
                     await Task.Delay(Config.ProfileTime.Seconds(), canceller);
                     Log.Debug("auto-profile done");
 
                     // grids
                     var gridProfileResult = gridProfiler.GetResult();
-                    _laggyGridTracker.Update(gridProfileResult);
-                    Log.Debug($"{_laggyGridTracker.LastLaggyEntityCount} laggy grids");
-                    Log.Debug($"{_laggyGridTracker.PinnedEntityCount} pinned grids");
+                    var gridLagSnapshots = _gridLagSnapshotCreator.CreateLagSnapshots(gridProfileResult).ToArray();
+                    _laggyGrids.Update(gridLagSnapshots);
 
                     // players
                     var playerProfileResult = playerProfiler.GetResult();
-                    _laggyPlayerTracker.Update(playerProfileResult, gridProfileResult);
-                    Log.Debug($"{_laggyPlayerTracker.LastLaggyEntityCount} laggy players");
-                    Log.Debug($"{_laggyPlayerTracker.PinnedEntityCount} pinned players");
+                    var playerLagSnapshots = _playerLagSnapshotCreator.CreateLagSnapshots(playerProfileResult);
+                    _laggyPlayers.Update(playerLagSnapshots);
+
+                    // map player id -> their laggiest grid's id
+                    var laggiestGridIds = gridLagSnapshots
+                        .OrderBy(s => s.LagNormal)
+                        .ToDictionary(s => s.OwnerId, s => s.EntityId);
+
+                    var trackedPlayerIds = _laggyPlayers.GetTrackedEntityIds();
+                    _playerLaggiestGrids.RemoveRangeExceptWith(trackedPlayerIds);
+                    _playerLaggiestGrids.AddRange(laggiestGridIds);
                 }
 
-                if (Config.EnableAlert)
+                if (Config.EnableSelfModeration)
                 {
+                    var lagSnapshots = _laggyPlayers
+                        .GetTrackedEntitySnapshots(Config.SelfModerationMspf)
+                        .ToDictionary(k => k.EntityId);
+
+                    var playerStates = new List<(long, double, bool)>();
+                    foreach (var (playerId, lagNormal) in lags)
+                    {
+                        var pinned = pins.TryGetValue(playerId, out var p) && p;
+                        playerStates.Add((playerId, lagNormal, pinned));
+                    }
+
+                    _selfModerationQuests.Update(playerStates, canceller);
+                }
+                else
+                {
+                    _selfModerationQuests.Clear();
                 }
 
                 if (Config.EnableBroadcasting)
                 {
-                    _laggyEntityBroadcaster.InitializeInterval();
+                    var allGpsSources = new Dictionary<long, IEntityGpsSource>();
 
                     if (Config.EnablePlayerBroadcasting)
                     {
-                        var gpsSources = _laggyPlayerTracker.CreateGpsSources(Config, Config.MaxGpsCount);
-                        _laggyEntityBroadcaster.AddGpsSourceRange(gpsSources);
+                        foreach (var (snapshot, rank) in _laggyPlayers.GetTopPins().Indexed())
+                        {
+                            var gridId = _playerLaggiestGrids[snapshot.EntityId];
+                            var gpsSource = new PlayerGpsSource(Config, snapshot, gridId, rank);
+                            allGpsSources[gpsSource.GridId] = gpsSource;
+                        }
                     }
 
                     if (Config.EnableGridBroadcasting)
                     {
-                        var gpsSources = _laggyGridTracker.CreateGpsSources(Config, Config.MaxGpsCount);
-                        _laggyEntityBroadcaster.AddGpsSourceRange(gpsSources);
+                        foreach (var (snapshot, rank) in _laggyGrids.GetTopPins().Indexed())
+                        {
+                            var gpsSource = new GridGpsSource(Config, snapshot, rank);
+                            allGpsSources[gpsSource.GridId] = gpsSource;
+                        }
                     }
 
-                    await _laggyEntityBroadcaster.SendIntervalGpss(Config.MaxGpsCount, canceller);
+                    await _entityGpsBroadcaster.ReplaceGpss(
+                        allGpsSources.Values,
+                        _gpsReceivers.GetReceiverIdentityIds(),
+                        canceller);
                 }
                 else
                 {
-                    _laggyEntityBroadcaster.ClearAllGpss();
+                    // you could also do this right at the moment the config's changed
+                    _entityGpsBroadcaster.ClearGpss();
                     Log.Debug("deleted all tracked gpss");
                 }
-
-                await TaskUtils.DelayMax(stopwatch, 1.Seconds(), canceller);
             }
         }
 
@@ -165,12 +203,12 @@ namespace AutoModerator
 
         public void DeleteAllGpss()
         {
-            _laggyEntityBroadcaster.ClearAllGpss();
+            _entityGpsBroadcaster.ClearGpss();
         }
 
         public IEnumerable<MyGps> GetAllGpss()
         {
-            return _laggyEntityBroadcaster.GetAllGpss();
+            return _entityGpsBroadcaster.GetGpss();
         }
     }
 }

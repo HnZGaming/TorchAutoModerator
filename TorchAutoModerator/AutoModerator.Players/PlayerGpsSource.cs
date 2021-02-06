@@ -1,8 +1,9 @@
 ﻿using System;
-using AutoModerator.Broadcast;
+using AutoModerator.Broadcasts;
 using AutoModerator.Core;
 using Sandbox.Game.Screens.Helpers;
-using Torch.Utils;
+using Sandbox.Game.World;
+using Utils.Torch;
 
 namespace AutoModerator.Players
 {
@@ -12,64 +13,55 @@ namespace AutoModerator.Players
         {
             string PlayerGpsNameFormat { get; }
             string PlayerGpsDescriptionFormat { get; }
-            string GpsColor { get; }
+            string GpsColorCode { get; }
         }
 
         readonly IConfig _config;
-        readonly TimeSpan _remainingTime;
+        readonly TrackedEntitySnapshot _snapshot;
+        readonly long _gridId;
         readonly int _rank;
-        readonly long _playerId;
-        readonly string _playerNameOrNull;
-        readonly string _factionTagOrNull;
 
-        public PlayerGpsSource(IConfig config, PlayerLagSnapshot snapshot, TimeSpan remainingTime, int rank)
+        public PlayerGpsSource(IConfig config, TrackedEntitySnapshot snapshot, long gridId, int rank)
         {
             _config = config;
-            _remainingTime = remainingTime;
+            _snapshot = snapshot;
+            _gridId = gridId;
             _rank = rank;
-            AttachedEntityId = snapshot.SignatureGridId; //note
-            LagNormal = snapshot.LagNormal;
-            _playerId = snapshot.EntityId;
-            _playerNameOrNull = snapshot.PlayerName;
-            _factionTagOrNull = snapshot.FactionTagOrNull;
         }
 
-        public long AttachedEntityId { get; }
-        public double LagNormal { get; }
+        public long GridId => _gridId;
 
         public bool TryCreateGps(out MyGps gps)
         {
-            if (GpsUtils.TryGetGridById(AttachedEntityId, out var grid))
+            if (!MySession.Static.Players.TryGetPlayerById(_snapshot.EntityId, out var player))
             {
-                var name = ToString(_config.PlayerGpsNameFormat);
-                var description = ToString(_config.PlayerGpsDescriptionFormat);
-                var color = ColorUtils.TranslateColor(_config.GpsColor);
-                gps = GpsUtils.CreateGridGps(grid, name, description, color);
-                return true;
+                gps = default;
+                return false;
             }
 
-            gps = null;
-            return false;
-        }
+            if (!VRageUtils.TryGetCubeGridById(_gridId, out var grid))
+            {
+                gps = default;
+                return false;
+            }
 
-        string ToString(string format)
-        {
-            return format
-                .Replace("{player}", _playerNameOrNull ?? "<none>")
-                .Replace("{faction}", _factionTagOrNull ?? "<none>")
-                .Replace("{ratio}", $"{LagNormal * 100:0}%")
-                .Replace("{rank}", GpsUtils.RankToString(_rank))
-                .Replace("{time}", GpsUtils.RemainingTimeToString(_remainingTime));
-        }
+            var faction = MySession.Static.Factions.GetPlayerFaction(_snapshot.EntityId);
 
-        public override string ToString()
-        {
-            var normal = $"{LagNormal * 100f:0.00}%";
-            var remainingTime = $"{_remainingTime.TotalMinutes:0.0}m";
-            var factionTag = _factionTagOrNull ?? "<single>";
-            var playerName = _playerNameOrNull ?? "<none>";
-            var rank = GpsUtils.RankToString(_rank);
-            return $"[{factionTag}] {playerName} ({_playerId}) {normal} ({rank}) {remainingTime}";
+            var name = Format(_config.PlayerGpsNameFormat);
+            var description = Format(_config.PlayerGpsDescriptionFormat);
+
+            gps = GpsUtils.CreateGridGps(grid, name, description, _config.GpsColorCode);
+            return true;
+
+            string Format(string format)
+            {
+                return format
+                    .Replace("{player}", player.DisplayName ?? "<none>")
+                    .Replace("{faction}", faction?.Tag ?? "<none>")
+                    .Replace("{ratio}", $"{_snapshot.LongLagNormal * 100:0}%")
+                    .Replace("{rank}", GpsUtils.RankToString(_rank))
+                    .Replace("{time}", GpsUtils.RemainingTimeToString(_snapshot.RemainingTime));
+            }
         }
     }
 }

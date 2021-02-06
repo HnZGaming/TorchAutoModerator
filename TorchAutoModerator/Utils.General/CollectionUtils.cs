@@ -133,6 +133,11 @@ namespace Utils.General
             return self.ToDictionary(p => p.Item1, p => p.Item2);
         }
 
+        public static IEnumerable<(K Key, V Value)> ToTuples<K, V>(this IReadOnlyDictionary<K, V> self)
+        {
+            return self.Select(kv => (kv.Key, kv.Value));
+        }
+
         public static IEnumerable<T> GetExceptWith<T>(this IEnumerable<T> self, IEnumerable<T> other)
         {
             var selfSet = self as ISet<T> ?? new HashSet<T>(self);
@@ -150,7 +155,7 @@ namespace Utils.General
 
         public static void RemoveRangeExceptWith<K, V>(this IDictionary<K, V> self, IEnumerable<K> keys)
         {
-            var keySet = new HashSet<K>(keys);
+            var keySet = keys as ISet<K> ?? new HashSet<K>(keys);
             foreach (var existingKey in self.Keys.ToArray())
             {
                 if (!keySet.Contains(existingKey))
@@ -193,6 +198,33 @@ namespace Utils.General
         public static IEnumerable<T> WhereNot<T>(this IEnumerable<T> self, Func<T, bool> f)
         {
             return self.Where(t => !f(t));
+        }
+
+        public static V GetOrElse<K, V>(this IReadOnlyDictionary<K, V> self, K key, V defaultValue)
+        {
+            return self.TryGetValue(key, out var v) ? v : defaultValue;
+        }
+
+        public static IReadOnlyDictionary<K, (V0 Value0, V1 Value1)> Zip<K, V0, V1>(
+            this IReadOnlyDictionary<K, V0> self,
+            IReadOnlyDictionary<K, V1> other,
+            V0 defaultValue0,
+            V1 defaultValue1)
+        {
+            var result = new Dictionary<K, (V0, V1)>();
+            foreach (var (k, v0) in self)
+            {
+                var v1 = other.GetOrElse(k, defaultValue1);
+                result[k] = (v0, v1);
+            }
+
+            foreach (var (k, v1) in other)
+            {
+                var v0 = self.GetOrElse(k, defaultValue0);
+                result[k] = (v0, v1);
+            }
+
+            return result;
         }
     }
 }

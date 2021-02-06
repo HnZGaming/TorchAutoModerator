@@ -8,6 +8,7 @@ using Sandbox.Game.Multiplayer;
 using Sandbox.Game.Screens.Helpers;
 using Sandbox.Game.World;
 using Utils.General;
+using VRage;
 using VRage.Game.Entity;
 using VRage.Game.ModAPI;
 using VRage.Game.ObjectBuilders.Components;
@@ -169,6 +170,23 @@ namespace Utils.Torch
             var faction = self.TryGetFactionByTag(factionTag);
             if (faction == null) return false;
             return faction.IsEveryoneNpc();
+        }
+
+        public static bool TryGetCubeGridById(long gridId, out MyCubeGrid grid)
+        {
+            if (!MyEntityIdentifier.TryGetEntity(gridId, out var entity))
+            {
+                grid = null;
+                return false;
+            }
+
+            if (!(entity is MyCubeGrid g))
+            {
+                throw new Exception($"Not a grid: {gridId} -> {entity.GetType()}");
+            }
+
+            grid = g;
+            return true;
         }
     }
 }

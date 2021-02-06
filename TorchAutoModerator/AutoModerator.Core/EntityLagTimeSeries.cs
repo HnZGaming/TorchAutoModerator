@@ -4,6 +4,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
 using NLog;
+using Utils.General;
 using Utils.TimeSerieses;
 
 namespace AutoModerator.Core
@@ -54,20 +55,40 @@ namespace AutoModerator.Core
         }
 
         [MethodImpl(MethodImplOptions.Synchronized)]
-        public IEnumerable<long> GetLaggyEntityIds()
+        public IEnumerable<(long EntityId, double Normal)> GetLongLagNormals(double minNormal)
         {
+            var normals = new List<(long, double)>();
             foreach (var (gridId, timeSeries) in _taggedTimeSeries.GetAllTimeSeries())
             {
-                if (IsLongLaggy(timeSeries))
+                var lagNormal = CalcLongLagNormal(timeSeries);
+                if (lagNormal > minNormal)
                 {
-                    yield return gridId;
+                    normals.Add((gridId, lagNormal));
                 }
             }
+
+            return normals;
         }
 
-        bool IsLongLaggy(ITimeSeries<double> timeSeries)
+        public IReadOnlyDictionary<long, double> GetLongLagNormalDictionary(double minNormal)
         {
-            if (timeSeries.Count == 0) return false;
+            return GetLongLagNormals(minNormal).ToDictionary();
+        }
+
+        [MethodImpl(MethodImplOptions.Synchronized)]
+        public double GetLongLagNormal(long entityId)
+        {
+            if (_taggedTimeSeries.TryGetTimeSeries(entityId, out var timeSeries))
+            {
+                return CalcLongLagNormal(timeSeries);
+            }
+
+            return 0;
+        }
+
+        double CalcLongLagNormal(ITimeSeries<double> timeSeries)
+        {
+            if (timeSeries.Count == 0) return 0;
 
             var sumNormal = 0d;
             var sumCount = 0;
@@ -81,7 +102,7 @@ namespace AutoModerator.Core
             }
 
             var avgNormal = sumNormal / sumCount;
-            return avgNormal >= 1f;
+            return avgNormal;
         }
 
         [MethodImpl(MethodImplOptions.Synchronized)]

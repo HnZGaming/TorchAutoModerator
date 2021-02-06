@@ -2,13 +2,13 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using System.Runtime.CompilerServices;
+using Utils.General;
 
 namespace AutoModerator.Core
 {
     public class LifespanDictionary<K>
     {
-        readonly IDictionary<K, DateTime> _self;
+        readonly ConcurrentDictionary<K, DateTime> _self;
 
         public LifespanDictionary()
         {
@@ -19,7 +19,25 @@ namespace AutoModerator.Core
         public int Count => _self.Count;
         public TimeSpan Lifespan { private get; set; }
 
-        [MethodImpl(MethodImplOptions.Synchronized)]
+        public bool ContainsKey(K key)
+        {
+            return _self.ContainsKey(key);
+        }
+
+        public IEnumerable<(K Key, TimeSpan RemainingTime)> GetRemainingTimes()
+        {
+            foreach (var (k, startTime) in _self)
+            {
+                var remainingTime = startTime + Lifespan - DateTime.UtcNow;
+                yield return (k, remainingTime);
+            }
+        }
+
+        public IReadOnlyDictionary<K, TimeSpan> ToDictionary()
+        {
+            return GetRemainingTimes().ToDictionary();
+        }
+
         public void AddOrUpdate(IEnumerable<K> keys)
         {
             var startTime = DateTime.UtcNow;
@@ -29,7 +47,6 @@ namespace AutoModerator.Core
             }
         }
 
-        [MethodImpl(MethodImplOptions.Synchronized)]
         public void RemoveExpired()
         {
             foreach (var (key, startTime) in _self.ToArray())
@@ -42,17 +59,6 @@ namespace AutoModerator.Core
             }
         }
 
-        [MethodImpl(MethodImplOptions.Synchronized)]
-        public IEnumerable<(K Key, TimeSpan RemainingTime)> GetRemainingTimes()
-        {
-            foreach (var (key, startTime) in _self)
-            {
-                var remainingTime = startTime + Lifespan - DateTime.UtcNow;
-                yield return (key, remainingTime);
-            }
-        }
-
-        [MethodImpl(MethodImplOptions.Synchronized)]
         public void Clear()
         {
             _self.Clear();

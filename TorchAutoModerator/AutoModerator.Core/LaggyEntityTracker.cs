@@ -9,74 +9,106 @@ namespace AutoModerator.Core
 {
     // smart base class is an anti pattern >;(
     // careful modifying stuff in this class
-    public abstract class LaggyEntityTracker<S> where S : IEntityLagSnapshot
+    public sealed class LaggyEntityTracker
     {
-        static readonly ILogger Log = LogManager.GetCurrentClassLogger();
-        readonly EntityLagTimeSeries _lagTimeSeries;
-        readonly LifespanDictionary<long> _pinnedIds;
-        readonly Dictionary<long, S> _snapshots;
-
-        protected LaggyEntityTracker()
+        public interface IConfig
         {
-            _lagTimeSeries = new EntityLagTimeSeries();
-            _pinnedIds = new LifespanDictionary<long>();
-            _snapshots = new Dictionary<long, S>();
+            TimeSpan PinWindow { get; }
+            TimeSpan PinLifespan { get; }
+            bool IsFactionExempt(string factionTag);
         }
 
-        protected abstract TimeSpan PinWindow { get; }
-        protected abstract TimeSpan PinLifespan { get; }
-        protected abstract bool IsFactionExempt(string factionTag);
+        static readonly ILogger Log = LogManager.GetCurrentClassLogger();
+        readonly IConfig _config;
+        readonly EntityLagTimeSeries _lagTimeSeries;
+        readonly LifespanDictionary<long> _pinnedIds;
 
-        public int LastLaggyEntityCount { get; private set; }
-        public int PinnedEntityCount => _pinnedIds.Count;
+        public LaggyEntityTracker(IConfig config)
+        {
+            _config = config;
+            _lagTimeSeries = new EntityLagTimeSeries();
+            _pinnedIds = new LifespanDictionary<long>();
+        }
+
+        public IEnumerable<long> GetTrackedEntityIds()
+        {
+            var set = new HashSet<long>();
+            set.UnionWith(_lagTimeSeries.EntityIds);
+            set.UnionWith(_pinnedIds.Keys);
+            return set;
+        }
+
+        public double GetLongLagNormal(long entityId)
+        {
+            return _lagTimeSeries.GetLongLagNormal(entityId);
+        }
+
+        public bool IsPinned(long entityId)
+        {
+            return _pinnedIds.ContainsKey(entityId);
+        }
 
         [MethodImpl(MethodImplOptions.Synchronized)]
         public void Clear()
         {
             _lagTimeSeries.Clear();
             _pinnedIds.Clear();
-            _snapshots.Clear();
         }
 
         [MethodImpl(MethodImplOptions.Synchronized)]
-        protected void Update(IEnumerable<S> snapshots)
+        public void Update(IEnumerable<IEntityLagSnapshot> snapshots)
         {
+            // clean up old data
+            _pinnedIds.Lifespan = _config.PinLifespan;
+            _pinnedIds.RemoveExpired();
+            _lagTimeSeries.RemovePointsOlderThan(DateTime.UtcNow - _config.PinWindow);
+
             // skip exempt factions
             snapshots = snapshots.WhereNot(s =>
                 s.FactionTagOrNull is string factionTag &&
-                IsFactionExempt(factionTag));
+                _config.IsFactionExempt(factionTag));
 
             _lagTimeSeries.AddInterval(snapshots.Select(r => (r.EntityId, r.LagNormal)));
 
-            // map grid id -> last profile result
-            _snapshots.AddRangeWithKeys(snapshots, r => r.EntityId);
-
-            // expire old data
-            var trackedGridIds = _lagTimeSeries.EntityIds.Concat(_pinnedIds.Keys);
-            _snapshots.RemoveRangeExceptWith(trackedGridIds);
-
             // keep track of laggy grids & gps lifespan
-            var laggyGridIds = _lagTimeSeries.GetLaggyEntityIds().ToArray();
+            var laggyGridIds = _lagTimeSeries.GetLongLagNormals(1).Select(p => p.EntityId);
             _pinnedIds.AddOrUpdate(laggyGridIds);
 
-            // clean up old data
-            _pinnedIds.Lifespan = PinLifespan;
-            _pinnedIds.RemoveExpired();
-            _lagTimeSeries.RemovePointsOlderThan(DateTime.UtcNow - PinWindow);
-
-            LastLaggyEntityCount = snapshots.Count(s => s.LagNormal >= 1f);
+            Log.Debug($"{snapshots.Count(s => s.LagNormal >= 1f)} laggy entities");
+            Log.Debug($"{_pinnedIds.Count} pinned entities");
         }
 
         [MethodImpl(MethodImplOptions.Synchronized)]
-        protected IEnumerable<(S Snapshot, TimeSpan RemainingTime)> GetTopPins(int count)
+        public IEnumerable<TrackedEntitySnapshot> GetTrackedEntitySnapshots(double minLongLagNormal)
         {
-            _pinnedIds.Lifespan = PinLifespan;
+            _pinnedIds.Lifespan = _config.PinLifespan;
 
-            return _pinnedIds
-                .GetRemainingTimes()
-                .Select(p => (Snapshot: _snapshots[p.Key], p.RemainingTime))
-                .OrderByDescending(p => p.Snapshot.LagNormal)
-                .Take(count);
+            var zip = _lagTimeSeries
+                .GetLongLagNormalDictionary(minLongLagNormal)
+                .Zip(_pinnedIds.ToDictionary(), 0, TimeSpan.Zero);
+
+            var snapshots = new List<TrackedEntitySnapshot>();
+            foreach (var (entityId, (longLagNormal, remainingTime)) in zip)
+            {
+                var snapshot = new TrackedEntitySnapshot(entityId, longLagNormal, remainingTime);
+                snapshots.Add(snapshot);
+            }
+
+            return snapshots;
+        }
+
+        [MethodImpl(MethodImplOptions.Synchronized)]
+        public IEnumerable<TrackedEntitySnapshot> GetTopPins()
+        {
+            var snapshots = new List<TrackedEntitySnapshot>();
+            foreach (var (entityId, remainingTime) in _pinnedIds.GetRemainingTimes())
+            {
+                var lagNormal = _lagTimeSeries.GetLongLagNormal(entityId);
+                var snapshot = new TrackedEntitySnapshot(entityId, lagNormal, remainingTime);
+                snapshots.Add(snapshot);
+            }
+
+            return snapshots.OrderByDescending(s => s.LongLagNormal);
         }
     }
 }

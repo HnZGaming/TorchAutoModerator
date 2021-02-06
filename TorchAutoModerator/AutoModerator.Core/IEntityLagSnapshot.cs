@@ -4,6 +4,6 @@
     {
         long EntityId { get; }
         double LagNormal { get; }
-        string FactionTagOrNull { get; }
+        string FactionTagOrNull { get; } // for exempt filtering
     }
 }
