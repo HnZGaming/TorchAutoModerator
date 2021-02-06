@@ -26,7 +26,7 @@ namespace AutoModerator.Players
         {
             foreach (var (player, profilerEntry) in playerProfileResult.GetTopEntities(50))
             {
-                var mspf = profilerEntry.MainThreadTime / playerProfileResult.TotalTime;
+                var mspf = profilerEntry.MainThreadTime / playerProfileResult.TotalFrameCount;
                 var lag = mspf / _config.PlayerMspfThreshold;
                 var snapshot = PlayerLagSnapshot.FromPlayer(player, lag);
                 yield return snapshot;

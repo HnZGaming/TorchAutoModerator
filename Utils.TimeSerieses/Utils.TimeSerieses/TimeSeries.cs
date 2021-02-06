@@ -16,10 +16,20 @@ namespace Utils.TimeSerieses
         }
 
         public int Count => _timestamps.Count;
+        public TimeSpan Length => GetLength();
 
         public Timestamped<T> GetPointAt(int index)
         {
             return new Timestamped<T>(_timestamps[index], _elements[index]);
+        }
+
+        TimeSpan GetLength()
+        {
+            if (_timestamps.Count < 2) return TimeSpan.Zero;
+            var firstTimestamp = _timestamps[0];
+            var lastTimestamp = _timestamps[_timestamps.Count - 1];
+
+            return lastTimestamp - firstTimestamp;
         }
 
         public void Add(DateTime timestamp, T element)
@@ -37,15 +47,29 @@ namespace Utils.TimeSerieses
             _elements.Add(element);
         }
 
-        public void RemoveOlderThan(DateTime thresholdTimestamp)
+        public void RemoveOlderThan(DateTime minTimestamp)
         {
             if (Count == 0) return;
 
-            var newTimestamps = _timestamps.SkipWhile(t => t < thresholdTimestamp).ToArray();
-            var newElements = _elements.Skip(_timestamps.Count - newTimestamps.Length).ToArray();
+            var newTimestamps = new List<DateTime>();
+            foreach (var timestamp in _timestamps)
+            {
+                if (timestamp > minTimestamp)
+                {
+                    newTimestamps.Add(timestamp);
+                }
+            }
 
             _timestamps.Clear();
             _timestamps.AddRange(newTimestamps);
+
+            var newElements = new List<T>();
+            for (var i = 0; i < _timestamps.Count; i++)
+            {
+                var j = i + _elements.Count - _timestamps.Count;
+                var e = _elements[j];
+                newElements.Add(e);
+            }
 
             _elements.Clear();
             _elements.AddRange(newElements);

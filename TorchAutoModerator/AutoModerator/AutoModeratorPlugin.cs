@@ -38,8 +38,8 @@ namespace AutoModerator
         PlayerLagSnapshotCreator _playerLagSnapshotCreator;
         EntityGpsBroadcaster _entityGpsBroadcaster;
         BroadcastListenerCollection _gpsReceivers;
-        SelfModerationQuestCollection _selfModerationQuests;
-        Dictionary<long, long> _playerLaggiestGrids;
+        SelfModQuestCollection _selfModQuests;
+        Dictionary<long, long> _playerLaggiestGridIds;
 
         UserControl IWpfPlugin.GetControl() => _config.GetOrCreateUserControl(ref _userControl);
         public AutoModeratorConfig Config => _config.Data;
@@ -71,8 +71,8 @@ namespace AutoModerator
             _playerLagSnapshotCreator = new PlayerLagSnapshotCreator(Config);
             _gpsReceivers = new BroadcastListenerCollection(Config);
             _entityGpsBroadcaster = new EntityGpsBroadcaster();
-            _selfModerationQuests = new SelfModerationQuestCollection();
-            _playerLaggiestGrids = new Dictionary<long, long>();
+            _selfModQuests = new SelfModQuestCollection();
+            _playerLaggiestGridIds = new Dictionary<long, long>();
         }
 
         void OnGameLoaded()
@@ -96,12 +96,15 @@ namespace AutoModerator
 
         async Task Main(CancellationToken canceller)
         {
-            Log.Info("started collector loop");
+            Log.Info("started main");
 
             _entityGpsBroadcaster.ClearGpss();
+            _selfModQuests.Clear();
 
             // Wait for some time during the session startup
             await Task.Delay(Config.FirstIdle.Seconds(), canceller);
+
+            Log.Info("started collector loop");
 
             // MAIN LOOP
             while (!canceller.IsCancellationRequested)
@@ -113,7 +116,6 @@ namespace AutoModerator
                 using (ProfilerResultQueue.Profile(gridProfiler))
                 using (ProfilerResultQueue.Profile(playerProfiler))
                 {
-                    Log.Debug("auto-profiling...");
                     gridProfiler.MarkStart();
                     playerProfiler.MarkStart();
                     await Task.Delay(Config.ProfileTime.Seconds(), canceller);
@@ -131,32 +133,37 @@ namespace AutoModerator
 
                     // map player id -> their laggiest grid's id
                     var laggiestGridIds = gridLagSnapshots
-                        .OrderBy(s => s.LagNormal)
-                        .ToDictionary(s => s.OwnerId, s => s.EntityId);
+                        .OrderByDescending(s => s.LagNormal)
+                        .ToDictionaryOrdered(s => s.OwnerId, s => s.EntityId);
 
                     var trackedPlayerIds = _laggyPlayers.GetTrackedEntityIds();
-                    _playerLaggiestGrids.RemoveRangeExceptWith(trackedPlayerIds);
-                    _playerLaggiestGrids.AddRange(laggiestGridIds);
+                    _playerLaggiestGridIds.RemoveRangeExceptWith(trackedPlayerIds);
+                    _playerLaggiestGridIds.AddRange(laggiestGridIds);
+
+                    Log.Debug("profile done");
                 }
 
                 if (Config.EnableSelfModeration)
                 {
-                    var lagSnapshots = _laggyPlayers
-                        .GetTrackedEntitySnapshots(Config.SelfModerationMspf)
-                        .ToDictionary(k => k.EntityId);
-
-                    var playerStates = new List<(long, double, bool)>();
-                    foreach (var (playerId, lagNormal) in lags)
+                    var playerAlertSnapshots = new List<AlertedPlayerSnapshot>();
+                    var playerLagSnapshots = _laggyPlayers.GetTrackedEntitySnapshots(Config.SelfModerationMspf);
+                    foreach (var playerLagSnapshot in playerLagSnapshots)
                     {
-                        var pinned = pins.TryGetValue(playerId, out var p) && p;
-                        playerStates.Add((playerId, lagNormal, pinned));
+                        var playerAlertSnapshot = new AlertedPlayerSnapshot(
+                            playerLagSnapshot.EntityId,
+                            playerLagSnapshot.LongLagNormal,
+                            playerLagSnapshot.RemainingTime > TimeSpan.Zero);
+
+                        playerAlertSnapshots.Add(playerAlertSnapshot);
                     }
 
-                    _selfModerationQuests.Update(playerStates, canceller);
+                    _selfModQuests.Update(playerAlertSnapshots);
+                    Log.Debug("quests done");
                 }
                 else
                 {
-                    _selfModerationQuests.Clear();
+                    _selfModQuests.Clear();
+                    Log.Debug("cleared all quests");
                 }
 
                 if (Config.EnableBroadcasting)
@@ -167,7 +174,7 @@ namespace AutoModerator
                     {
                         foreach (var (snapshot, rank) in _laggyPlayers.GetTopPins().Indexed())
                         {
-                            var gridId = _playerLaggiestGrids[snapshot.EntityId];
+                            var gridId = _playerLaggiestGridIds[snapshot.EntityId];
                             var gpsSource = new PlayerGpsSource(Config, snapshot, gridId, rank);
                             allGpsSources[gpsSource.GridId] = gpsSource;
                         }
@@ -186,6 +193,8 @@ namespace AutoModerator
                         allGpsSources.Values,
                         _gpsReceivers.GetReceiverIdentityIds(),
                         canceller);
+
+                    Log.Debug("broadcast done");
                 }
                 else
                 {
@@ -193,6 +202,8 @@ namespace AutoModerator
                     _entityGpsBroadcaster.ClearGpss();
                     Log.Debug("deleted all tracked gpss");
                 }
+
+                Log.Debug("interval done");
             }
         }
 
@@ -209,6 +220,11 @@ namespace AutoModerator
         public IEnumerable<MyGps> GetAllGpss()
         {
             return _entityGpsBroadcaster.GetGpss();
+        }
+
+        public void OnSelfProfiled(long playerId)
+        {
+            _selfModQuests.OnSelfProfiled(playerId);
         }
     }
 }

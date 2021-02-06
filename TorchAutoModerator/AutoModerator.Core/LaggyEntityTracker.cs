@@ -58,11 +58,6 @@ namespace AutoModerator.Core
         [MethodImpl(MethodImplOptions.Synchronized)]
         public void Update(IEnumerable<IEntityLagSnapshot> snapshots)
         {
-            // clean up old data
-            _pinnedIds.Lifespan = _config.PinLifespan;
-            _pinnedIds.RemoveExpired();
-            _lagTimeSeries.RemovePointsOlderThan(DateTime.UtcNow - _config.PinWindow);
-
             // skip exempt factions
             snapshots = snapshots.WhereNot(s =>
                 s.FactionTagOrNull is string factionTag &&
@@ -71,11 +66,16 @@ namespace AutoModerator.Core
             _lagTimeSeries.AddInterval(snapshots.Select(r => (r.EntityId, r.LagNormal)));
 
             // keep track of laggy grids & gps lifespan
-            var laggyGridIds = _lagTimeSeries.GetLongLagNormals(1).Select(p => p.EntityId);
+            var laggyGridIds = _lagTimeSeries.GetLongLagNormals(1d).Select(p => p.EntityId).ToArray();
             _pinnedIds.AddOrUpdate(laggyGridIds);
 
+            // clean up old data
+            _pinnedIds.Lifespan = _config.PinLifespan;
+            _pinnedIds.RemoveExpired();
+            _lagTimeSeries.RemovePointsOlderThan(_config.PinWindow);
+
             Log.Debug($"{snapshots.Count(s => s.LagNormal >= 1f)} laggy entities");
-            Log.Debug($"{_pinnedIds.Count} pinned entities");
+            Log.Debug($"{_pinnedIds.Count} pinned entities (new: {laggyGridIds.Length})");
         }
 
         [MethodImpl(MethodImplOptions.Synchronized)]

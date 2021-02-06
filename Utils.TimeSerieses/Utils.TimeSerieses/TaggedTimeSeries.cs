@@ -1,11 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using NLog;
 
 namespace Utils.TimeSerieses
 {
     public sealed class TaggedTimeSeries<T, E>
     {
+        static readonly ILogger Log = LogManager.GetCurrentClassLogger();
         readonly Dictionary<T, TimeSeries<E>> _timeSeriesMap;
 
         public TaggedTimeSeries()
@@ -50,11 +52,15 @@ namespace Utils.TimeSerieses
                 var tag = p.Key;
                 var timeSeries = p.Value;
 
+                var lastCount = timeSeries.Count;
                 timeSeries.RemoveOlderThan(thresholdTimestamp);
                 if (timeSeries.Count == 0)
                 {
                     _timeSeriesMap.Remove(tag);
                 }
+
+                var newCount = timeSeries.Count;
+                Log.Trace($"{tag} {lastCount} -> {newCount}");
             }
         }
 

@@ -25,7 +25,7 @@ namespace AutoModerator
         const string BroadcastGroupName = "Broadcasting";
         const string GridBroadcastGroupName = BroadcastGroupName + " (Grids)";
         const string PlayerBroadcastGroupName = BroadcastGroupName + " (Players)";
-        const string SelfModGroupName = "Alerts";
+        const string SelfModGroupName = "Quests";
         const string LogGroupName = "Logging";
         public const string DefaultLogFilePath = "Logs/AutoModerator-${shortdate}.log";
 

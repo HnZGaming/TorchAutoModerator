@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using AutoModerator.Quests;
 using Profiler.Basics;
 using Profiler.Core;
 using Sandbox.Game.World;
@@ -135,8 +136,8 @@ namespace AutoModerator
             Context.Player.ThrowIfNull("must be called by a player");
 
             // parse all options
-            long? playerMask = Context.Player.IdentityId;
-            long? gridMask = null;
+            var playerId = Context.Player.IdentityId;
+            var gridId = (long?) null;
             var profileTime = 10.Seconds();
             var count = 3;
             foreach (var arg in Context.Args)
@@ -152,7 +153,7 @@ namespace AutoModerator
                         return;
                     }
 
-                    gridMask = grid.EntityId;
+                    gridId = grid.EntityId;
                     continue;
                 }
 
@@ -176,7 +177,7 @@ namespace AutoModerator
             var msgBuilder = new StringBuilder();
             msgBuilder.AppendLine();
 
-            var mask = new GameEntityMask(playerMask, gridMask, null);
+            var mask = new GameEntityMask(playerId, gridId, null);
             using (var gridProfiler = new GridProfiler(mask))
             using (var blockDefProfiler = new BlockDefinitionProfiler(mask))
             using (ProfilerResultQueue.Profile(gridProfiler))
@@ -212,6 +213,8 @@ namespace AutoModerator
 
                 Context.Respond(msgBuilder.ToString());
             }
+
+            Plugin.OnSelfProfiled(playerId);
         });
     }
 }

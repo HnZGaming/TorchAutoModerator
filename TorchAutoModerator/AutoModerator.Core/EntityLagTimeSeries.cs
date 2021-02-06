@@ -49,9 +49,9 @@ namespace AutoModerator.Core
         }
 
         [MethodImpl(MethodImplOptions.Synchronized)]
-        public void RemovePointsOlderThan(DateTime timestamp)
+        public void RemovePointsOlderThan(TimeSpan timeSpan)
         {
-            _taggedTimeSeries.RemovePointsOlderThan(timestamp);
+            _taggedTimeSeries.RemovePointsOlderThan(DateTime.UtcNow - timeSpan);
         }
 
         [MethodImpl(MethodImplOptions.Synchronized)]
@@ -65,6 +65,8 @@ namespace AutoModerator.Core
                 {
                     normals.Add((gridId, lagNormal));
                 }
+
+                Log.Trace($"{gridId} {timeSeries.Count} {lagNormal * 100:0}%");
             }
 
             return normals;

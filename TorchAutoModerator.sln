@@ -6,6 +6,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Utils.EntityGps", "Utils.En
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Utils.TimeSerieses", "Utils.TimeSerieses\Utils.TimeSerieses.csproj", "{7F42B008-0B81-4DCC-82E6-18125AC9524E}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Utils.TimeSerieses.Test", "Utils.TimeSerieses.Test\Utils.TimeSerieses.Test.csproj", "{74E430BF-3027-4E02-8B34-39E81387FE49}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -24,5 +26,9 @@ Global
 		{7F42B008-0B81-4DCC-82E6-18125AC9524E}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{7F42B008-0B81-4DCC-82E6-18125AC9524E}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{7F42B008-0B81-4DCC-82E6-18125AC9524E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{74E430BF-3027-4E02-8B34-39E81387FE49}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{74E430BF-3027-4E02-8B34-39E81387FE49}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{74E430BF-3027-4E02-8B34-39E81387FE49}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{74E430BF-3027-4E02-8B34-39E81387FE49}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
