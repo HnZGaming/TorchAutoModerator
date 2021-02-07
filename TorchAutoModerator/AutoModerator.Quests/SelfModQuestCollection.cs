@@ -22,7 +22,7 @@ namespace AutoModerator.Quests
         sealed class PlayerState
         {
             public QuestState QuestState { get; set; }
-            public AlertedPlayerSnapshot LatestSnapshot { get; set; }
+            public LaggyPlayerSnapshot LatestSnapshot { get; set; }
         }
 
         static readonly ILogger Log = LogManager.GetCurrentClassLogger();
@@ -43,7 +43,7 @@ namespace AutoModerator.Quests
             _quests.Clear();
         }
 
-        public void Update(IEnumerable<AlertedPlayerSnapshot> playerSnapshot)
+        public void Update(IEnumerable<LaggyPlayerSnapshot> playerSnapshot)
         {
             foreach (var snapshot in playerSnapshot)
             {
@@ -63,14 +63,15 @@ namespace AutoModerator.Quests
                     continue;
                 }
 
-                if (snapshot.LagNormal < 1f && playerState.QuestState <= QuestState.MustDelagSelf)
+                // update
+                if (snapshot.LongLagNormal < 1f && playerState.QuestState <= QuestState.MustDelagSelf)
                 {
                     playerState.QuestState = snapshot.IsPinned
                         ? QuestState.MustWaitUnpinned
                         : QuestState.Ended;
                     UpdateQuestLog(playerState.QuestState, playerId);
                 }
-                else if (snapshot.LagNormal >= 1f && playerState.QuestState >= QuestState.MustWaitUnpinned)
+                else if (snapshot.LongLagNormal >= 1f && playerState.QuestState >= QuestState.MustWaitUnpinned)
                 {
                     playerState.QuestState = QuestState.MustProfileSelf;
                     UpdateQuestLog(playerState.QuestState, playerId);
@@ -107,7 +108,7 @@ namespace AutoModerator.Quests
             {
                 if (playerState.QuestState == QuestState.MustProfileSelf)
                 {
-                    playerState.QuestState = playerState.LatestSnapshot.LagNormal >= 1f
+                    playerState.QuestState = playerState.LatestSnapshot.LongLagNormal >= 1f
                         ? QuestState.MustDelagSelf
                         : QuestState.MustWaitUnpinned;
                     UpdateQuestLog(playerState.QuestState, playerId);

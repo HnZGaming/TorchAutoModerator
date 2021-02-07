@@ -227,7 +227,7 @@ namespace Utils.General
             return result;
         }
 
-        public static IReadOnlyDictionary<K, V> ToDictionaryOrdered<T, K, V>(this IEnumerable<T> self, Func<T, K> toKey, Func<T, V> toValue)
+        public static IReadOnlyDictionary<K, V> ToDictionaryDescending<T, K, V>(this IEnumerable<T> self, Func<T, K> toKey, Func<T, V> toValue)
         {
             var dictionary = new Dictionary<K, V>();
             foreach (var t in self)

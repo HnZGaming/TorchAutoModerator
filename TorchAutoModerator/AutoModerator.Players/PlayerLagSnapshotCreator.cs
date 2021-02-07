@@ -22,7 +22,7 @@ namespace AutoModerator.Players
             _config = config;
         }
 
-        public IEnumerable<IEntityLagSnapshot> CreateLagSnapshots(BaseProfilerResult<MyIdentity> playerProfileResult)
+        public IEnumerable<PlayerLagSnapshot> CreateLagSnapshots(BaseProfilerResult<MyIdentity> playerProfileResult)
         {
             foreach (var (player, profilerEntry) in playerProfileResult.GetTopEntities(50))
             {

@@ -17,7 +17,7 @@ namespace Utils.TimeSerieses
 
         public IEnumerable<T> Tags => _timeSeriesMap.Keys;
 
-        public IEnumerable<(T, ITimeSeries<E>)> GetAllTimeSeries()
+        public IEnumerable<(T Key, ITimeSeries<E> TimeSeries)> GetAllTimeSeries()
         {
             return _timeSeriesMap.Select(m => (m.Key, (ITimeSeries<E>) m.Value));
         }

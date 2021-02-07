@@ -55,6 +55,33 @@ namespace AutoModerator.Core
         }
 
         [MethodImpl(MethodImplOptions.Synchronized)]
+        public double GetLatestLagNormal(long entityId)
+        {
+            if (_taggedTimeSeries.TryGetTimeSeries(entityId, out var timeSeries))
+            {
+                var lastNormal = timeSeries.GetPointAt(timeSeries.Count - 1).Element;
+                return lastNormal;
+            }
+
+            return 0;
+        }
+
+        [MethodImpl(MethodImplOptions.Synchronized)]
+        public IEnumerable<(long EntityId, double Normal)> GetLatestLagNormals()
+        {
+            var result = new List<(long, double)>();
+            if (!_taggedTimeSeries.Tags.Any()) return result;
+
+            foreach (var (entityId, timeSeries) in _taggedTimeSeries.GetAllTimeSeries())
+            {
+                var lastNormal = timeSeries.GetPointAt(timeSeries.Count - 1).Element;
+                result.Add((entityId, lastNormal));
+            }
+
+            return result;
+        }
+
+        [MethodImpl(MethodImplOptions.Synchronized)]
         public IEnumerable<(long EntityId, double Normal)> GetLongLagNormals(double minNormal)
         {
             var normals = new List<(long, double)>();

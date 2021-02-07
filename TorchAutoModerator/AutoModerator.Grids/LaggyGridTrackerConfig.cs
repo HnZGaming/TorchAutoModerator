@@ -14,7 +14,7 @@ namespace AutoModerator.Grids
         }
 
         public TimeSpan PinWindow => _masterConfig.GridPinWindow.Seconds();
-        public TimeSpan PinLifespan => _masterConfig.GridPinLifespan.Seconds();
+        public TimeSpan PinLifeSpan => _masterConfig.GridPinLifespan.Seconds();
         public bool IsFactionExempt(string factionTag) => _masterConfig.IsFactionExempt(factionTag);
     }
 }

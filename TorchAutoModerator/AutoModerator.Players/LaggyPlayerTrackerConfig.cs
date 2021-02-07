@@ -14,7 +14,7 @@ namespace AutoModerator.Players
         }
 
         public TimeSpan PinWindow => _masterConfig.PlayerPinWindow.Seconds();
-        public TimeSpan PinLifespan => _masterConfig.PlayerPinLifespan.Seconds();
+        public TimeSpan PinLifeSpan => _masterConfig.PlayerPinLifespan.Seconds();
         public bool IsFactionExempt(string factionTag) => _masterConfig.IsFactionExempt(factionTag);
     }
 }

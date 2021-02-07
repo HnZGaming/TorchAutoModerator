@@ -43,7 +43,7 @@ namespace AutoModerator
         double _playerPinWindow = 300d;
         double _playerPinLifespan = 600d;
         double _sampleFrequency = 5;
-        double _selfModerationMspf = 0.7d;
+        double _selfModerationNormal = 0.7d;
         bool _exemptNpcFactions = true;
         string _gridGpsNameFormat = "[{faction}] {grid} {ratio} ({time})";
         string _gridGpsDescriptionFormat = "The {rank} laggiest grid. Get 'em!";
@@ -65,12 +65,12 @@ namespace AutoModerator
             set => SetValue(ref _enableSelfModeration, value);
         }
 
-        [XmlElement("SelfModerationMspf")]
-        [Display(Order = 0, Name = "Self moderation ms/f threshold", GroupName = SelfModGroupName)]
-        public double SelfModerationMspf
+        [XmlElement("SelfModerationNormal")]
+        [Display(Order = 0, Name = "Self moderation normal", GroupName = SelfModGroupName)]
+        public double SelfModerationNormal
         {
-            get => _selfModerationMspf;
-            set => SetValue(ref _selfModerationMspf, value);
+            get => _selfModerationNormal;
+            set => SetValue(ref _selfModerationNormal, value);
         }
 
         [XmlElement("EnableBroadcasting")]

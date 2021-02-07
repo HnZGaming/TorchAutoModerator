@@ -14,7 +14,7 @@ namespace AutoModerator.Core
         public interface IConfig
         {
             TimeSpan PinWindow { get; }
-            TimeSpan PinLifespan { get; }
+            TimeSpan PinLifeSpan { get; }
             bool IsFactionExempt(string factionTag);
         }
 
@@ -67,10 +67,9 @@ namespace AutoModerator.Core
 
             // keep track of laggy grids & gps lifespan
             var laggyGridIds = _lagTimeSeries.GetLongLagNormals(1d).Select(p => p.EntityId).ToArray();
-            _pinnedIds.AddOrUpdate(laggyGridIds);
+            _pinnedIds.AddOrUpdate(laggyGridIds, _config.PinLifeSpan);
 
             // clean up old data
-            _pinnedIds.Lifespan = _config.PinLifespan;
             _pinnedIds.RemoveExpired();
             _lagTimeSeries.RemovePointsOlderThan(_config.PinWindow);
 
@@ -81,20 +80,27 @@ namespace AutoModerator.Core
         [MethodImpl(MethodImplOptions.Synchronized)]
         public IEnumerable<TrackedEntitySnapshot> GetTrackedEntitySnapshots(double minLongLagNormal)
         {
-            _pinnedIds.Lifespan = _config.PinLifespan;
-
             var zip = _lagTimeSeries
                 .GetLongLagNormalDictionary(minLongLagNormal)
-                .Zip(_pinnedIds.ToDictionary(), 0, TimeSpan.Zero);
+                .Zip(_pinnedIds.ToDictionary(), default, default);
 
             var snapshots = new List<TrackedEntitySnapshot>();
-            foreach (var (entityId, (longLagNormal, remainingTime)) in zip)
+            foreach (var (entityId, (longNormal, remainingTime)) in zip)
             {
-                var snapshot = new TrackedEntitySnapshot(entityId, longLagNormal, remainingTime);
+                var snapshot = new TrackedEntitySnapshot(entityId, longNormal, remainingTime);
                 snapshots.Add(snapshot);
             }
 
             return snapshots;
+        }
+
+        [MethodImpl(MethodImplOptions.Synchronized)]
+        public bool TryGetTrackedEntitySnapshot(long entityId, out TrackedEntitySnapshot entitySnapshot)
+        {
+            var longNormal = _lagTimeSeries.GetLongLagNormal(entityId);
+            var pin = _pinnedIds.TryGetRemainingTime(entityId, out var r) ? r : TimeSpan.Zero;
+            entitySnapshot = new TrackedEntitySnapshot(entityId, longNormal, pin);
+            return true;
         }
 
         [MethodImpl(MethodImplOptions.Synchronized)]
@@ -103,8 +109,8 @@ namespace AutoModerator.Core
             var snapshots = new List<TrackedEntitySnapshot>();
             foreach (var (entityId, remainingTime) in _pinnedIds.GetRemainingTimes())
             {
-                var lagNormal = _lagTimeSeries.GetLongLagNormal(entityId);
-                var snapshot = new TrackedEntitySnapshot(entityId, lagNormal, remainingTime);
+                var longNormal = _lagTimeSeries.GetLongLagNormal(entityId);
+                var snapshot = new TrackedEntitySnapshot(entityId, longNormal, remainingTime);
                 snapshots.Add(snapshot);
             }
 

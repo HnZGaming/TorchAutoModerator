@@ -188,5 +188,21 @@ namespace Utils.Torch
             grid = g;
             return true;
         }
+
+        public static long GetOwnerPlayerId(long gridId)
+        {
+            if (!Thread.CurrentThread.IsSessionThread())
+            {
+                throw new Exception("Not in the main thread");
+            }
+
+            if (TryGetCubeGridById(gridId, out var grid) &&
+                grid.BigOwners.TryGetFirst(out var ownerId))
+            {
+                return ownerId;
+            }
+
+            return 0;
+        }
     }
 }
