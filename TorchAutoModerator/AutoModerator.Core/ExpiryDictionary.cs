@@ -6,11 +6,11 @@ using Utils.General;
 
 namespace AutoModerator.Core
 {
-    public class LifespanDictionary<K>
+    public class ExpiryDictionary<K>
     {
         readonly ConcurrentDictionary<K, DateTime> _self;
 
-        public LifespanDictionary()
+        public ExpiryDictionary()
         {
             _self = new ConcurrentDictionary<K, DateTime>();
         }

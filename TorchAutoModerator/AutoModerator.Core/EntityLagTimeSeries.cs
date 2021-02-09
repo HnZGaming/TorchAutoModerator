@@ -85,15 +85,13 @@ namespace AutoModerator.Core
         public IEnumerable<(long EntityId, double Normal)> GetLongLagNormals(double minNormal)
         {
             var normals = new List<(long, double)>();
-            foreach (var (gridId, timeSeries) in _taggedTimeSeries.GetAllTimeSeries())
+            foreach (var (entityId, timeSeries) in _taggedTimeSeries.GetAllTimeSeries())
             {
                 var lagNormal = CalcLongLagNormal(timeSeries);
                 if (lagNormal > minNormal)
                 {
-                    normals.Add((gridId, lagNormal));
+                    normals.Add((entityId, lagNormal));
                 }
-
-                Log.Trace($"{gridId} {timeSeries.Count} {lagNormal * 100:0}%");
             }
 
             return normals;

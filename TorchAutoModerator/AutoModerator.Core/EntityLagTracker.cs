@@ -20,13 +20,15 @@ namespace AutoModerator.Core
         static readonly ILogger Log = LogManager.GetCurrentClassLogger();
         readonly IConfig _config;
         readonly EntityLagTimeSeries _lagTimeSeries;
-        readonly LifespanDictionary<long> _pinnedIds;
+        readonly ExpiryDictionary<long> _pinnedIds;
+        readonly Dictionary<long, string> _names; // for debugging only
 
         public EntityLagTracker(IConfig config)
         {
             _config = config;
             _lagTimeSeries = new EntityLagTimeSeries();
-            _pinnedIds = new LifespanDictionary<long>();
+            _pinnedIds = new ExpiryDictionary<long>();
+            _names = new Dictionary<long, string>();
         }
 
         [MethodImpl(MethodImplOptions.Synchronized)]
@@ -38,7 +40,7 @@ namespace AutoModerator.Core
                 _config.IsFactionExempt(factionTag));
 
             _lagTimeSeries.AddInterval(entityLags.Select(r =>
-                (r.EntityId, LagNormal: r.Lag / _config.LagThreshold)));
+                (r.EntityId, LagNormal: r.LagMspf / _config.LagThreshold)));
 
             // keep track of laggy grids & lifespan
             var laggyGridIds = _lagTimeSeries.GetLongLagNormals(1d).Select(p => p.EntityId).ToArray();
@@ -48,7 +50,21 @@ namespace AutoModerator.Core
             _pinnedIds.RemoveExpired();
             _lagTimeSeries.RemovePointsOlderThan(_config.PinWindow);
 
-            Log.Debug($"{entityLags.Count(s => s.Lag >= 1f)} laggy entities");
+            foreach (var lag in entityLags)
+            {
+                _names[lag.EntityId] = lag.Name;
+            }
+
+            if (Log.IsTraceEnabled)
+            {
+                foreach (var grid in GetTrackedEntities(.5d))
+                {
+                    var name = _names.GetOrElse(grid.Id, $"{grid.Id}");
+                    Log.Trace($"entity lag: \"{name}\" -> {grid.LongLagNormal * 100:0}% {grid.RemainingTime.TotalSeconds:0}s");
+                }
+            }
+
+            Log.Debug($"{entityLags.Count(s => s.LagMspf >= 1f)} laggy entities");
             Log.Debug($"{_pinnedIds.Count} pinned entities (new: {laggyGridIds.Length})");
         }
 

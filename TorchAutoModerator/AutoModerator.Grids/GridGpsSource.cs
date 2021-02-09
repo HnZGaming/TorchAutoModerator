@@ -29,11 +29,11 @@ namespace AutoModerator.Grids
             _rank = rank;
         }
 
-        public long GridId => _snapshot.EntityId;
+        public long GridId => _snapshot.Id;
 
         public bool TryCreateGps(out MyGps gps)
         {
-            if (!VRageUtils.TryGetCubeGridById(_snapshot.EntityId, out var grid))
+            if (!VRageUtils.TryGetCubeGridById(_snapshot.Id, out var grid))
             {
                 gps = default;
                 return false;

@@ -52,15 +52,11 @@ namespace Utils.TimeSerieses
                 var tag = p.Key;
                 var timeSeries = p.Value;
 
-                var lastCount = timeSeries.Count;
                 timeSeries.RemoveOlderThan(thresholdTimestamp);
                 if (timeSeries.Count == 0)
                 {
                     _timeSeriesMap.Remove(tag);
                 }
-
-                var newCount = timeSeries.Count;
-                Log.Trace($"{tag} {lastCount} -> {newCount}");
             }
         }
 

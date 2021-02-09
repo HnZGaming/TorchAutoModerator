@@ -220,5 +220,10 @@ namespace Utils.Torch
 
             return defaultPlayerName;
         }
+
+        public static string GetEntityNameOrElse(long entityId, string defaultName)
+        {
+            return MyEntities.TryGetEntityById(entityId, out var e) ? e.DisplayName : defaultName;
+        }
     }
 }

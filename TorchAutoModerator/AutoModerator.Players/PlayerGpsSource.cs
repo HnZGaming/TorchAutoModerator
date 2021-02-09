@@ -33,7 +33,7 @@ namespace AutoModerator.Players
 
         public bool TryCreateGps(out MyGps gps)
         {
-            if (!MySession.Static.Players.TryGetPlayerById(_snapshot.EntityId, out var player))
+            if (!MySession.Static.Players.TryGetPlayerById(_snapshot.Id, out var player))
             {
                 gps = default;
                 return false;
@@ -45,7 +45,7 @@ namespace AutoModerator.Players
                 return false;
             }
 
-            var faction = MySession.Static.Factions.GetPlayerFaction(_snapshot.EntityId);
+            var faction = MySession.Static.Factions.GetPlayerFaction(_snapshot.Id);
 
             var name = Format(_config.PlayerGpsNameFormat);
             var description = Format(_config.PlayerGpsDescriptionFormat);

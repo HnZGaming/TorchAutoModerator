@@ -1,14 +1,16 @@
 ﻿using System;
 
-namespace AutoModerator.Quests
+namespace AutoModerator.Warnings
 {
     public readonly struct LaggyPlayerSnapshot
     {
         public LaggyPlayerSnapshot(
-            long playerId, double longLagNormal, bool isPinned,
+            long playerId, string playerName,
+            double longLagNormal, bool isPinned,
             double gridLongLagNormal, bool isGridPinned)
         {
             PlayerId = playerId;
+            PlayerName = playerName;
             PlayerLagNormal = longLagNormal;
             IsPlayerPinned = isPinned;
             GridLongLagNormal = gridLongLagNormal;
@@ -16,6 +18,7 @@ namespace AutoModerator.Quests
         }
 
         public long PlayerId { get; }
+        public string PlayerName { get; }
 
         public double PlayerLagNormal { get; }
         public bool IsPlayerPinned { get; }

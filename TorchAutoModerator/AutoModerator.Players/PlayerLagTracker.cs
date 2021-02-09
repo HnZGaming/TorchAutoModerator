@@ -47,20 +47,21 @@ namespace AutoModerator.Players
         [MethodImpl(MethodImplOptions.Synchronized)]
         public void Update(BaseProfilerResult<MyIdentity> profileResult)
         {
-            Log.Debug("updating player lag tracker...");
-            
+            Log.Debug("updating player lags...");
+
             var results = new List<EntityLagSnapshot>();
             foreach (var (player, profilerEntry) in profileResult.GetTopEntities(50))
             {
                 var mspf = profilerEntry.MainThreadTime / profileResult.TotalFrameCount;
                 var faction = MySession.Static.Factions.TryGetPlayerFaction(player.IdentityId);
-                var result = new EntityLagSnapshot(player.IdentityId, mspf, faction?.Tag);
+                var result = new EntityLagSnapshot(player.IdentityId, player.DisplayName, mspf, faction?.Tag);
                 results.Add(result);
 
                 Log.Trace($"player profiled: {player.DisplayName} {mspf:0.00}ms/f");
             }
 
             _lagTracker.Update(results);
+            Log.Debug("updated player lags");
         }
 
         [MethodImpl(MethodImplOptions.Synchronized)]

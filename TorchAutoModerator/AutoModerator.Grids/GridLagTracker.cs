@@ -57,8 +57,8 @@ namespace AutoModerator.Grids
         [MethodImpl(MethodImplOptions.Synchronized)]
         public void Update(BaseProfilerResult<MyCubeGrid> profileResult)
         {
-            Log.Debug("updating grid lag tracker...");
-            
+            Log.Debug("updating grid lags...");
+
             var lags = new List<EntityLagSnapshot>();
             var gridToOwnerIds = new Dictionary<long, long>();
             var ownerIds = new HashSet<long>();
@@ -70,7 +70,7 @@ namespace AutoModerator.Grids
                     ? MySession.Static.Factions.GetPlayerFactionTag(ownerId)
                     : null;
 
-                var lag = new EntityLagSnapshot(grid.EntityId, mspf, factionTag);
+                var lag = new EntityLagSnapshot(grid.EntityId, grid.DisplayName, mspf, factionTag);
                 lags.Add(lag);
 
                 if (!ownerIds.Contains(ownerId)) // pick the laggiest grid
@@ -87,11 +87,13 @@ namespace AutoModerator.Grids
             // update owner -> laggiest grid map w/ latest state
             foreach (var lag in _lagTracker.GetTrackedEntities(0))
             {
-                if (gridToOwnerIds.TryGetValue(lag.EntityId, out var ownerId))
+                if (gridToOwnerIds.TryGetValue(lag.Id, out var ownerId))
                 {
                     _playerToLaggiestGrids[ownerId] = lag;
                 }
             }
+
+            Log.Debug("updated grid lags");
         }
 
         [MethodImpl(MethodImplOptions.Synchronized)]

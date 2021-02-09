@@ -5,6 +5,7 @@ using System.Xml.Serialization;
 using AutoModerator.Broadcasts;
 using AutoModerator.Grids;
 using AutoModerator.Players;
+using AutoModerator.Warnings;
 using Sandbox.Game.World;
 using Torch;
 using Torch.Views;
@@ -19,7 +20,8 @@ namespace AutoModerator
         FileLoggingConfigurator.IConfig,
         PlayerGpsSource.IConfig,
         GridLagTracker.IConfig,
-        PlayerLagTracker.IConfig
+        PlayerLagTracker.IConfig,
+        WarningQuestCollection.IConfig
     {
         const string OpGroupName = "Auto Moderator";
         const string OpGridGroupName = "Auto Moderator (Grids)";
@@ -27,7 +29,7 @@ namespace AutoModerator
         const string BroadcastGroupName = "Broadcasting (General)";
         const string GridBroadcastGroupName = "Broadcasting (Grids)";
         const string PlayerBroadcastGroupName = "Broadcasting (Players)";
-        const string SelfModGroupName = "Quests";
+        const string WarningGroupName = "Warnings";
         const string LogGroupName = "Logging";
         public const string DefaultLogFilePath = "Logs/AutoModerator-${shortdate}.log";
 
@@ -57,22 +59,12 @@ namespace AutoModerator
         bool _enableLoggingTrace;
         bool _enableLoggingDebug;
         string _logFilePath = DefaultLogFilePath;
-
-        [XmlElement("EnableSelfModeration")]
-        [Display(Order = 0, Name = "Enable self moderation", GroupName = SelfModGroupName)]
-        public bool EnableSelfModeration
-        {
-            get => _enableSelfModeration;
-            set => SetValue(ref _enableSelfModeration, value);
-        }
-
-        [XmlElement("SelfModerationNormal")]
-        [Display(Order = 0, Name = "Self moderation normal", GroupName = SelfModGroupName)]
-        public double SelfModerationNormal
-        {
-            get => _selfModerationNormal;
-            set => SetValue(ref _selfModerationNormal, value);
-        }
+        string _warningTitle = WarningDefaultTexts.Title;
+        string _warningDetailMustProfileSelf = WarningDefaultTexts.MustProfileSelf;
+        string _warningDetailMustDelagSelf = WarningDefaultTexts.MustDelagSelf;
+        string _warningDetailMustWaitUnpinned = WarningDefaultTexts.MustWaitUnpinned;
+        string _warningDetailEnded = WarningDefaultTexts.Ended;
+        string _warningNotificationFormat = WarningDefaultTexts.NotificationFormat;
 
         [XmlElement("EnableGridBroadcasting")]
         [Display(Order = 0, Name = "Enable grid broadcast", GroupName = GridBroadcastGroupName)]
@@ -122,8 +114,8 @@ namespace AutoModerator
             set => SetValue(ref _maxLaggyGpsCountPerScan, value);
         }
 
-        [XmlElement("ProfileFrequency")]
-        [Display(Order = 5, Name = "Sample frequency (seconds)", GroupName = OpGroupName)]
+        [XmlElement("IntervalFrequency")]
+        [Display(Order = 5, Name = "Interval frequency (seconds)", GroupName = OpGroupName)]
         public double ProfileFrequency
         {
             get => _sampleFrequency;
@@ -208,6 +200,70 @@ namespace AutoModerator
         {
             get => _gpsColor;
             set => SetValue(ref _gpsColor, value);
+        }
+
+        [XmlElement("EnableSelfModeration")]
+        [Display(Order = 0, Name = "Enable self moderation", GroupName = WarningGroupName)]
+        public bool EnableSelfModeration
+        {
+            get => _enableSelfModeration;
+            set => SetValue(ref _enableSelfModeration, value);
+        }
+
+        [XmlElement("SelfModerationNormal")]
+        [Display(Order = 1, Name = "Self moderation normal", GroupName = WarningGroupName)]
+        public double SelfModerationNormal
+        {
+            get => _selfModerationNormal;
+            set => SetValue(ref _selfModerationNormal, value);
+        }
+
+        [XmlElement("WarningTitle")]
+        [Display(Order = 2, Name = "Warning title", GroupName = WarningGroupName)]
+        public string WarningTitle
+        {
+            get => _warningTitle;
+            set => SetValue(ref _warningTitle, value);
+        }
+
+        [XmlElement("WarningDetailMustProfileSelf")]
+        [Display(Order = 3, Name = "Warning title", GroupName = WarningGroupName)]
+        public string WarningDetailMustProfileSelf
+        {
+            get => _warningDetailMustProfileSelf;
+            set => SetValue(ref _warningDetailMustProfileSelf, value);
+        }
+
+        [XmlElement("WarningDetailMustDelagSelf")]
+        [Display(Order = 4, Name = "Warning title", GroupName = WarningGroupName)]
+        public string WarningDetailMustDelagSelf
+        {
+            get => _warningDetailMustDelagSelf;
+            set => SetValue(ref _warningDetailMustDelagSelf, value);
+        }
+
+        [XmlElement("WarningDetailMustWaitUnpinned")]
+        [Display(Order = 5, Name = "Warning title", GroupName = WarningGroupName)]
+        public string WarningDetailMustWaitUnpinned
+        {
+            get => _warningDetailMustWaitUnpinned;
+            set => SetValue(ref _warningDetailMustWaitUnpinned, value);
+        }
+
+        [XmlElement("WarningDetailEnded")]
+        [Display(Order = 6, Name = "Warning title", GroupName = WarningGroupName)]
+        public string WarningDetailEnded
+        {
+            get => _warningDetailEnded;
+            set => SetValue(ref _warningDetailEnded, value);
+        }
+
+        [XmlElement("WarningNotificationFormat")]
+        [Display(Order = 7, Name = "Warning title", GroupName = WarningGroupName)]
+        public string WarningNotificationFormat
+        {
+            get => _warningNotificationFormat;
+            set => SetValue(ref _warningNotificationFormat, value);
         }
 
         [XmlElement("IgnoreNpcFactions")]

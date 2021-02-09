@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -14,7 +15,7 @@ using VRageMath;
 
 namespace AutoModerator
 {
-    [Category("lag")]
+    [Category("lags")]
     public sealed class AutoModeratorCommandModule : CommandModule
     {
         AutoModeratorPlugin Plugin => (AutoModeratorPlugin) Context.Plugin;
@@ -121,7 +122,16 @@ namespace AutoModerator
             Plugin.Config.RemoveAllMutedPlayers();
         });
 
-        [Command("profile", "Self profiler interface.")]
+
+        [Command("clear", "Clear quest HUD.")]
+        [Permission(MyPromoteLevel.None)]
+        public void ClearQuests() => this.CatchAndReport(() =>
+        {
+            Context.Player.ThrowIfNull("must be called by a player");
+            Plugin.ClearQuestForUser(Context.Player.IdentityId);
+        });
+
+        [Command("scan", "Self-profiler for players. `-this` to profile the seated grid.")]
         [Permission(MyPromoteLevel.None)]
         public void ProfilePlayer() => this.CatchAndReport(async () =>
         {
@@ -130,8 +140,8 @@ namespace AutoModerator
             // parse all options
             var playerId = Context.Player.IdentityId;
             var gridId = (long?) null;
-            var profileTime = 10.Seconds();
-            var count = 3;
+            var profileTime = 5.Seconds();
+            var count = 5;
             foreach (var arg in Context.Args)
             {
                 if (!CommandOption.TryGetOption(arg, out var option)) continue;
@@ -171,36 +181,45 @@ namespace AutoModerator
 
             var mask = new GameEntityMask(playerId, gridId, null);
             using (var gridProfiler = new GridProfiler(mask))
-            using (var blockDefProfiler = new BlockDefinitionProfiler(mask))
+            using (var blockProfiler = new BlockDefinitionProfiler(mask))
             using (ProfilerResultQueue.Profile(gridProfiler))
             {
                 gridProfiler.MarkStart();
-                blockDefProfiler.MarkStart();
+                blockProfiler.MarkStart();
 
                 await Task.Delay(profileTime);
 
-                msgBuilder.AppendLine("Grid lags (% of threshold):");
+                msgBuilder.AppendLine("Grid lags (% over max lag per grid):");
 
-                var profileResult = gridProfiler.GetResult();
-                foreach (var (grid, profilerEntry) in profileResult.GetTopEntities(count))
+                var gridProfileResult = gridProfiler.GetResult();
+                foreach (var (grid, profilerEntry) in gridProfileResult.GetTopEntities(count))
                 {
                     var gridName = grid.DisplayName;
-                    var mspf = profilerEntry.MainThreadTime / profileResult.TotalTime;
+                    var mspf = profilerEntry.MainThreadTime / gridProfileResult.TotalFrameCount;
                     var lagNormal = mspf / Plugin.Config.MaxGridMspf;
-                    var lagStr = $"{lagNormal * 100:0}%";
-                    msgBuilder.AppendLine($"\"{gridName}\" {lagStr}");
+                    msgBuilder.AppendLine($"\"{gridName}\" {lagNormal * 100:0}%");
                 }
 
                 msgBuilder.AppendLine();
-                msgBuilder.AppendLine("Block type lags (% of total):");
+                msgBuilder.AppendLine("Block lags (% of total):");
 
-                var blockDefProfilerResult = blockDefProfiler.GetResult();
-                foreach (var (blockDef, profileEntity) in blockDefProfilerResult.GetTopEntities(4))
+                var a = new Dictionary<string, double>();
+                var blockProfilerResult = blockProfiler.GetResult();
+                foreach (var (blockDef, profileEntity) in blockProfilerResult.GetTopEntities(count))
                 {
                     var blockName = blockDef.BlockPairName;
-                    var lag = profileEntity.TotalTime / blockDefProfilerResult.TotalTime;
-                    var lagStr = $"{lag * 100:0}%";
-                    msgBuilder.AppendLine($"{blockName} {lagStr}");
+
+                    a.TryGetValue(blockName, out var lag);
+                    lag += profileEntity.MainThreadTime;
+
+                    a[blockName] = lag;
+                }
+
+                var totalBlockLag = a.Values.Sum();
+                foreach (var (blockName, lag) in a.OrderByDescending(p => p.Value))
+                {
+                    var relLag = lag / totalBlockLag;
+                    msgBuilder.AppendLine($"{blockName} {relLag * 100:0}%");
                 }
 
                 Context.Respond(msgBuilder.ToString());
