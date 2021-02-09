@@ -10,7 +10,7 @@ using Utils.Torch;
 
 namespace AutoModerator.Warnings
 {
-    public sealed class WarningQuestCollection
+    public sealed class LagWarningCollection
     {
         public interface IConfig
         {
@@ -41,13 +41,13 @@ namespace AutoModerator.Warnings
         static readonly ILogger Log = LogManager.GetCurrentClassLogger();
         readonly IConfig _config;
         readonly ConcurrentDictionary<long, PlayerState> _quests;
-        readonly Dictionary<long, int> _notificationIds;
+        readonly HudNotificationCollection _hudNotifications;
 
-        public WarningQuestCollection(IConfig config)
+        public LagWarningCollection(IConfig config)
         {
             _config = config;
             _quests = new ConcurrentDictionary<long, PlayerState>();
-            _notificationIds = new Dictionary<long, int>();
+            _hudNotifications = new HudNotificationCollection();
         }
 
         [MethodImpl(MethodImplOptions.Synchronized)]
@@ -59,12 +59,15 @@ namespace AutoModerator.Warnings
             }
 
             _quests.Clear();
+            _hudNotifications.Clear();
         }
 
+        [MethodImpl(MethodImplOptions.Synchronized)]
         public void Clear(long playerId)
         {
             _quests.Remove(playerId);
             UpdateQuestLog(QuestState.Cleared, playerId);
+            _hudNotifications.Remove(playerId);
         }
 
         [MethodImpl(MethodImplOptions.Synchronized)]
@@ -111,7 +114,8 @@ namespace AutoModerator.Warnings
 
                 _quests[playerId].Latest = laggyPlayer;
 
-                SendHudNotification(playerId, laggyPlayer.LongLagNormal);
+                var message = _config.WarningNotificationFormat.Replace("{level}", $"{laggyPlayer.LongLagNormal * 100:0}");
+                _hudNotifications.Show(playerId, message);
             }
 
             var latestPlayerIdSet = new HashSet<long>(laggyPlayers.Select(s => s.PlayerId));
@@ -127,6 +131,7 @@ namespace AutoModerator.Warnings
                 {
                     state.Quest = QuestState.Ended;
                     UpdateQuestLog(state.Quest, playerId);
+                    _hudNotifications.Remove(playerId);
                 }
             }
 
@@ -134,19 +139,6 @@ namespace AutoModerator.Warnings
             {
                 Log.Trace($"warning: \"{state.Latest.PlayerName}\" {state.Latest.PlayerLagNormal * 100:0}% {state.Quest}");
             }
-        }
-
-        void SendHudNotification(long playerId, double lag)
-        {
-            if (_notificationIds.TryGetValue(playerId, out var nid))
-            {
-                MyVisualScriptLogicProvider.RemoveNotification(nid);
-            }
-
-            var message = _config.WarningNotificationFormat.Replace("{level}", $"{lag * 100:0}");
-            nid = MyVisualScriptLogicProvider.AddNotification(message, "Red", playerId);
-
-            _notificationIds[playerId] = nid;
         }
 
         [MethodImpl(MethodImplOptions.Synchronized)]
@@ -175,21 +167,25 @@ namespace AutoModerator.Warnings
                 case QuestState.MustProfileSelf:
                 {
                     MyVisualScriptLogicProvider.SetQuestlog(true, _config.WarningTitle, playerId);
+                    MyVisualScriptLogicProvider.RemoveQuestlogDetails(playerId);
                     MyVisualScriptLogicProvider.AddQuestlogDetail(_config.WarningDetailMustProfileSelf, true, true, playerId);
                     return;
                 }
                 case QuestState.MustDelagSelf:
                 {
+                    MyVisualScriptLogicProvider.RemoveQuestlogDetails(playerId);
                     MyVisualScriptLogicProvider.AddQuestlogDetail(_config.WarningDetailMustDelagSelf, true, true, playerId);
                     return;
                 }
                 case QuestState.MustWaitUnpinned:
                 {
+                    MyVisualScriptLogicProvider.RemoveQuestlogDetails(playerId);
                     MyVisualScriptLogicProvider.AddQuestlogDetail(_config.WarningDetailMustWaitUnpinned, true, true, playerId);
                     return;
                 }
                 case QuestState.Ended:
                 {
+                    MyVisualScriptLogicProvider.RemoveQuestlogDetails(playerId);
                     MyVisualScriptLogicProvider.AddQuestlogDetail(_config.WarningDetailEnded, true, true, playerId);
                     return;
                 }

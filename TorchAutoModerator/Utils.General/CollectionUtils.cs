@@ -35,6 +35,18 @@ namespace Utils.General
             return false;
         }
 
+        public static bool TryGetFirst<T>(this IReadOnlyList<T> self, out T foundValue)
+        {
+            if (self.Count == 0)
+            {
+                foundValue = default;
+                return false;
+            }
+
+            foundValue = self[0];
+            return true;
+        }
+
         public static T GetFirstOrElse<T>(this IEnumerable<T> self, T defaultValue)
         {
             return self.TryGetFirst(out var t) ? t : defaultValue;

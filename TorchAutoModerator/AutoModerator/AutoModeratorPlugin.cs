@@ -35,7 +35,7 @@ namespace AutoModerator
         PlayerLagTracker _laggyPlayers;
         EntityGpsBroadcaster _entityGpsBroadcaster;
         BroadcastListenerCollection _gpsReceivers;
-        WarningQuestCollection _warningQuests;
+        LagWarningCollection _warningQuests;
 
         UserControl IWpfPlugin.GetControl() => _config.GetOrCreateUserControl(ref _userControl);
         public AutoModeratorConfig Config => _config.Data;
@@ -65,7 +65,7 @@ namespace AutoModerator
             _laggyPlayers = new PlayerLagTracker(Config);
             _gpsReceivers = new BroadcastListenerCollection(Config);
             _entityGpsBroadcaster = new EntityGpsBroadcaster();
-            _warningQuests = new WarningQuestCollection(Config);
+            _warningQuests = new LagWarningCollection(Config);
         }
 
         void OnGameLoaded()

@@ -162,7 +162,8 @@
         <Compile Include="AutoModerator.Core\TrackedEntitySnapshot.cs" />
         <Compile Include="AutoModerator.Grids\GridLagTracker.cs" />
         <Compile Include="AutoModerator.Players\PlayerLagTracker.cs" />
-        <Compile Include="AutoModerator.Warnings\WarningQuestCollection.cs" />
+        <Compile Include="AutoModerator.Warnings\HudNotificationCollection.cs" />
+        <Compile Include="AutoModerator.Warnings\LagWarningCollection.cs" />
         <Compile Include="AutoModerator.Broadcasts\BroadcastListenerCollection.cs" />
         <Compile Include="AutoModerator.Broadcasts\GpsUtils.cs" />
         <Compile Include="AutoModerator.Broadcasts\EntityGpsBroadcaster.cs" />
@@ -173,7 +174,7 @@
         <Compile Include="AutoModerator.Grids\GridGpsSource.cs" />
         <Compile Include="AutoModerator.Players\PlayerGpsSource.cs" />
         <Compile Include="AutoModerator.Warnings\LaggyPlayerSnapshot.cs" />
-        <Compile Include="AutoModerator.Warnings\WarningDefaultTexts.cs" />
+        <Compile Include="AutoModerator.Warnings\LagWarningDefaultTexts.cs" />
         <Compile Include="Properties\AssemblyInfo.cs" />
         <Compile Include="AutoModerator\AutoModeratorCommandModule.cs" />
         <Compile Include="AutoModerator\AutoModeratorConfig.cs" />

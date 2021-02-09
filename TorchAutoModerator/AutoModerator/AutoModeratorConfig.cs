@@ -21,7 +21,7 @@ namespace AutoModerator
         PlayerGpsSource.IConfig,
         GridLagTracker.IConfig,
         PlayerLagTracker.IConfig,
-        WarningQuestCollection.IConfig
+        LagWarningCollection.IConfig
     {
         const string OpGroupName = "Auto Moderator";
         const string OpGridGroupName = "Auto Moderator (Grids)";
@@ -59,12 +59,12 @@ namespace AutoModerator
         bool _enableLoggingTrace;
         bool _enableLoggingDebug;
         string _logFilePath = DefaultLogFilePath;
-        string _warningTitle = WarningDefaultTexts.Title;
-        string _warningDetailMustProfileSelf = WarningDefaultTexts.MustProfileSelf;
-        string _warningDetailMustDelagSelf = WarningDefaultTexts.MustDelagSelf;
-        string _warningDetailMustWaitUnpinned = WarningDefaultTexts.MustWaitUnpinned;
-        string _warningDetailEnded = WarningDefaultTexts.Ended;
-        string _warningNotificationFormat = WarningDefaultTexts.NotificationFormat;
+        string _warningTitle = LagWarningDefaultTexts.Title;
+        string _warningDetailMustProfileSelf = LagWarningDefaultTexts.MustProfileSelf;
+        string _warningDetailMustDelagSelf = LagWarningDefaultTexts.MustDelagSelf;
+        string _warningDetailMustWaitUnpinned = LagWarningDefaultTexts.MustWaitUnpinned;
+        string _warningDetailEnded = LagWarningDefaultTexts.Ended;
+        string _warningNotificationFormat = LagWarningDefaultTexts.NotificationFormat;
 
         [XmlElement("EnableGridBroadcasting")]
         [Display(Order = 0, Name = "Enable grid broadcast", GroupName = GridBroadcastGroupName)]
