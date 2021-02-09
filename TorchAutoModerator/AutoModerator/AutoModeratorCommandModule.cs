@@ -125,8 +125,7 @@ namespace AutoModerator
             Plugin.Config.RemoveAllMutedPlayers();
         });
 
-
-        [Command("clear", "Clear quest HUD.")]
+        [Command("clear_quest", "Clear quest HUD.")]
         [Permission(MyPromoteLevel.None)]
         public void ClearQuests() => this.CatchAndReport(() =>
         {

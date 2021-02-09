@@ -28,5 +28,10 @@ namespace AutoModerator.Warnings
 
         public double LongLagNormal => Math.Max(PlayerLagNormal, GridLongLagNormal);
         public bool IsPinned => IsPlayerPinned || IsGridPinned;
+
+        public override string ToString()
+        {
+            return $"\"{PlayerName}\" player: ({PlayerLagNormal * 100:0}%, {IsPlayerPinned}), grid: ({GridLongLagNormal * 100:0}%, {IsGridPinned})";
+        }
     }
 }

@@ -154,7 +154,7 @@ namespace AutoModerator
                     _warningQuests.Update(Enumerable.Empty<LaggyPlayerSnapshot>());
                 }
 
-                Log.Debug("quests done");
+                Log.Debug("warnings done");
 
                 var allGpsSources = new Dictionary<long, IEntityGpsSource>();
 

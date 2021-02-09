@@ -87,21 +87,24 @@ namespace AutoModerator.Warnings
                     };
 
                     _quests[playerId] = newPlayerState;
-                    UpdateQuestLog(QuestState.MustProfileSelf, playerId);
+                    UpdateQuestLog(newPlayerState.Quest, playerId);
 
                     Log.Trace($"warning (new): \"{laggyPlayer.PlayerName}\" {laggyPlayer.LongLagNormal * 100:0}%");
                     continue;
                 }
 
                 // update
-                if (laggyPlayer.LongLagNormal < 1f && playerState.Quest <= QuestState.MustDelagSelf)
+                if (laggyPlayer.IsPinned && playerState.Quest < QuestState.MustWaitUnpinned)
                 {
-                    playerState.Quest = laggyPlayer.IsPinned
-                        ? QuestState.MustWaitUnpinned
-                        : QuestState.Ended;
+                    playerState.Quest = QuestState.MustWaitUnpinned;
                     UpdateQuestLog(playerState.Quest, playerId);
                 }
-                else if (laggyPlayer.LongLagNormal >= 1f && playerState.Quest >= QuestState.MustWaitUnpinned)
+                else if (laggyPlayer.LongLagNormal < 1f && playerState.Quest < QuestState.MustWaitUnpinned)
+                {
+                    playerState.Quest = QuestState.Ended;
+                    UpdateQuestLog(playerState.Quest, playerId);
+                }
+                else if (laggyPlayer.LongLagNormal >= 1f && playerState.Quest >= QuestState.Ended)
                 {
                     playerState.Quest = QuestState.MustProfileSelf;
                     UpdateQuestLog(playerState.Quest, playerId);
@@ -137,7 +140,7 @@ namespace AutoModerator.Warnings
 
             foreach (var (_, state) in _quests)
             {
-                Log.Trace($"warning: \"{state.Latest.PlayerName}\" {state.Latest.PlayerLagNormal * 100:0}% {state.Quest}");
+                Log.Trace($"warning: \"{state.Latest}\" {state.Quest}");
             }
         }
 

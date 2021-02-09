@@ -1,6 +1,7 @@
 ﻿using System;
 using AutoModerator.Broadcasts;
 using AutoModerator.Core;
+using NLog;
 using Sandbox.Game.Screens.Helpers;
 using Sandbox.Game.World;
 using Utils.General;
@@ -18,6 +19,7 @@ namespace AutoModerator.Grids
             string GpsColorCode { get; }
         }
 
+        static readonly ILogger Log = LogManager.GetCurrentClassLogger();
         readonly IConfig _config;
         readonly TrackedEntitySnapshot _snapshot;
         readonly int _rank;
@@ -41,8 +43,15 @@ namespace AutoModerator.Grids
 
             var playerName = (string) null;
 
-            if (grid.BigOwners.TryGetFirst(out var playerId) &&
-                MySession.Static.Players.TryGetPlayerById(playerId, out var player))
+            if (!grid.BigOwners.TryGetFirst(out var playerId))
+            {
+                Log.Trace($"grid no owner: \"{grid.DisplayName}\"");
+            }
+            else if (!MySession.Static.Players.TryGetPlayerById(playerId, out var player))
+            {
+                Log.Trace($"player not found for grid: \"{grid.DisplayName}\": {playerId}");
+            }
+            else
             {
                 playerName = player.DisplayName;
             }
