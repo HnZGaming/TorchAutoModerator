@@ -61,7 +61,7 @@ namespace TorchEntityGpsBroadcaster.Core
                 _gpsCollection.SendAddGps(targetId, newGps, !existed);
             }
 
-            Log.Trace("Done replacing all GPSs");
+            Log.Debug($"broadcasted {newGpss.Count()} laggy entities");
         }
     }
 }

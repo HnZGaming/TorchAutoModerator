@@ -125,24 +125,21 @@ namespace AutoModerator
 
                 if (Config.EnableSelfModeration)
                 {
-                    var laggyPlayers = _laggyPlayers.GetTrackedEntities(Config.SelfModerationNormal);
+                    var laggyPlayers = _laggyPlayers.GetTrackedEntities(Config.SelfModerationNormal).ToDictionary(p => p.Id);
+                    var laggyGrids = _laggyGrids.GetPlayerLaggiestGrids(Config.SelfModerationNormal).ToDictionary();
                     var laggyPlayerReports = new List<LaggyPlayerSnapshot>();
-                    foreach (var player in laggyPlayers)
+                    foreach (var (playerId, (player, grid)) in laggyPlayers.Zip(laggyGrids))
                     {
-                        var playerId = player.Id;
-                        var playerName = MySession.Static.Players.GetPlayerNameOrElse(playerId, $"<{playerId}>");
+                        if (playerId == 0) continue;
 
-                        if (!_laggyGrids.TryGetLaggiestGridOwnedBy(playerId, out var laggiestGrid))
-                        {
-                            Log.Warn($"laggy grid not found for laggy player: {playerName}");
-                        }
+                        var playerName = MySession.Static.Players.GetPlayerNameOrElse(playerId, $"<{playerId}>");
 
                         var laggyPlayerReport = new LaggyPlayerSnapshot(
                             playerId, playerName,
                             player.LongLagNormal / Config.SelfModerationNormal,
-                            player.RemainingTime > TimeSpan.Zero,
-                            laggiestGrid.LongLagNormal / Config.SelfModerationNormal,
-                            laggiestGrid.RemainingTime > TimeSpan.Zero);
+                            player.RemainingTime,
+                            grid.LongLagNormal / Config.SelfModerationNormal,
+                            grid.RemainingTime);
 
                         laggyPlayerReports.Add(laggyPlayerReport);
                     }

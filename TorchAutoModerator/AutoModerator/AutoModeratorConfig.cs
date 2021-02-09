@@ -64,7 +64,6 @@ namespace AutoModerator
         string _warningDetailMustDelagSelf = LagWarningDefaultTexts.MustDelagSelf;
         string _warningDetailMustWaitUnpinned = LagWarningDefaultTexts.MustWaitUnpinned;
         string _warningDetailEnded = LagWarningDefaultTexts.Ended;
-        string _warningNotificationFormat = LagWarningDefaultTexts.NotificationFormat;
 
         [XmlElement("EnableGridBroadcasting")]
         [Display(Order = 0, Name = "Enable grid broadcast", GroupName = GridBroadcastGroupName)]
@@ -155,7 +154,7 @@ namespace AutoModerator
         }
 
         [XmlElement("MaxPlayerMspf")]
-        [Display(Order = 3, Name = "ms/f threshold", GroupName = OpPlayerGroupName)]
+        [Display(Order = 3, Name = "Max player ms/f", GroupName = OpPlayerGroupName)]
         public double MaxPlayerMspf
         {
             get => _maxPlayerMspf;
@@ -256,14 +255,6 @@ namespace AutoModerator
         {
             get => _warningDetailEnded;
             set => SetValue(ref _warningDetailEnded, value);
-        }
-
-        [XmlElement("WarningNotificationFormat")]
-        [Display(Order = 7, Name = "Warning title", GroupName = WarningGroupName)]
-        public string WarningNotificationFormat
-        {
-            get => _warningNotificationFormat;
-            set => SetValue(ref _warningNotificationFormat, value);
         }
 
         [XmlElement("IgnoreNpcFactions")]

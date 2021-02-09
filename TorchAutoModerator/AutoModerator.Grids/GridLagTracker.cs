@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using AutoModerator.Core;
 using NLog;
@@ -52,6 +53,14 @@ namespace AutoModerator.Grids
         public bool TryGetLaggiestGridOwnedBy(long ownerId, out TrackedEntitySnapshot ownedGridId)
         {
             return _playerToLaggiestGrids.TryGetValue(ownerId, out ownedGridId);
+        }
+
+        [MethodImpl(MethodImplOptions.Synchronized)]
+        public IEnumerable<(long OwnerId, TrackedEntitySnapshot Grid)> GetPlayerLaggiestGrids(double maxLongLagNormal)
+        {
+            return _playerToLaggiestGrids
+                .ToTuples()
+                .Where(p => p.Value.LongLagNormal > maxLongLagNormal);
         }
 
         [MethodImpl(MethodImplOptions.Synchronized)]

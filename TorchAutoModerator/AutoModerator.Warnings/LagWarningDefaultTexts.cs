@@ -5,7 +5,6 @@ namespace AutoModerator.Warnings
     public static class LagWarningDefaultTexts
     {
         public const string Title = "Auto Moderator: L.A.G.S. Warning";
-        public const string NotificationFormat = "Your current L.A.G.S. level: {level}%";
 
         public static string MustProfileSelf => ToString(new[]
         {

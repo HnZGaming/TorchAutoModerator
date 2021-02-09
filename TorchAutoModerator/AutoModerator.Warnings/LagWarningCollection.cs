@@ -19,7 +19,6 @@ namespace AutoModerator.Warnings
             string WarningDetailMustDelagSelf { get; }
             string WarningDetailMustWaitUnpinned { get; }
             string WarningDetailEnded { get; }
-            string WarningNotificationFormat { get; }
         }
 
         enum QuestState
@@ -76,6 +75,7 @@ namespace AutoModerator.Warnings
             foreach (var laggyPlayer in laggyPlayers)
             {
                 var playerId = laggyPlayer.PlayerId;
+                var lag = laggyPlayer.LongLagNormal;
 
                 // new entry
                 if (!_quests.TryGetValue(playerId, out var playerState))
@@ -89,7 +89,7 @@ namespace AutoModerator.Warnings
                     _quests[playerId] = newPlayerState;
                     UpdateQuestLog(newPlayerState.Quest, playerId);
 
-                    Log.Trace($"warning (new): \"{laggyPlayer.PlayerName}\" {laggyPlayer.LongLagNormal * 100:0}%");
+                    Log.Trace($"warning (new): \"{laggyPlayer.PlayerName}\" {lag * 100:0}%");
                     continue;
                 }
 
@@ -99,12 +99,12 @@ namespace AutoModerator.Warnings
                     playerState.Quest = QuestState.MustWaitUnpinned;
                     UpdateQuestLog(playerState.Quest, playerId);
                 }
-                else if (laggyPlayer.LongLagNormal < 1f && playerState.Quest < QuestState.MustWaitUnpinned)
+                else if (lag < 1f && playerState.Quest <= QuestState.MustDelagSelf)
                 {
                     playerState.Quest = QuestState.Ended;
                     UpdateQuestLog(playerState.Quest, playerId);
                 }
-                else if (laggyPlayer.LongLagNormal >= 1f && playerState.Quest >= QuestState.Ended)
+                else if (lag >= 1f && playerState.Quest >= QuestState.Ended)
                 {
                     playerState.Quest = QuestState.MustProfileSelf;
                     UpdateQuestLog(playerState.Quest, playerId);
@@ -117,7 +117,12 @@ namespace AutoModerator.Warnings
 
                 _quests[playerId].Latest = laggyPlayer;
 
-                var message = _config.WarningNotificationFormat.Replace("{level}", $"{laggyPlayer.LongLagNormal * 100:0}");
+                var message = $"Your current L.A.G.S. level: {lag * 100:0}%";
+                if (laggyPlayer.IsPinned)
+                {
+                    message += $" ({laggyPlayer.Pin.TotalSeconds:0} seconds left)";
+                }
+
                 _hudNotifications.Show(playerId, message);
             }
 
@@ -140,7 +145,7 @@ namespace AutoModerator.Warnings
 
             foreach (var (_, state) in _quests)
             {
-                Log.Trace($"warning: \"{state.Latest}\" {state.Quest}");
+                Log.Trace($"warning: {state.Latest} {state.Quest}");
             }
         }
 

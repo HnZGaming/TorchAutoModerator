@@ -6,32 +6,33 @@ namespace AutoModerator.Warnings
     {
         public LaggyPlayerSnapshot(
             long playerId, string playerName,
-            double longLagNormal, bool isPinned,
-            double gridLongLagNormal, bool isGridPinned)
+            double longLagNormal, TimeSpan pin,
+            double gridLongLagNormal, TimeSpan gridPin)
         {
             PlayerId = playerId;
             PlayerName = playerName;
             PlayerLagNormal = longLagNormal;
-            IsPlayerPinned = isPinned;
+            PlayerPin = pin;
             GridLongLagNormal = gridLongLagNormal;
-            IsGridPinned = isGridPinned;
+            GridPin = gridPin;
         }
 
         public long PlayerId { get; }
         public string PlayerName { get; }
 
         public double PlayerLagNormal { get; }
-        public bool IsPlayerPinned { get; }
+        public TimeSpan PlayerPin { get; }
 
         public double GridLongLagNormal { get; }
-        public bool IsGridPinned { get; }
+        public TimeSpan GridPin { get; }
 
         public double LongLagNormal => Math.Max(PlayerLagNormal, GridLongLagNormal);
-        public bool IsPinned => IsPlayerPinned || IsGridPinned;
+        public TimeSpan Pin => PlayerPin > GridPin ? PlayerPin : GridPin;
+        public bool IsPinned => Pin > TimeSpan.Zero;
 
         public override string ToString()
         {
-            return $"\"{PlayerName}\" player: ({PlayerLagNormal * 100:0}%, {IsPlayerPinned}), grid: ({GridLongLagNormal * 100:0}%, {IsGridPinned})";
+            return $"\"{PlayerName}\" player: ({PlayerLagNormal * 100:0}%, {PlayerPin.TotalSeconds:0}secs), grid: ({GridLongLagNormal * 100:0}%, {GridPin.TotalSeconds:0}secs)";
         }
     }
 }

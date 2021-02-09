@@ -37,7 +37,6 @@ namespace AutoModerator.Broadcasts
         {
             var gpss = await CreateGps(gpsSources, canceller);
             _gpsCollection.SendReplaceAllTrackedGpss(gpss, receiverIdentityIds);
-            Log.Debug($"broadcasted {gpss.Count} laggy entities");
         }
 
         async Task<IReadOnlyList<MyGps>> CreateGps(IEnumerable<IEntityGpsSource> gpsSources, CancellationToken canceller)
