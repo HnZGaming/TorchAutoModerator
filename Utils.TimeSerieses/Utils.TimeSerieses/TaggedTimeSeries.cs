@@ -1,11 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using NLog;
 
 namespace Utils.TimeSerieses
 {
     public sealed class TaggedTimeSeries<T, E>
     {
+        static readonly ILogger Log = LogManager.GetCurrentClassLogger();
         readonly Dictionary<T, TimeSeries<E>> _timeSeriesMap;
 
         public TaggedTimeSeries()
@@ -15,7 +17,7 @@ namespace Utils.TimeSerieses
 
         public IEnumerable<T> Tags => _timeSeriesMap.Keys;
 
-        public IEnumerable<(T, ITimeSeries<E>)> GetAllTimeSeries()
+        public IEnumerable<(T Key, ITimeSeries<E> TimeSeries)> GetAllTimeSeries()
         {
             return _timeSeriesMap.Select(m => (m.Key, (ITimeSeries<E>) m.Value));
         }

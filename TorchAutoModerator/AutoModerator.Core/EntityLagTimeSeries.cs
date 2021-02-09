@@ -4,6 +4,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
 using NLog;
+using Utils.General;
 using Utils.TimeSerieses;
 
 namespace AutoModerator.Core
@@ -48,26 +49,75 @@ namespace AutoModerator.Core
         }
 
         [MethodImpl(MethodImplOptions.Synchronized)]
-        public void RemovePointsOlderThan(DateTime timestamp)
+        public void RemovePointsOlderThan(TimeSpan timeSpan)
         {
-            _taggedTimeSeries.RemovePointsOlderThan(timestamp);
+            _taggedTimeSeries.RemovePointsOlderThan(DateTime.UtcNow - timeSpan);
         }
 
         [MethodImpl(MethodImplOptions.Synchronized)]
-        public IEnumerable<long> GetLaggyEntityIds()
+        public double GetLatestLagNormal(long entityId)
         {
-            foreach (var (gridId, timeSeries) in _taggedTimeSeries.GetAllTimeSeries())
+            if (_taggedTimeSeries.TryGetTimeSeries(entityId, out var timeSeries))
             {
-                if (IsLongLaggy(timeSeries))
-                {
-                    yield return gridId;
-                }
+                var lastNormal = timeSeries.GetPointAt(timeSeries.Count - 1).Element;
+                return lastNormal;
             }
+
+            return 0;
         }
 
-        bool IsLongLaggy(ITimeSeries<double> timeSeries)
+        [MethodImpl(MethodImplOptions.Synchronized)]
+        public IEnumerable<(long EntityId, double Normal)> GetLatestLagNormals()
         {
-            if (timeSeries.Count == 0) return false;
+            var result = new List<(long, double)>();
+            if (!_taggedTimeSeries.Tags.Any()) return result;
+
+            foreach (var (entityId, timeSeries) in _taggedTimeSeries.GetAllTimeSeries())
+            {
+                var lastNormal = timeSeries.GetPointAt(timeSeries.Count - 1).Element;
+                result.Add((entityId, lastNormal));
+            }
+
+            return result;
+        }
+
+        [MethodImpl(MethodImplOptions.Synchronized)]
+        public IEnumerable<(long EntityId, double Normal)> GetLongLagNormals(double minNormal)
+        {
+            var normals = new List<(long, double)>();
+            foreach (var (entityId, timeSeries) in _taggedTimeSeries.GetAllTimeSeries())
+            {
+                var lagNormal = CalcLongLagNormal(timeSeries);
+                if (lagNormal > minNormal)
+                {
+                    normals.Add((entityId, lagNormal));
+                }
+            }
+
+            return normals;
+        }
+
+        public IReadOnlyDictionary<long, double> GetLongLagNormalDictionary(double minNormal)
+        {
+            return GetLongLagNormals(minNormal).ToDictionary();
+        }
+
+        [MethodImpl(MethodImplOptions.Synchronized)]
+        public bool TryGetLongLagNormal(long entityId, out double normal)
+        {
+            if (_taggedTimeSeries.TryGetTimeSeries(entityId, out var timeSeries))
+            {
+                normal = CalcLongLagNormal(timeSeries);
+                return true;
+            }
+
+            normal = 0d;
+            return false;
+        }
+
+        double CalcLongLagNormal(ITimeSeries<double> timeSeries)
+        {
+            if (timeSeries.Count == 0) return 0;
 
             var sumNormal = 0d;
             var sumCount = 0;
@@ -81,7 +131,7 @@ namespace AutoModerator.Core
             }
 
             var avgNormal = sumNormal / sumCount;
-            return avgNormal >= 1f;
+            return avgNormal;
         }
 
         [MethodImpl(MethodImplOptions.Synchronized)]

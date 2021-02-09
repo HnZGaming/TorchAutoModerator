@@ -1,7 +1,9 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using NLog;
 using Profiler.Basics;
 using Profiler.Core;
 using Sandbox.Game.World;
@@ -14,30 +16,25 @@ using VRageMath;
 
 namespace AutoModerator
 {
-    [Category("lag")]
+    [Category("lags")]
     public sealed class AutoModeratorCommandModule : CommandModule
     {
-        AutoModeratorPlugin Plugin => (AutoModeratorPlugin) Context.Plugin;
+        static readonly ILogger Log = LogManager.GetCurrentClassLogger();
 
-        [Command("broadcast", "Enable/disable broadcasting.")]
-        [Permission(MyPromoteLevel.Admin)]
-        public void GetOrSetEnabled() => this.CatchAndReport(() =>
-        {
-            this.GetOrSetProperty(Plugin.Config, nameof(AutoModeratorConfig.EnableBroadcasting));
-        });
+        AutoModeratorPlugin Plugin => (AutoModeratorPlugin) Context.Plugin;
 
         [Command("grid_mspf", "Get or set the current ms/f threshold per grid.")]
         [Permission(MyPromoteLevel.Admin)]
         public void GridMspfThreshold() => this.CatchAndReport(() =>
         {
-            this.GetOrSetProperty(Plugin.Config, nameof(AutoModeratorConfig.GridMspfThreshold));
+            this.GetOrSetProperty(Plugin.Config, nameof(AutoModeratorConfig.MaxGridMspf));
         });
 
         [Command("player_mspf", "Get or set the current ms/f threshold per player.")]
         [Permission(MyPromoteLevel.Admin)]
         public void PlayerMspfThreshold() => this.CatchAndReport(() =>
         {
-            this.GetOrSetProperty(Plugin.Config, nameof(AutoModeratorConfig.PlayerMspfThreshold));
+            this.GetOrSetProperty(Plugin.Config, nameof(AutoModeratorConfig.MaxPlayerMspf));
         });
 
         [Command("admins-only", "Get or set the current \"admins only\" value.")]
@@ -47,11 +44,11 @@ namespace AutoModerator
             this.GetOrSetProperty(Plugin.Config, nameof(AutoModeratorConfig.AdminsOnly));
         });
 
-        [Command("clear_gps", "Clear all custom GPS entities.")]
+        [Command("clear", "Clear all internal state.")]
         [Permission(MyPromoteLevel.Admin)]
-        public void ClearGpss() => this.CatchAndReport(() =>
+        public void Clear() => this.CatchAndReport(() =>
         {
-            Plugin.DeleteAllGpss();
+            Plugin.ClearCache();
         });
 
         [Command("show_gps", "Show the list of custom GPS entities.")]
@@ -128,17 +125,25 @@ namespace AutoModerator
             Plugin.Config.RemoveAllMutedPlayers();
         });
 
-        [Command("profile", "Self profiler interface.")]
+        [Command("clear_quest", "Clear quest HUD.")]
+        [Permission(MyPromoteLevel.None)]
+        public void ClearQuests() => this.CatchAndReport(() =>
+        {
+            Context.Player.ThrowIfNull("must be called by a player");
+            Plugin.ClearQuestForUser(Context.Player.IdentityId);
+        });
+
+        [Command("scan", "Self-profiler for players. `-this` to profile the seated grid.")]
         [Permission(MyPromoteLevel.None)]
         public void ProfilePlayer() => this.CatchAndReport(async () =>
         {
             Context.Player.ThrowIfNull("must be called by a player");
 
             // parse all options
-            long? playerMask = Context.Player.IdentityId;
-            long? gridMask = null;
-            var profileTime = 10.Seconds();
-            var count = 3;
+            var playerId = Context.Player.IdentityId;
+            var gridId = (long?) null;
+            var profileTime = 5.Seconds();
+            var count = 4;
             foreach (var arg in Context.Args)
             {
                 if (!CommandOption.TryGetOption(arg, out var option)) continue;
@@ -152,7 +157,7 @@ namespace AutoModerator
                         return;
                     }
 
-                    gridMask = grid.EntityId;
+                    gridId = grid.EntityId;
                     continue;
                 }
 
@@ -171,47 +176,62 @@ namespace AutoModerator
                 return;
             }
 
+            Log.Debug($"player \"{Context.Player.DisplayName}\" self-profile; player: {playerId}, grid: {gridId}");
+
             Context.Respond($"Profiling for {profileTime.TotalSeconds} seconds...");
 
             var msgBuilder = new StringBuilder();
             msgBuilder.AppendLine();
 
-            var mask = new GameEntityMask(playerMask, gridMask, null);
+            var mask = new GameEntityMask(playerId, gridId, null);
             using (var gridProfiler = new GridProfiler(mask))
-            using (var blockDefProfiler = new BlockDefinitionProfiler(mask))
             using (ProfilerResultQueue.Profile(gridProfiler))
+            using (var blockProfiler = new BlockDefinitionProfiler(mask))
+            using (ProfilerResultQueue.Profile(blockProfiler))
             {
                 gridProfiler.MarkStart();
-                blockDefProfiler.MarkStart();
+                blockProfiler.MarkStart();
 
                 await Task.Delay(profileTime);
 
-                msgBuilder.AppendLine("Grid lags (% of threshold):");
+                msgBuilder.AppendLine("Grid lags (% of max lag per grid):");
 
-                var profileResult = gridProfiler.GetResult();
-                foreach (var (grid, profilerEntry) in profileResult.GetTopEntities(count))
+                var gridProfileResult = gridProfiler.GetResult();
+                foreach (var (grid, profilerEntry) in gridProfileResult.GetTopEntities(count))
                 {
                     var gridName = grid.DisplayName;
-                    var mspf = profilerEntry.MainThreadTime / profileResult.TotalTime;
-                    var lagNormal = mspf / Plugin.Config.GridMspfThreshold;
-                    var lagStr = $"{lagNormal * 100:0}%";
-                    msgBuilder.AppendLine($"\"{gridName}\" {lagStr}");
+                    var mspf = profilerEntry.MainThreadTime / gridProfileResult.TotalFrameCount;
+                    var lagNormal = mspf / Plugin.Config.MaxGridMspf;
+                    msgBuilder.AppendLine($"\"{gridName}\" {lagNormal * 100:0}%");
                 }
 
                 msgBuilder.AppendLine();
-                msgBuilder.AppendLine("Block type lags (% of total):");
+                msgBuilder.AppendLine("Block lags (% of total):");
 
-                var blockDefProfilerResult = blockDefProfiler.GetResult();
-                foreach (var (blockDef, profileEntity) in blockDefProfilerResult.GetTopEntities(4))
+                var blockLags = new Dictionary<string, double>();
+                var blockProfilerResult = blockProfiler.GetResult();
+                foreach (var (block, profileEntity) in blockProfilerResult.GetTopEntities(count))
                 {
-                    var blockName = blockDef.BlockPairName;
-                    var lag = profileEntity.TotalTime / blockDefProfilerResult.TotalTime;
-                    var lagStr = $"{lag * 100:0}%";
-                    msgBuilder.AppendLine($"{blockName} {lagStr}");
+                    var blockName = block.BlockPairName;
+
+                    blockLags.TryGetValue(blockName, out var lag);
+                    lag += profileEntity.MainThreadTime;
+
+                    blockLags[blockName] = lag;
+                    Log.Trace($"player \"{Context.Player.DisplayName}\" self-profile block {blockName} {lag:0.00}ms");
+                }
+
+                var totalBlockLag = blockLags.Values.Sum();
+                foreach (var (blockName, lag) in blockLags.OrderByDescending(p => p.Value))
+                {
+                    var relLag = lag / totalBlockLag;
+                    msgBuilder.AppendLine($"{blockName} {relLag * 100:0}%");
                 }
 
                 Context.Respond(msgBuilder.ToString());
             }
+
+            Plugin.OnSelfProfiled(playerId);
         });
     }
 }

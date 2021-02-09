@@ -8,6 +8,7 @@ using Sandbox.Game.Multiplayer;
 using Sandbox.Game.Screens.Helpers;
 using Sandbox.Game.World;
 using Utils.General;
+using VRage;
 using VRage.Game.Entity;
 using VRage.Game.ModAPI;
 using VRage.Game.ObjectBuilders.Components;
@@ -169,6 +170,60 @@ namespace Utils.Torch
             var faction = self.TryGetFactionByTag(factionTag);
             if (faction == null) return false;
             return faction.IsEveryoneNpc();
+        }
+
+        public static string GetPlayerFactionTag(this MyFactionCollection self, long playerId)
+        {
+            var faction = self.GetPlayerFaction(playerId);
+            return faction?.Tag;
+        }
+
+        public static bool TryGetCubeGridById(long gridId, out MyCubeGrid grid)
+        {
+            if (!MyEntityIdentifier.TryGetEntity(gridId, out var entity))
+            {
+                grid = null;
+                return false;
+            }
+
+            if (!(entity is MyCubeGrid g))
+            {
+                throw new Exception($"Not a grid: {gridId} -> {entity.GetType()}");
+            }
+
+            grid = g;
+            return true;
+        }
+
+        public static long GetOwnerPlayerId(long gridId)
+        {
+            if (!Thread.CurrentThread.IsSessionThread())
+            {
+                throw new Exception("Not in the main thread");
+            }
+
+            if (TryGetCubeGridById(gridId, out var grid) &&
+                grid.BigOwners.TryGetFirst(out var ownerId))
+            {
+                return ownerId;
+            }
+
+            return 0;
+        }
+
+        public static string GetPlayerNameOrElse(this MyPlayerCollection self, long playerId, string defaultPlayerName)
+        {
+            if (self.TryGetPlayerById(playerId, out var p))
+            {
+                return p.DisplayName;
+            }
+
+            return defaultPlayerName;
+        }
+
+        public static string GetEntityNameOrElse(long entityId, string defaultName)
+        {
+            return MyEntities.TryGetEntityById(entityId, out var e) ? e.DisplayName : defaultName;
         }
     }
 }

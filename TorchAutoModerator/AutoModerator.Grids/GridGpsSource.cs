@@ -1,7 +1,11 @@
 ﻿using System;
+using AutoModerator.Broadcasts;
 using AutoModerator.Core;
+using NLog;
 using Sandbox.Game.Screens.Helpers;
-using Torch.Utils;
+using Sandbox.Game.World;
+using Utils.General;
+using Utils.Torch;
 
 namespace AutoModerator.Grids
 {
@@ -12,65 +16,64 @@ namespace AutoModerator.Grids
         {
             string GridGpsNameFormat { get; }
             string GridGpsDescriptionFormat { get; }
-            string GpsColor { get; }
+            string GpsColorCode { get; }
         }
 
+        static readonly ILogger Log = LogManager.GetCurrentClassLogger();
         readonly IConfig _config;
-        readonly string _gridName;
-        readonly string _factionTagOrNull;
-        readonly string _playerNameOrNull;
-        readonly TimeSpan _remainingTime;
+        readonly TrackedEntitySnapshot _snapshot;
         readonly int _rank;
 
-        public GridGpsSource(IConfig config, GridLagSnapshot snapshot, TimeSpan remainingTime, int rank)
+        public GridGpsSource(IConfig config, TrackedEntitySnapshot snapshot, int rank)
         {
             _config = config;
-            AttachedEntityId = snapshot.EntityId;
-            LagNormal = snapshot.LagNormal;
-            _gridName = snapshot.GridName;
-            _factionTagOrNull = snapshot.FactionTagOrNull;
-            _playerNameOrNull = snapshot.PlayerNameOrNull;
-            _remainingTime = remainingTime;
+            _snapshot = snapshot;
             _rank = rank;
         }
 
-        public long AttachedEntityId { get; }
-        public double LagNormal { get; }
+        public long GridId => _snapshot.Id;
 
         public bool TryCreateGps(out MyGps gps)
         {
-            if (GpsUtils.TryGetGridById(AttachedEntityId, out var grid))
+            if (!VRageUtils.TryGetCubeGridById(_snapshot.Id, out var grid))
             {
-                var name = ToString(_config.GridGpsNameFormat);
-                var description = ToString(_config.GridGpsDescriptionFormat);
-                var color = ColorUtils.TranslateColor(_config.GpsColor);
-                gps = GpsUtils.CreateGridGps(grid, name, description, color);
-                return true;
+                gps = default;
+                return false;
             }
 
-            gps = null;
-            return false;
-        }
+            var playerName = (string) null;
 
-        string ToString(string format)
-        {
-            return format
-                .Replace("{grid}", _gridName)
-                .Replace("{player}", _playerNameOrNull ?? "<none>")
-                .Replace("{faction}", _factionTagOrNull ?? "<none>")
-                .Replace("{ratio}", $"{LagNormal * 100:0}%")
-                .Replace("{rank}", GpsUtils.RankToString(_rank))
-                .Replace("{time}", GpsUtils.RemainingTimeToString(_remainingTime));
-        }
+            if (!grid.BigOwners.TryGetFirst(out var playerId))
+            {
+                Log.Trace($"grid no owner: \"{grid.DisplayName}\"");
+            }
+            else if (!MySession.Static.Players.TryGetPlayerById(playerId, out var player))
+            {
+                Log.Trace($"player not found for grid: \"{grid.DisplayName}\": {playerId}");
+            }
+            else
+            {
+                playerName = player.DisplayName;
+            }
 
-        public override string ToString()
-        {
-            var normal = $"{LagNormal * 100f:0.00}%";
-            var remainingTime = $"{_remainingTime.TotalMinutes:0.0}m";
-            var factionTag = _factionTagOrNull ?? "<single>";
-            var playerName = _playerNameOrNull ?? "<none>";
-            var rank = GpsUtils.RankToString(_rank);
-            return $"\"{_gridName}\" ({AttachedEntityId}) [{factionTag}] {playerName}{normal} ({rank}) {remainingTime}";
+            var faction = MySession.Static.Factions.GetPlayerFaction(playerId);
+            var factionTag = faction?.Tag;
+
+            var name = Format(_config.GridGpsNameFormat);
+            var description = Format(_config.GridGpsDescriptionFormat);
+            gps = GpsUtils.CreateGridGps(grid, name, description, _config.GpsColorCode);
+            return true;
+
+            string Format(string format)
+            {
+                return format
+                    .Replace("{grid}", grid.DisplayName)
+                    .Replace("{player}", playerName ?? "<none>")
+                    .Replace("{faction}", factionTag ?? "<none>")
+                    .Replace("{ratio}", $"{_snapshot.LongLagNormal * 100:0}%")
+                    .Replace("{rank}", GpsUtils.RankToString(_rank))
+                    .Replace("{time}", GpsUtils.RemainingTimeToString(_snapshot.RemainingTime));
+            }
         }
     }
 }

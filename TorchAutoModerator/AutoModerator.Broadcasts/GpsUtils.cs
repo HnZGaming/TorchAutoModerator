@@ -3,56 +3,32 @@ using System.Threading;
 using NLog;
 using Sandbox.Game.Entities;
 using Sandbox.Game.Screens.Helpers;
+using Torch.Utils;
 using Utils.Torch;
 using VRage;
 using VRage.Game;
 using VRageMath;
 
-namespace AutoModerator.Core
+namespace AutoModerator.Broadcasts
 {
     public static class GpsUtils
     {
         static readonly ILogger Log = LogManager.GetCurrentClassLogger();
 
-        public static bool TryGetGridById(long gridId, out MyCubeGrid grid)
-        {
-            if (!MyEntityIdentifier.TryGetEntity(gridId, out var entity, true))
-            {
-                Log.Warn($"Grid not found by EntityId: {gridId}");
-                grid = null;
-                return false;
-            }
-
-            if (entity.Closed)
-            {
-                Log.Warn($"Grid found but closed: {gridId}");
-                grid = null;
-                return false;
-            }
-
-            if (!(entity is MyCubeGrid g))
-            {
-                throw new Exception($"Not a grid: {gridId} -> {entity.GetType()}");
-            }
-
-            grid = g;
-            return true;
-        }
-
-        public static MyGps CreateGridGps(MyCubeGrid grid, string name, string description, Color color)
+        public static MyGps CreateGridGps(MyCubeGrid grid, string name, string description, string colorCode)
         {
             if (!Thread.CurrentThread.IsSessionThread())
             {
                 throw new Exception("Can be called in the game loop only");
             }
-            
+
             var gps = new MyGps(new MyObjectBuilder_Gps.Entry
             {
                 name = name,
                 DisplayName = name,
                 coords = grid.PositionComp.GetPosition(),
                 showOnHud = true,
-                color = color,
+                color = ColorUtils.TranslateColor(colorCode),
                 description = description,
             });
 

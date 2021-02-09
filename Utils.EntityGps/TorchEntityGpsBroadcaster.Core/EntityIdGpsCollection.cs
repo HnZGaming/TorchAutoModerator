@@ -45,34 +45,23 @@ namespace TorchEntityGpsBroadcaster.Core
         {
             Log.Trace("replacing all GPSs...");
 
-            var newEntityIdSet = new HashSet<long>(newGpss.Select(g => g.EntityId));
-            var targetIdSet = new HashSet<long>(targetIds);
-
-            // delete all the GPSs but remember which ones are updated
-            var updatedEntityIds = new Dictionary<long, HashSet<long>>();
+            // delete all the GPSs but remember the structure
+            var existedGPSs = new Dictionary<long, HashSet<long>>();
             foreach (var (identityId, gps) in _gpsCollection.GetAllGpss())
             {
+                existedGPSs.Add(identityId, gps.EntityId);
                 _gpsCollection.SendDeleteGps(identityId, gps.Hash);
-
-                var entityId = gps.EntityId;
-                var updated = targetIdSet.Contains(identityId) && newEntityIdSet.Contains(entityId);
-                if (updated)
-                {
-                    updatedEntityIds.Add(identityId, entityId);
-                }
-
-                Log.Trace($"deleted old gps {entityId} (to {identityId}) update: {updated}");
             }
 
-            // add all new GPSs
+            // add all new GPSs but don't make a ping sound if existed earlier
             foreach (var targetId in targetIds)
             foreach (var newGps in newGpss)
             {
-                var updated = updatedEntityIds.Contains(targetId, newGps.EntityId);
-                _gpsCollection.SendAddGps(targetId, newGps, !updated);
+                var existed = existedGPSs.Contains(targetId, newGps.EntityId);
+                _gpsCollection.SendAddGps(targetId, newGps, !existed);
             }
 
-            Log.Trace("Done replacing all GPSs");
+            Log.Debug($"broadcasted {newGpss.Count()} laggy entities");
         }
     }
 }
