@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
@@ -7,13 +6,13 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Controls;
 using AutoModerator.Broadcasts;
-using AutoModerator.Core;
 using AutoModerator.Grids;
 using AutoModerator.Players;
 using AutoModerator.Quests;
 using NLog;
 using Profiler.Basics;
 using Profiler.Core;
+using Sandbox.Game.Entities;
 using Sandbox.Game.Screens.Helpers;
 using Sandbox.Game.World;
 using Torch;
@@ -33,14 +32,11 @@ namespace AutoModerator
         CancellationTokenSource _canceller;
         FileLoggingConfigurator _fileLoggingConfigurator;
 
-        LaggyEntityTracker _laggyGrids;
-        LaggyEntityTracker _laggyPlayers;
-        GridLagSnapshotCreator _gridLagSnapshotCreator;
-        PlayerLagSnapshotCreator _playerLagSnapshotCreator;
+        GridLagTracker _laggyGrids;
+        PlayerLagTracker _laggyPlayers;
         EntityGpsBroadcaster _entityGpsBroadcaster;
         BroadcastListenerCollection _gpsReceivers;
         SelfModQuestCollection _selfModQuests;
-        ConcurrentDictionary<long, long> _playerIdToLaggiestGridIds;
 
         UserControl IWpfPlugin.GetControl() => _config.GetOrCreateUserControl(ref _userControl);
         public AutoModeratorConfig Config => _config.Data;
@@ -66,14 +62,11 @@ namespace AutoModerator
             _fileLoggingConfigurator.Configure(Config);
 
             _canceller = new CancellationTokenSource();
-            _laggyGrids = new LaggyEntityTracker(new LaggyGridTrackerConfig(Config));
-            _laggyPlayers = new LaggyEntityTracker(new LaggyPlayerTrackerConfig(Config));
-            _gridLagSnapshotCreator = new GridLagSnapshotCreator(Config);
-            _playerLagSnapshotCreator = new PlayerLagSnapshotCreator(Config);
+            _laggyGrids = new GridLagTracker(Config);
+            _laggyPlayers = new PlayerLagTracker(Config);
             _gpsReceivers = new BroadcastListenerCollection(Config);
             _entityGpsBroadcaster = new EntityGpsBroadcaster();
             _selfModQuests = new SelfModQuestCollection();
-            _playerIdToLaggiestGridIds = new ConcurrentDictionary<long, long>();
         }
 
         void OnGameLoaded()
@@ -103,7 +96,7 @@ namespace AutoModerator
             _selfModQuests.Clear();
 
             // Wait for some time during the session startup
-            await Task.Delay(Config.FirstIdle.Seconds(), canceller);
+            await Task.Delay(Config.FirstIdleTime.Seconds(), canceller);
 
             Log.Info("started collector loop");
 
@@ -117,93 +110,83 @@ namespace AutoModerator
                 using (ProfilerResultQueue.Profile(gridProfiler))
                 using (ProfilerResultQueue.Profile(playerProfiler))
                 {
+                    Log.Debug("auto-profile started");
                     gridProfiler.MarkStart();
                     playerProfiler.MarkStart();
-                    await Task.Delay(Config.ProfileTime.Seconds(), canceller);
+                    await Task.Delay(Config.ProfileFrequency.Seconds(), canceller);
                     Log.Debug("auto-profile done");
 
-                    // grids
-                    var gridProfileResult = gridProfiler.GetResult();
-                    var gridLagSnapshots = _gridLagSnapshotCreator.CreateLagSnapshots(gridProfileResult).ToArray();
-
-                    // players
-                    var playerProfileResult = playerProfiler.GetResult();
-                    var playerLagSnapshots = _playerLagSnapshotCreator.CreateLagSnapshots(playerProfileResult).ToArray();
-
-                    _laggyGrids.Update(gridLagSnapshots);
-                    _laggyPlayers.Update(playerLagSnapshots);
-
-                    // map player id -> their laggiest grid's id
-                    var laggiestGridIds = gridLagSnapshots
-                        .OrderByDescending(s => s.LagNormal)
-                        .ToDictionaryDescending(s => s.OwnerId, s => s.EntityId);
-
-                    var trackedPlayerIds = _laggyPlayers.GetTrackedEntityIds();
-                    _playerIdToLaggiestGridIds.RemoveRangeExceptWith(trackedPlayerIds);
-                    _playerIdToLaggiestGridIds.AddRange(laggiestGridIds);
+                    _laggyGrids.Update(gridProfiler.GetResult());
+                    _laggyPlayers.Update(playerProfiler.GetResult());
                 }
 
                 Log.Debug("profile done");
 
                 if (Config.EnableSelfModeration)
                 {
-                    var laggiestGrids = _laggyGrids.GetTrackedEntitySnapshots(Config.SelfModerationNormal);
-                    var laggiestPlayers = _laggyPlayers.GetTrackedEntitySnapshots(Config.SelfModerationNormal);
-                    var laggyPlayerSnapshotCreator = new LaggyPlayerSnapshotCreator();
-                    var laggyPlayerSnapshots = await laggyPlayerSnapshotCreator.CreateSnapshots(laggiestPlayers, laggiestGrids, canceller);
-                    _selfModQuests.Update(laggyPlayerSnapshots);
-                    Log.Debug("quests done");
+                    var laggyPlayers = _laggyPlayers.GetTrackedEntities(Config.SelfModerationNormal);
+                    var laggyPlayerReports = new List<LaggyPlayerSnapshot>();
+                    foreach (var player in laggyPlayers)
+                    {
+                        var playerId = player.EntityId;
+
+                        if (!_laggyGrids.TryGetLaggiestGridOwnedBy(playerId, out var laggiestGrid))
+                        {
+                            var playerName = MySession.Static.Players.GetPlayerNameOrElse(playerId, $"<{playerId}>");
+                            Log.Warn($"laggy grid not found for laggy player: {playerName}");
+                        }
+
+                        var laggyPlayerReport = new LaggyPlayerSnapshot(
+                            playerId,
+                            player.LongLagNormal,
+                            player.RemainingTime > TimeSpan.Zero,
+                            laggiestGrid.LongLagNormal,
+                            laggiestGrid.RemainingTime > TimeSpan.Zero);
+
+                        laggyPlayerReports.Add(laggyPlayerReport);
+                    }
+
+                    _selfModQuests.Update(laggyPlayerReports);
                 }
                 else
                 {
-                    _selfModQuests.Clear();
-                    Log.Debug("cleared all quests");
+                    _selfModQuests.Update(Enumerable.Empty<LaggyPlayerSnapshot>());
                 }
 
-                if (Config.EnableBroadcasting)
+                Log.Debug("quests done");
+
+                var allGpsSources = new Dictionary<long, IEntityGpsSource>();
+
+                if (Config.EnablePlayerBroadcasting)
                 {
-                    var allGpsSources = new Dictionary<long, IEntityGpsSource>();
-
-                    if (Config.EnablePlayerBroadcasting)
+                    foreach (var (player, rank) in _laggyPlayers.GetTopPins())
                     {
-                        foreach (var (snapshot, rank) in _laggyPlayers.GetTopPins().Indexed())
+                        var playerId = player.EntityId;
+                        if (!_laggyGrids.TryGetLaggiestGridOwnedBy(playerId, out var laggiestGrid))
                         {
-                            if (_playerIdToLaggiestGridIds.TryGetValue(snapshot.EntityId, out var gridId))
-                            {
-                                var gpsSource = new PlayerGpsSource(Config, snapshot, gridId, rank);
-                                allGpsSources[gpsSource.GridId] = gpsSource;
-                            }
-                            else
-                            {
-                                var player = MySession.Static.Players.TryGetPlayerById(snapshot.EntityId, out var p) ? p : null;
-                                Log.Warn($"laggy grid not found for laggy player: {player?.DisplayName ?? "<no name>"} ({snapshot.EntityId})");
-                            }
+                            var playerName = MySession.Static.Players.GetPlayerNameOrElse(playerId, $"<{playerId}>");
+                            Log.Warn($"laggy grid not found for laggy player: {playerName}");
+                            continue;
                         }
+
+                        var gpsSource = new PlayerGpsSource(Config, player, laggiestGrid.EntityId, rank);
+                        allGpsSources[gpsSource.GridId] = gpsSource;
                     }
-
-                    if (Config.EnableGridBroadcasting)
-                    {
-                        foreach (var (snapshot, rank) in _laggyGrids.GetTopPins().Indexed())
-                        {
-                            var gpsSource = new GridGpsSource(Config, snapshot, rank);
-                            allGpsSources[gpsSource.GridId] = gpsSource;
-                        }
-                    }
-
-                    await _entityGpsBroadcaster.ReplaceGpss(
-                        allGpsSources.Values,
-                        _gpsReceivers.GetReceiverIdentityIds(),
-                        canceller);
-
-                    Log.Debug("broadcast done");
                 }
-                else
+
+                if (Config.EnableGridBroadcasting)
                 {
-                    // you could also do this right at the moment the config's changed
-                    _entityGpsBroadcaster.ClearGpss();
-                    Log.Debug("deleted all tracked gpss");
+                    foreach (var (grid, rank) in _laggyGrids.GetTopPins())
+                    {
+                        var gpsSource = new GridGpsSource(Config, grid, rank);
+                        allGpsSources[gpsSource.GridId] = gpsSource;
+                    }
                 }
 
+                var targetIdentityIds = _gpsReceivers.GetReceiverIdentityIds();
+                await _entityGpsBroadcaster.ReplaceGpss(allGpsSources.Values, targetIdentityIds, canceller);
+
+                Log.Debug("broadcast done");
                 Log.Debug("interval done");
             }
         }
@@ -211,11 +194,6 @@ namespace AutoModerator
         public bool CheckPlayerReceivesGpss(MyPlayer player)
         {
             return _gpsReceivers.CheckReceive(player);
-        }
-
-        public void DeleteAllGpss()
-        {
-            _entityGpsBroadcaster.ClearGpss();
         }
 
         public IEnumerable<MyGps> GetAllGpss()
@@ -226,6 +204,12 @@ namespace AutoModerator
         public void OnSelfProfiled(long playerId)
         {
             _selfModQuests.OnSelfProfiled(playerId);
+        }
+
+        public void ClearCache()
+        {
+            _laggyGrids.Clear();
+            _laggyPlayers.Clear();
         }
     }
 }

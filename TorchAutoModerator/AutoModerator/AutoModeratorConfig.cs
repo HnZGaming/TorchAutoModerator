@@ -17,31 +17,32 @@ namespace AutoModerator
         GridGpsSource.IConfig,
         BroadcastListenerCollection.IConfig,
         FileLoggingConfigurator.IConfig,
-        GridLagSnapshotCreator.IConfig,
-        PlayerLagSnapshotCreator.IConfig,
-        PlayerGpsSource.IConfig
+        PlayerGpsSource.IConfig,
+        GridLagTracker.IConfig,
+        PlayerLagTracker.IConfig
     {
         const string OpGroupName = "Auto Moderator";
-        const string BroadcastGroupName = "Broadcasting";
-        const string GridBroadcastGroupName = BroadcastGroupName + " (Grids)";
-        const string PlayerBroadcastGroupName = BroadcastGroupName + " (Players)";
+        const string OpGridGroupName = "Auto Moderator (Grids)";
+        const string OpPlayerGroupName = "Auto Moderator (Players)";
+        const string BroadcastGroupName = "Broadcasting (General)";
+        const string GridBroadcastGroupName = "Broadcasting (Grids)";
+        const string PlayerBroadcastGroupName = "Broadcasting (Players)";
         const string SelfModGroupName = "Quests";
         const string LogGroupName = "Logging";
         public const string DefaultLogFilePath = "Logs/AutoModerator-${shortdate}.log";
 
         bool _enableSelfModeration = true;
-        double _firstIdle = 180;
-        bool _enableBroadcasting = true;
+        double _firstIdleTime = 180;
         bool _enableGridBroadcasting = true;
         bool _enablePlayerBroadcasting = true;
         bool _adminsOnly = true;
-        int _maxLaggyGpsCountPerScan = 3;
-        double _gridPinWindow = 300d;
-        double _gridPinLifespan = 600d;
-        double _gridMspfThreshold = 3.0f;
-        double _playerMspfThreshold = 3.0f;
-        double _playerPinWindow = 300d;
-        double _playerPinLifespan = 600d;
+        int _maxLaggyGpsCountPerScan = 5;
+        double _gridWarningTime = 300d;
+        double _gridPinTime = 600d;
+        double _maxGridMspf = 0.5f;
+        double _maxPlayerMspf = 0.5f;
+        double _playerWarningTime = 300d;
+        double _playerPinTime = 600d;
         double _sampleFrequency = 5;
         double _selfModerationNormal = 0.7d;
         bool _exemptNpcFactions = true;
@@ -73,14 +74,6 @@ namespace AutoModerator
             set => SetValue(ref _selfModerationNormal, value);
         }
 
-        [XmlElement("EnableBroadcasting")]
-        [Display(Order = 0, Name = "Enable broadcasting", GroupName = BroadcastGroupName)]
-        public bool EnableBroadcasting
-        {
-            get => _enableBroadcasting;
-            set => SetValue(ref _enableBroadcasting, value);
-        }
-
         [XmlElement("EnableGridBroadcasting")]
         [Display(Order = 0, Name = "Enable grid broadcast", GroupName = GridBroadcastGroupName)]
         public bool EnableGridBroadcasting
@@ -97,7 +90,7 @@ namespace AutoModerator
             set => SetValue(ref _enablePlayerBroadcasting, value);
         }
 
-        [XmlElement("EnableAdminsOnly")]
+        [XmlElement("AdminsOnly")]
         [Display(Order = 1, Name = "Broadcast to admins only", GroupName = BroadcastGroupName)]
         public bool AdminsOnly
         {
@@ -105,20 +98,20 @@ namespace AutoModerator
             set => SetValue(ref _adminsOnly, value);
         }
 
-        [XmlElement("FirstIdleSeconds")]
+        [XmlElement("FirstIdleTime")]
         [Display(Order = 2, Name = "First idle seconds", GroupName = OpGroupName, Description = "Game is generally laggy for the first minute or two of the session.")]
-        public double FirstIdle
+        public double FirstIdleTime
         {
-            get => _firstIdle;
-            set => SetValue(ref _firstIdle, value);
+            get => _firstIdleTime;
+            set => SetValue(ref _firstIdleTime, value);
         }
 
-        [XmlElement("MspfThreshold")]
-        [Display(Order = 3, Name = "Grid ms/f threshold", GroupName = GridBroadcastGroupName)]
-        public double GridMspfThreshold
+        [XmlElement("MaxGridMspf")]
+        [Display(Order = 3, Name = "Max grid ms/f", GroupName = OpGridGroupName)]
+        public double MaxGridMspf
         {
-            get => _gridMspfThreshold;
-            set => SetValue(ref _gridMspfThreshold, Math.Max(value, 0.001f));
+            get => _maxGridMspf;
+            set => SetValue(ref _maxGridMspf, Math.Max(value, 0.001f));
         }
 
         [XmlElement("MaxGpsCount")]
@@ -129,28 +122,28 @@ namespace AutoModerator
             set => SetValue(ref _maxLaggyGpsCountPerScan, value);
         }
 
-        [XmlElement("SampleFrequencySeconds")]
-        [Display(Order = 5, Name = "Sample frequency (seconds)", GroupName = BroadcastGroupName)]
-        public double ProfileTime
+        [XmlElement("ProfileFrequency")]
+        [Display(Order = 5, Name = "Sample frequency (seconds)", GroupName = OpGroupName)]
+        public double ProfileFrequency
         {
             get => _sampleFrequency;
             set => SetValue(ref _sampleFrequency, Math.Max(value, 1));
         }
 
-        [XmlElement("GridPinWindow")]
-        [Display(Order = 6, Name = "Sample time (seconds)", GroupName = GridBroadcastGroupName)]
-        public double GridPinWindow
+        [XmlElement("GridWarningTime")]
+        [Display(Order = 6, Name = "Warning time (seconds)", GroupName = OpGridGroupName)]
+        public double GridWarningTime
         {
-            get => _gridPinWindow;
-            set => SetValue(ref _gridPinWindow, value);
+            get => _gridWarningTime;
+            set => SetValue(ref _gridWarningTime, value);
         }
 
-        [XmlElement("GridPinLifespan")]
-        [Display(Order = 7, Name = "Broadcast time (seconds)", GroupName = GridBroadcastGroupName)]
-        public double GridPinLifespan
+        [XmlElement("GridPinTime")]
+        [Display(Order = 7, Name = "Pinned time (seconds)", GroupName = OpGridGroupName)]
+        public double GridPinTime
         {
-            get => _gridPinLifespan;
-            set => SetValue(ref _gridPinLifespan, value);
+            get => _gridPinTime;
+            set => SetValue(ref _gridPinTime, value);
         }
 
         [XmlElement("GridGpsNameFormat")]
@@ -169,28 +162,28 @@ namespace AutoModerator
             set => SetValue(ref _gridGpsDescriptionFormat, value);
         }
 
-        [XmlElement("PlayerMspfThreshold")]
-        [Display(Order = 3, Name = "ms/f threshold", GroupName = PlayerBroadcastGroupName)]
-        public double PlayerMspfThreshold
+        [XmlElement("MaxPlayerMspf")]
+        [Display(Order = 3, Name = "ms/f threshold", GroupName = OpPlayerGroupName)]
+        public double MaxPlayerMspf
         {
-            get => _playerMspfThreshold;
-            set => SetValue(ref _playerMspfThreshold, value);
+            get => _maxPlayerMspf;
+            set => SetValue(ref _maxPlayerMspf, value);
         }
 
-        [XmlElement("PlayerPinWindow")]
-        [Display(Order = 6, Name = "Sample time (seconds)", GroupName = PlayerBroadcastGroupName)]
-        public double PlayerPinWindow
+        [XmlElement("PlayerWarningTime")]
+        [Display(Order = 6, Name = "Warning time (seconds)", GroupName = OpPlayerGroupName)]
+        public double PlayerWarningTime
         {
-            get => _playerPinWindow;
-            set => SetValue(ref _playerPinWindow, value);
+            get => _playerWarningTime;
+            set => SetValue(ref _playerWarningTime, value);
         }
 
-        [XmlElement("PlayerPinLifespan")]
-        [Display(Order = 7, Name = "Broadcast time (seconds)", GroupName = PlayerBroadcastGroupName)]
-        public double PlayerPinLifespan
+        [XmlElement("PlayerPinTime")]
+        [Display(Order = 7, Name = "Pinned time (seconds)", GroupName = OpPlayerGroupName)]
+        public double PlayerPinTime
         {
-            get => _playerPinLifespan;
-            set => SetValue(ref _playerPinLifespan, value);
+            get => _playerPinTime;
+            set => SetValue(ref _playerPinTime, value);
         }
 
         [XmlElement("PlayerGpsNameFormat")]

@@ -105,14 +105,16 @@ namespace AutoModerator.Core
         }
 
         [MethodImpl(MethodImplOptions.Synchronized)]
-        public double GetLongLagNormal(long entityId)
+        public bool TryGetLongLagNormal(long entityId, out double normal)
         {
             if (_taggedTimeSeries.TryGetTimeSeries(entityId, out var timeSeries))
             {
-                return CalcLongLagNormal(timeSeries);
+                normal = CalcLongLagNormal(timeSeries);
+                return true;
             }
 
-            return 0;
+            normal = 0d;
+            return false;
         }
 
         double CalcLongLagNormal(ITimeSeries<double> timeSeries)

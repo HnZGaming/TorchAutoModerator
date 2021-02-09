@@ -160,23 +160,17 @@
     <ItemGroup>
         <Compile Include="AutoModerator.Broadcasts\IEntityGpsSource.cs" />
         <Compile Include="AutoModerator.Core\TrackedEntitySnapshot.cs" />
-        <Compile Include="AutoModerator.Grids\GridLagSnapshot.cs" />
-        <Compile Include="AutoModerator.Grids\LaggyGridTrackerConfig.cs" />
-        <Compile Include="AutoModerator.Players\LaggyPlayerTrackerConfig.cs" />
-        <Compile Include="AutoModerator.Players\PlayerLagSnapshot.cs" />
-        <Compile Include="AutoModerator.Quests\EntityType.cs" />
-        <Compile Include="AutoModerator.Quests\LaggyPlayerSnapshotCreator.cs" />
+        <Compile Include="AutoModerator.Grids\GridLagTracker.cs" />
+        <Compile Include="AutoModerator.Players\PlayerLagTracker.cs" />
         <Compile Include="AutoModerator.Quests\SelfModQuestCollection.cs" />
         <Compile Include="AutoModerator.Broadcasts\BroadcastListenerCollection.cs" />
         <Compile Include="AutoModerator.Broadcasts\GpsUtils.cs" />
         <Compile Include="AutoModerator.Broadcasts\EntityGpsBroadcaster.cs" />
         <Compile Include="AutoModerator.Core\EntityLagTimeSeries.cs" />
-        <Compile Include="AutoModerator.Core\LaggyEntityTracker.cs" />
-        <Compile Include="AutoModerator.Core\IEntityLagSnapshot.cs" />
+        <Compile Include="AutoModerator.Core\EntityLagTracker.cs" />
+        <Compile Include="AutoModerator.Core\EntityLagSnapshot.cs" />
         <Compile Include="AutoModerator.Core\LifespanDictionary.cs" />
         <Compile Include="AutoModerator.Grids\GridGpsSource.cs" />
-        <Compile Include="AutoModerator.Grids\GridLagSnapshotCreator.cs" />
-        <Compile Include="AutoModerator.Players\PlayerLagSnapshotCreator.cs" />
         <Compile Include="AutoModerator.Players\PlayerGpsSource.cs" />
         <Compile Include="AutoModerator.Quests\LaggyPlayerSnapshot.cs" />
         <Compile Include="Properties\AssemblyInfo.cs" />

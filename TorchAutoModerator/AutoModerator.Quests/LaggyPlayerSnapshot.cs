@@ -1,16 +1,29 @@
-﻿namespace AutoModerator.Quests
+﻿using System;
+
+namespace AutoModerator.Quests
 {
     public readonly struct LaggyPlayerSnapshot
     {
-        public LaggyPlayerSnapshot(long playerId, double longLagNormal, bool isPinned)
+        public LaggyPlayerSnapshot(
+            long playerId, double longLagNormal, bool isPinned,
+            double gridLongLagNormal, bool isGridPinned)
         {
             PlayerId = playerId;
-            LongLagNormal = longLagNormal;
-            IsPinned = isPinned;
+            PlayerLagNormal = longLagNormal;
+            IsPlayerPinned = isPinned;
+            GridLongLagNormal = gridLongLagNormal;
+            IsGridPinned = isGridPinned;
         }
 
         public long PlayerId { get; }
-        public double LongLagNormal { get; }
-        public bool IsPinned { get; }
+
+        public double PlayerLagNormal { get; }
+        public bool IsPlayerPinned { get; }
+
+        public double GridLongLagNormal { get; }
+        public bool IsGridPinned { get; }
+
+        public double LongLagNormal => Math.Max(PlayerLagNormal, GridLongLagNormal);
+        public bool IsPinned => IsPlayerPinned || IsGridPinned;
     }
 }

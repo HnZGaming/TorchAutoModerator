@@ -2,7 +2,6 @@
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using AutoModerator.Quests;
 using Profiler.Basics;
 using Profiler.Core;
 using Sandbox.Game.World;
@@ -20,25 +19,18 @@ namespace AutoModerator
     {
         AutoModeratorPlugin Plugin => (AutoModeratorPlugin) Context.Plugin;
 
-        [Command("broadcast", "Enable/disable broadcasting.")]
-        [Permission(MyPromoteLevel.Admin)]
-        public void GetOrSetEnabled() => this.CatchAndReport(() =>
-        {
-            this.GetOrSetProperty(Plugin.Config, nameof(AutoModeratorConfig.EnableBroadcasting));
-        });
-
         [Command("grid_mspf", "Get or set the current ms/f threshold per grid.")]
         [Permission(MyPromoteLevel.Admin)]
         public void GridMspfThreshold() => this.CatchAndReport(() =>
         {
-            this.GetOrSetProperty(Plugin.Config, nameof(AutoModeratorConfig.GridMspfThreshold));
+            this.GetOrSetProperty(Plugin.Config, nameof(AutoModeratorConfig.MaxGridMspf));
         });
 
         [Command("player_mspf", "Get or set the current ms/f threshold per player.")]
         [Permission(MyPromoteLevel.Admin)]
         public void PlayerMspfThreshold() => this.CatchAndReport(() =>
         {
-            this.GetOrSetProperty(Plugin.Config, nameof(AutoModeratorConfig.PlayerMspfThreshold));
+            this.GetOrSetProperty(Plugin.Config, nameof(AutoModeratorConfig.MaxPlayerMspf));
         });
 
         [Command("admins-only", "Get or set the current \"admins only\" value.")]
@@ -48,11 +40,11 @@ namespace AutoModerator
             this.GetOrSetProperty(Plugin.Config, nameof(AutoModeratorConfig.AdminsOnly));
         });
 
-        [Command("clear_gps", "Clear all custom GPS entities.")]
+        [Command("clear", "Clear all internal state.")]
         [Permission(MyPromoteLevel.Admin)]
-        public void ClearGpss() => this.CatchAndReport(() =>
+        public void Clear() => this.CatchAndReport(() =>
         {
-            Plugin.DeleteAllGpss();
+            Plugin.ClearCache();
         });
 
         [Command("show_gps", "Show the list of custom GPS entities.")]
@@ -194,7 +186,7 @@ namespace AutoModerator
                 {
                     var gridName = grid.DisplayName;
                     var mspf = profilerEntry.MainThreadTime / profileResult.TotalTime;
-                    var lagNormal = mspf / Plugin.Config.GridMspfThreshold;
+                    var lagNormal = mspf / Plugin.Config.MaxGridMspf;
                     var lagStr = $"{lagNormal * 100:0}%";
                     msgBuilder.AppendLine($"\"{gridName}\" {lagStr}");
                 }

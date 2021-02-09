@@ -7,12 +7,11 @@ using Utils.General;
 
 namespace AutoModerator.Core
 {
-    // smart base class is an anti pattern >;(
-    // careful modifying stuff in this class
-    public sealed class LaggyEntityTracker
+    public sealed class EntityLagTracker
     {
         public interface IConfig
         {
+            double LagThreshold { get; }
             TimeSpan PinWindow { get; }
             TimeSpan PinLifeSpan { get; }
             bool IsFactionExempt(string factionTag);
@@ -23,13 +22,51 @@ namespace AutoModerator.Core
         readonly EntityLagTimeSeries _lagTimeSeries;
         readonly LifespanDictionary<long> _pinnedIds;
 
-        public LaggyEntityTracker(IConfig config)
+        public EntityLagTracker(IConfig config)
         {
             _config = config;
             _lagTimeSeries = new EntityLagTimeSeries();
             _pinnedIds = new LifespanDictionary<long>();
         }
 
+        [MethodImpl(MethodImplOptions.Synchronized)]
+        public void Update(IEnumerable<EntityLagSnapshot> entityLags)
+        {
+            // skip exempt factions
+            entityLags = entityLags.WhereNot(s =>
+                s.FactionTag is string factionTag &&
+                _config.IsFactionExempt(factionTag));
+
+            _lagTimeSeries.AddInterval(entityLags.Select(r =>
+                (r.EntityId, LagNormal: r.Lag / _config.LagThreshold)));
+
+            // keep track of laggy grids & lifespan
+            var laggyGridIds = _lagTimeSeries.GetLongLagNormals(1d).Select(p => p.EntityId).ToArray();
+            _pinnedIds.AddOrUpdate(laggyGridIds, _config.PinLifeSpan);
+
+            // clean up old data
+            _pinnedIds.RemoveExpired();
+            _lagTimeSeries.RemovePointsOlderThan(_config.PinWindow);
+
+            Log.Debug($"{entityLags.Count(s => s.Lag >= 1f)} laggy entities");
+            Log.Debug($"{_pinnedIds.Count} pinned entities (new: {laggyGridIds.Length})");
+        }
+
+        public bool TryGetTrackedEntity(long entityId, out TrackedEntitySnapshot entity)
+        {
+            var hasPoint = _lagTimeSeries.TryGetLongLagNormal(entityId, out var lag);
+            var hasPin = _pinnedIds.TryGetRemainingTime(entityId, out var remainingTime);
+            if (!hasPoint && !hasPin)
+            {
+                entity = default;
+                return false;
+            }
+
+            entity = new TrackedEntitySnapshot(entityId, lag, remainingTime);
+            return true;
+        }
+
+        [MethodImpl(MethodImplOptions.Synchronized)]
         public IEnumerable<long> GetTrackedEntityIds()
         {
             var set = new HashSet<long>();
@@ -38,51 +75,12 @@ namespace AutoModerator.Core
             return set;
         }
 
-        public double GetLongLagNormal(long entityId)
-        {
-            return _lagTimeSeries.GetLongLagNormal(entityId);
-        }
-
-        public bool IsPinned(long entityId)
-        {
-            return _pinnedIds.ContainsKey(entityId);
-        }
-
         [MethodImpl(MethodImplOptions.Synchronized)]
-        public void Clear()
-        {
-            _lagTimeSeries.Clear();
-            _pinnedIds.Clear();
-        }
-
-        [MethodImpl(MethodImplOptions.Synchronized)]
-        public void Update(IEnumerable<IEntityLagSnapshot> snapshots)
-        {
-            // skip exempt factions
-            snapshots = snapshots.WhereNot(s =>
-                s.FactionTagOrNull is string factionTag &&
-                _config.IsFactionExempt(factionTag));
-
-            _lagTimeSeries.AddInterval(snapshots.Select(r => (r.EntityId, r.LagNormal)));
-
-            // keep track of laggy grids & gps lifespan
-            var laggyGridIds = _lagTimeSeries.GetLongLagNormals(1d).Select(p => p.EntityId).ToArray();
-            _pinnedIds.AddOrUpdate(laggyGridIds, _config.PinLifeSpan);
-
-            // clean up old data
-            _pinnedIds.RemoveExpired();
-            _lagTimeSeries.RemovePointsOlderThan(_config.PinWindow);
-
-            Log.Debug($"{snapshots.Count(s => s.LagNormal >= 1f)} laggy entities");
-            Log.Debug($"{_pinnedIds.Count} pinned entities (new: {laggyGridIds.Length})");
-        }
-
-        [MethodImpl(MethodImplOptions.Synchronized)]
-        public IEnumerable<TrackedEntitySnapshot> GetTrackedEntitySnapshots(double minLongLagNormal)
+        public IEnumerable<TrackedEntitySnapshot> GetTrackedEntities(double minLongLagNormal)
         {
             var zip = _lagTimeSeries
                 .GetLongLagNormalDictionary(minLongLagNormal)
-                .Zip(_pinnedIds.ToDictionary(), default, default);
+                .Zip(_pinnedIds.ToDictionary());
 
             var snapshots = new List<TrackedEntitySnapshot>();
             foreach (var (entityId, (longNormal, remainingTime)) in zip)
@@ -95,26 +93,24 @@ namespace AutoModerator.Core
         }
 
         [MethodImpl(MethodImplOptions.Synchronized)]
-        public bool TryGetTrackedEntitySnapshot(long entityId, out TrackedEntitySnapshot entitySnapshot)
-        {
-            var longNormal = _lagTimeSeries.GetLongLagNormal(entityId);
-            var pin = _pinnedIds.TryGetRemainingTime(entityId, out var r) ? r : TimeSpan.Zero;
-            entitySnapshot = new TrackedEntitySnapshot(entityId, longNormal, pin);
-            return true;
-        }
-
-        [MethodImpl(MethodImplOptions.Synchronized)]
         public IEnumerable<TrackedEntitySnapshot> GetTopPins()
         {
             var snapshots = new List<TrackedEntitySnapshot>();
             foreach (var (entityId, remainingTime) in _pinnedIds.GetRemainingTimes())
             {
-                var longNormal = _lagTimeSeries.GetLongLagNormal(entityId);
+                var longNormal = _lagTimeSeries.TryGetLongLagNormal(entityId, out var n) ? n : 0d;
                 var snapshot = new TrackedEntitySnapshot(entityId, longNormal, remainingTime);
                 snapshots.Add(snapshot);
             }
 
             return snapshots.OrderByDescending(s => s.LongLagNormal);
+        }
+
+        [MethodImpl(MethodImplOptions.Synchronized)]
+        public void Clear()
+        {
+            _lagTimeSeries.Clear();
+            _pinnedIds.Clear();
         }
     }
 }

@@ -172,6 +172,12 @@ namespace Utils.Torch
             return faction.IsEveryoneNpc();
         }
 
+        public static string GetPlayerFactionTag(this MyFactionCollection self, long playerId)
+        {
+            var faction = self.GetPlayerFaction(playerId);
+            return faction?.Tag;
+        }
+
         public static bool TryGetCubeGridById(long gridId, out MyCubeGrid grid)
         {
             if (!MyEntityIdentifier.TryGetEntity(gridId, out var entity))
@@ -203,6 +209,16 @@ namespace Utils.Torch
             }
 
             return 0;
+        }
+
+        public static string GetPlayerNameOrElse(this MyPlayerCollection self, long playerId, string defaultPlayerName)
+        {
+            if (self.TryGetPlayerById(playerId, out var p))
+            {
+                return p.DisplayName;
+            }
+
+            return defaultPlayerName;
         }
     }
 }

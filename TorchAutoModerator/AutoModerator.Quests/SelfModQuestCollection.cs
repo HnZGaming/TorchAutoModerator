@@ -11,12 +11,12 @@ namespace AutoModerator.Quests
     {
         enum QuestState
         {
-            Invalid = -1,
-            MustProfileSelf = 0,
-            MustDelagSelf = 1,
-            MustWaitUnpinned = 2,
-            Ended = 3,
-            Cleared = 4,
+            Invalid,
+            MustProfileSelf,
+            MustDelagSelf,
+            MustWaitUnpinned,
+            Ended, // show players that the quest is done
+            Cleared, // remove the hud
         }
 
         sealed class PlayerState
