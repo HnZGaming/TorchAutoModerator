@@ -1,8 +1,8 @@
 ﻿namespace AutoModerator.Punishes
 {
-    public readonly struct LagPunishmentSource
+    public readonly struct LagPunishSource
     {
-        public LagPunishmentSource(long gridId, bool isPinned)
+        public LagPunishSource(long gridId, bool isPinned)
         {
             GridId = gridId;
             IsPinned = isPinned;

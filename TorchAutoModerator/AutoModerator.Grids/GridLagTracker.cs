@@ -38,14 +38,12 @@ namespace AutoModerator.Grids
         }
 
         static readonly ILogger Log = LogManager.GetCurrentClassLogger();
-        readonly IConfig _config;
         readonly EntityLagTracker _lagTracker;
         readonly Dictionary<long, TrackedEntitySnapshot> _playerToLaggiestGrids;
 
         public GridLagTracker(IConfig config)
         {
-            _config = config;
-            _lagTracker = new EntityLagTracker(new BridgeConfig(_config));
+            _lagTracker = new EntityLagTracker(new BridgeConfig(config));
             _playerToLaggiestGrids = new Dictionary<long, TrackedEntitySnapshot>();
         }
 
@@ -64,12 +62,20 @@ namespace AutoModerator.Grids
         }
 
         [MethodImpl(MethodImplOptions.Synchronized)]
+        public IEnumerable<(long OwnerId, TrackedEntitySnapshot Grid)> GetPlayerPinnedGrids()
+        {
+            return _playerToLaggiestGrids
+                .ToTuples()
+                .Where(p => p.Value.RemainingTime > TimeSpan.Zero);
+        }
+
+        [MethodImpl(MethodImplOptions.Synchronized)]
         public void Update(BaseProfilerResult<MyCubeGrid> profileResult)
         {
             Log.Debug("updating grid lags...");
 
             var lags = new List<EntityLagSnapshot>();
-            var gridToOwnerIds = new Dictionary<long, long>();
+            var laggiestGridToOwnerIds = new Dictionary<long, long>();
             var ownerIds = new HashSet<long>();
 
             foreach (var (grid, profileEntity) in profileResult.GetTopEntities(50))
@@ -85,7 +91,7 @@ namespace AutoModerator.Grids
                 if (!ownerIds.Contains(ownerId)) // pick the laggiest grid
                 {
                     ownerIds.Add(ownerId);
-                    gridToOwnerIds.Add(grid.EntityId, ownerId);
+                    laggiestGridToOwnerIds.Add(grid.EntityId, ownerId);
                 }
 
                 Log.Trace($"grid profiled: {grid.DisplayName} {mspf:0.00}ms/f");
@@ -96,9 +102,18 @@ namespace AutoModerator.Grids
             // update owner -> laggiest grid map w/ latest state
             foreach (var lag in _lagTracker.GetTrackedEntities(0))
             {
-                if (gridToOwnerIds.TryGetValue(lag.Id, out var ownerId))
+                if (laggiestGridToOwnerIds.TryGetValue(lag.Id, out var ownerId))
                 {
                     _playerToLaggiestGrids[ownerId] = lag;
+                }
+            }
+
+            var trackedGridIds = _lagTracker.GetTrackedEntityIds();
+            foreach (var (ownerId, laggiestGrid) in _playerToLaggiestGrids.ToArray())
+            {
+                if (!trackedGridIds.Contains(laggiestGrid.Id))
+                {
+                    _playerToLaggiestGrids.Remove(ownerId);
                 }
             }
 
@@ -106,7 +121,7 @@ namespace AutoModerator.Grids
         }
 
         [MethodImpl(MethodImplOptions.Synchronized)]
-        public IEnumerable<TrackedEntitySnapshot> GetTopPins()
+        public IEnumerable<TrackedEntitySnapshot> GetPinnedGrids()
         {
             return _lagTracker.GetTopPins();
         }

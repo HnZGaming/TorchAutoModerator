@@ -65,7 +65,7 @@ namespace AutoModerator.Players
         }
 
         [MethodImpl(MethodImplOptions.Synchronized)]
-        public IEnumerable<TrackedEntitySnapshot> GetTopPins()
+        public IEnumerable<TrackedEntitySnapshot> GetPinnedPlayers()
         {
             return _lagTracker.GetTopPins();
         }

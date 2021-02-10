@@ -17,6 +17,7 @@ using Sandbox.Game.Screens.Helpers;
 using Sandbox.Game.World;
 using Torch;
 using Torch.API;
+using Torch.API.Managers;
 using Torch.API.Plugins;
 using Utils.General;
 using Utils.Torch;
@@ -37,7 +38,8 @@ namespace AutoModerator
         EntityGpsBroadcaster _entityGpsBroadcaster;
         BroadcastListenerCollection _gpsReceivers;
         LagWarningCollection _warningQuests;
-        LagPunishmentExecutor _punishmentExecutor;
+        LagPunishExecutor _punishExecutor;
+        LagPunishChatFeed _punishChatFeed;
 
         UserControl IWpfPlugin.GetControl() => _config.GetOrCreateUserControl(ref _userControl);
         public AutoModeratorConfig Config => _config.Data;
@@ -68,11 +70,15 @@ namespace AutoModerator
             _gpsReceivers = new BroadcastListenerCollection(Config);
             _entityGpsBroadcaster = new EntityGpsBroadcaster(Config);
             _warningQuests = new LagWarningCollection(Config);
-            _punishmentExecutor = new LagPunishmentExecutor(Config);
+            _punishExecutor = new LagPunishExecutor(Config);
         }
 
         void OnGameLoaded()
         {
+            var chatManager = Torch.CurrentSession.Managers.GetManager<IChatManagerServer>();
+            chatManager.ThrowIfNull("chat manager not found");
+            _punishChatFeed = new LagPunishChatFeed(Config, chatManager);
+
             TaskUtils.RunUntilCancelledAsync(Main, _canceller.Token).Forget(Log);
         }
 
@@ -133,7 +139,7 @@ namespace AutoModerator
                     var laggyPlayerReports = new List<LagWarningSource>();
                     foreach (var (playerId, (player, grid)) in laggyPlayers.Zip(laggyGrids))
                     {
-                        if (playerId == 0) continue;
+                        if (playerId == 0) continue; // grid not owned
 
                         var playerName = MySession.Static.Players.GetPlayerNameOrElse(playerId, $"<{playerId}>");
 
@@ -156,50 +162,69 @@ namespace AutoModerator
 
                 Log.Debug("warnings done");
 
-                if (Config.PunishmentType == LagPunishmentType.Damage ||
-                    Config.PunishmentType == LagPunishmentType.Shutdown)
+                if (Config.EnablePunishChatFeed)
                 {
-                    var punishSources = new Dictionary<long, LagPunishmentSource>();
-                    foreach (var player in _laggyPlayers.GetTopPins())
+                    var sources = new List<LagPunishChatSource>();
+                    var grids = _laggyGrids.GetPlayerPinnedGrids().ToDictionary();
+                    var players = _laggyPlayers.GetPinnedPlayers().ToDictionary(p => p.Id);
+                    foreach (var (playerId, (laggiestGrid, player)) in grids.Zip(players))
+                    {
+                        var lagNormal = Math.Max(laggiestGrid.LongLagNormal, player.LongLagNormal);
+                        var source = new LagPunishChatSource(playerId, laggiestGrid.Id, lagNormal);
+                        sources.Add(source);
+                    }
+
+                    await _punishChatFeed.Update(sources);
+                }
+                else
+                {
+                    _punishChatFeed.Clear();
+                }
+
+                if (Config.PunishType == LagPunishType.Damage ||
+                    Config.PunishType == LagPunishType.Shutdown)
+                {
+                    var punishSources = new Dictionary<long, LagPunishSource>();
+                    foreach (var player in _laggyPlayers.GetPinnedPlayers())
                     {
                         var playerId = player.Id;
                         if (!_laggyGrids.TryGetLaggiestGridOwnedBy(playerId, out var laggiestGrid))
                         {
                             var playerName = MySession.Static.Players.GetPlayerNameOrElse(playerId, $"<{playerId}>");
-                            Log.Warn($"laggy grid not found for laggy player: {playerName}");
+                            Log.Warn($"laggy grid deleted by {playerName}");
                             continue;
                         }
 
-                        var src = new LagPunishmentSource(laggiestGrid.Id, laggiestGrid.RemainingTime > TimeSpan.Zero);
+                        var src = new LagPunishSource(laggiestGrid.Id, laggiestGrid.RemainingTime > TimeSpan.Zero);
                         punishSources[src.GridId] = src;
                     }
 
-                    foreach (var grid in _laggyGrids.GetTopPins())
+                    foreach (var grid in _laggyGrids.GetPinnedGrids())
                     {
-                        var gpsSource = new LagPunishmentSource(grid.Id, grid.RemainingTime > TimeSpan.Zero);
+                        var gpsSource = new LagPunishSource(grid.Id, grid.RemainingTime > TimeSpan.Zero);
                         punishSources[gpsSource.GridId] = gpsSource;
                     }
 
-                    await _punishmentExecutor.Update(punishSources);
+                    await _punishExecutor.Update(punishSources);
                 }
                 else
                 {
-                    _punishmentExecutor.Clear();
+                    _punishExecutor.Clear();
                 }
 
                 Log.Debug("punishment done");
 
-                if (Config.PunishmentType == LagPunishmentType.Broadcast)
+                if (Config.PunishType == LagPunishType.Broadcast)
                 {
                     var allGpsSources = new Dictionary<long, GridGpsSource>();
 
-                    foreach (var (player, rank) in _laggyPlayers.GetTopPins().Indexed())
+                    foreach (var (player, rank) in _laggyPlayers.GetPinnedPlayers().Indexed())
                     {
                         var playerId = player.Id;
                         if (!_laggyGrids.TryGetLaggiestGridOwnedBy(playerId, out var laggiestGrid))
                         {
                             var playerName = MySession.Static.Players.GetPlayerNameOrElse(playerId, $"<{playerId}>");
-                            Log.Warn($"laggy grid not found for laggy player: {playerName}");
+                            Log.Warn($"laggy grid deleted by {playerName}");
                             continue;
                         }
 
@@ -207,7 +232,7 @@ namespace AutoModerator
                         allGpsSources[gpsSource.GridId] = gpsSource;
                     }
 
-                    foreach (var (grid, rank) in _laggyGrids.GetTopPins().Indexed())
+                    foreach (var (grid, rank) in _laggyGrids.GetPinnedGrids().Indexed())
                     {
                         var gpsSource = new GridGpsSource(grid.Id, grid.LongLagNormal, grid.RemainingTime, rank);
                         allGpsSources[gpsSource.GridId] = gpsSource;

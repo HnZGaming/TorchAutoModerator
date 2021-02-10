@@ -11,19 +11,11 @@ namespace AutoModerator.Punishes.Broadcasts
     {
         public interface IConfig
         {
-            /// <summary>
-            /// Steam IDs of players who have muted this GPS broadcaster.
-            /// </summary>
             IEnumerable<ulong> GpsMutedPlayers { get; }
-
-            /// <summary>
-            /// Broadcast to admin players only.
-            /// </summary>
             bool GpsAdminsOnly { get; }
         }
 
         static readonly ILogger Log = LogManager.GetCurrentClassLogger();
-
         readonly IConfig _config;
         readonly HashSet<ulong> _mutedPlayerIds;
 
@@ -48,6 +40,18 @@ namespace AutoModerator.Punishes.Broadcasts
         public IEnumerable<long> GetReceiverIdentityIds()
         {
             return GetReceivers().Select(r => r.IdentityId);
+        }
+
+        public IEnumerable<ulong> GetReceiverSteamIds()
+        {
+            foreach (var player in GetReceivers())
+            {
+                var steamId = player.SteamUserId;
+                if (steamId != 0)
+                {
+                    yield return steamId;
+                }
+            }
         }
 
         void UpdateCollection()

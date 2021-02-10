@@ -13,11 +13,11 @@ using VRage.Game;
 
 namespace AutoModerator.Punishes
 {
-    public sealed class LagPunishmentExecutor
+    public sealed class LagPunishExecutor
     {
         public interface IConfig
         {
-            LagPunishmentType PunishmentType { get; }
+            LagPunishType PunishType { get; }
             double DamageNormalPerInterval { get; }
             double MinIntegrityNormal { get; }
         }
@@ -27,7 +27,7 @@ namespace AutoModerator.Punishes
         static readonly ILogger Log = LogManager.GetCurrentClassLogger();
         readonly IConfig _config;
 
-        public LagPunishmentExecutor(IConfig config)
+        public LagPunishExecutor(IConfig config)
         {
             _config = config;
         }
@@ -36,7 +36,7 @@ namespace AutoModerator.Punishes
         {
         }
 
-        public async Task Update(IReadOnlyDictionary<long, LagPunishmentSource> lags)
+        public async Task Update(IReadOnlyDictionary<long, LagPunishSource> lags)
         {
             // move to the game loop so we can synchronously operate on blocks
             await GameLoopObserver.MoveToGameLoop();
@@ -56,7 +56,7 @@ namespace AutoModerator.Punishes
                 // move to the next frame so we won't lag the server
                 await GameLoopObserver.MoveToGameLoop();
 
-                Log.Trace($"finished \"{grid.DisplayName}\" {_config.PunishmentType}");
+                Log.Trace($"finished \"{grid.DisplayName}\" {_config.PunishType}");
             }
 
             // back to some worker thread
@@ -77,14 +77,14 @@ namespace AutoModerator.Punishes
                 var block = blocks[i];
                 if (block == null) continue;
 
-                switch (_config.PunishmentType)
+                switch (_config.PunishType)
                 {
-                    case LagPunishmentType.Shutdown:
+                    case LagPunishType.Shutdown:
                     {
                         DisableFunctionalBlock(block);
                         break;
                     }
-                    case LagPunishmentType.Damage:
+                    case LagPunishType.Damage:
                     {
                         DamageBlock(block);
                         break;
