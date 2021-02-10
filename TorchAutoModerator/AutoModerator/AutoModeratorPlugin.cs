@@ -66,7 +66,7 @@ namespace AutoModerator
             _laggyGrids = new GridLagTracker(Config);
             _laggyPlayers = new PlayerLagTracker(Config);
             _gpsReceivers = new BroadcastListenerCollection(Config);
-            _entityGpsBroadcaster = new EntityGpsBroadcaster();
+            _entityGpsBroadcaster = new EntityGpsBroadcaster(Config);
             _warningQuests = new LagWarningCollection(Config);
             _punishmentExecutor = new LagPunishmentExecutor(Config);
         }
@@ -117,7 +117,7 @@ namespace AutoModerator
                     Log.Debug("auto-profile started");
                     gridProfiler.MarkStart();
                     playerProfiler.MarkStart();
-                    await Task.Delay(Config.ProfileFrequency.Seconds(), canceller);
+                    await Task.Delay(Config.IntervalFrequency.Seconds(), canceller);
                     Log.Debug("auto-profile done");
 
                     _laggyGrids.Update(gridProfiler.GetResult());
@@ -156,7 +156,8 @@ namespace AutoModerator
 
                 Log.Debug("warnings done");
 
-                if (Config.PunishmentType > LagPunishmentType.None)
+                if (Config.PunishmentType == LagPunishmentType.Damage ||
+                    Config.PunishmentType == LagPunishmentType.Shutdown)
                 {
                     var punishSources = new Dictionary<long, LagPunishmentSource>();
                     foreach (var player in _laggyPlayers.GetTopPins())
@@ -188,10 +189,10 @@ namespace AutoModerator
 
                 Log.Debug("punishment done");
 
-                var allGpsSources = new Dictionary<long, IEntityGpsSource>();
-
-                if (Config.EnablePlayerBroadcasting)
+                if (Config.PunishmentType == LagPunishmentType.Broadcast)
                 {
+                    var allGpsSources = new Dictionary<long, GridGpsSource>();
+
                     foreach (var (player, rank) in _laggyPlayers.GetTopPins().Indexed())
                     {
                         var playerId = player.Id;
@@ -202,31 +203,27 @@ namespace AutoModerator
                             continue;
                         }
 
-                        var gpsSource = new PlayerGpsSource(Config, player, laggiestGrid.Id, rank);
+                        var gpsSource = new GridGpsSource(laggiestGrid.Id, player.LongLagNormal, player.RemainingTime, rank);
                         allGpsSources[gpsSource.GridId] = gpsSource;
                     }
-                }
 
-                if (Config.EnableGridBroadcasting)
-                {
                     foreach (var (grid, rank) in _laggyGrids.GetTopPins().Indexed())
                     {
-                        var gpsSource = new GridGpsSource(Config, grid, rank);
+                        var gpsSource = new GridGpsSource(grid.Id, grid.LongLagNormal, grid.RemainingTime, rank);
                         allGpsSources[gpsSource.GridId] = gpsSource;
                     }
-                }
 
-                var targetIdentityIds = _gpsReceivers.GetReceiverIdentityIds();
-                await _entityGpsBroadcaster.ReplaceGpss(allGpsSources.Values, targetIdentityIds, canceller);
+                    var targetIdentityIds = _gpsReceivers.GetReceiverIdentityIds();
+                    await _entityGpsBroadcaster.ReplaceGpss(allGpsSources.Values, targetIdentityIds, canceller);
+                }
+                else
+                {
+                    _entityGpsBroadcaster.ClearGpss();
+                }
 
                 Log.Debug("broadcast done");
                 Log.Debug("interval done");
             }
-        }
-
-        public bool CheckPlayerReceivesGpss(MyPlayer player)
-        {
-            return _gpsReceivers.CheckReceive(player);
         }
 
         public IEnumerable<MyGps> GetAllGpss()

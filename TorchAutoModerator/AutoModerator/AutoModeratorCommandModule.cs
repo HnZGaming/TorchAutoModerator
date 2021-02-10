@@ -6,7 +6,6 @@ using System.Threading.Tasks;
 using NLog;
 using Profiler.Basics;
 using Profiler.Core;
-using Sandbox.Game.World;
 using Torch.Commands;
 using Torch.Commands.Permissions;
 using Utils.General;
@@ -16,32 +15,25 @@ using VRageMath;
 
 namespace AutoModerator
 {
-    [Category("lags")]
+    [Category("lag")]
     public sealed class AutoModeratorCommandModule : CommandModule
     {
         static readonly ILogger Log = LogManager.GetCurrentClassLogger();
 
         AutoModeratorPlugin Plugin => (AutoModeratorPlugin) Context.Plugin;
 
-        [Command("grid_mspf", "Get or set the current ms/f threshold per grid.")]
+        [Command("configs", "Get or set config")]
         [Permission(MyPromoteLevel.Admin)]
-        public void GridMspfThreshold() => this.CatchAndReport(() =>
+        public void GetOrSetConfig() => this.CatchAndReport(() =>
         {
-            this.GetOrSetProperty(Plugin.Config, nameof(AutoModeratorConfig.MaxGridMspf));
+            this.GetOrSetProperty(Plugin.Config);
         });
 
-        [Command("player_mspf", "Get or set the current ms/f threshold per player.")]
+        [Command("commands", "Get a list of commands")]
         [Permission(MyPromoteLevel.Admin)]
-        public void PlayerMspfThreshold() => this.CatchAndReport(() =>
+        public void ShowCommandList() => this.CatchAndReport(() =>
         {
-            this.GetOrSetProperty(Plugin.Config, nameof(AutoModeratorConfig.MaxPlayerMspf));
-        });
-
-        [Command("admins-only", "Get or set the current \"admins only\" value.")]
-        [Permission(MyPromoteLevel.Admin)]
-        public void AdminsOnly() => this.CatchAndReport(() =>
-        {
-            this.GetOrSetProperty(Plugin.Config, nameof(AutoModeratorConfig.AdminsOnly));
+            this.ShowCommands();
         });
 
         [Command("clear", "Clear all internal state.")]
@@ -51,7 +43,7 @@ namespace AutoModerator
             Plugin.ClearCache();
         });
 
-        [Command("show_gps", "Show the list of custom GPS entities.")]
+        [Command("gpslist", "Show the list of custom GPS entities.")]
         [Permission(MyPromoteLevel.Admin)]
         public void ShowGpss() => this.CatchAndReport(() =>
         {
@@ -70,24 +62,6 @@ namespace AutoModerator
             }
 
             Context.Respond($"Custom GPS entities: \n{msgBuilder}");
-        });
-
-        [Command("check", "Show if the player is receiving a broadcast")]
-        [Permission(MyPromoteLevel.None)]
-        public void CheckReceive(string playerName = null) => this.CatchAndReport(() =>
-        {
-            var player = Context.Player ?? MySession.Static.Players.GetPlayerByName(playerName);
-            if (player == null)
-            {
-                Context.Respond($"Player not found: \"{playerName}\"", Color.Red);
-                return;
-            }
-
-            var msg = Plugin.CheckPlayerReceivesGpss(player as MyPlayer)
-                ? $"Player \"{playerName}\" does receive broadcasts"
-                : $"Player \"{playerName}\" does not receive broadcasts";
-
-            Context.Respond(msg);
         });
 
         [Command("mute", "Mute broadcasting.")]
@@ -118,14 +92,14 @@ namespace AutoModerator
             Context.Respond("Unmuted broadcasting. It may take some time to take effect.");
         });
 
-        [Command("unmute_all", "Force every player to unmute broadcasting.")]
+        [Command("unmuteall", "Force every player to unmute broadcasting.")]
         [Permission(MyPromoteLevel.Admin)]
         public void UnmuteBroadcastsToAll() => this.CatchAndReport(() =>
         {
             Plugin.Config.RemoveAllMutedPlayers();
         });
 
-        [Command("clear_quest", "Clear quest HUD.")]
+        [Command("clearwarning", "Clear quest HUD.")]
         [Permission(MyPromoteLevel.None)]
         public void ClearQuests() => this.CatchAndReport(() =>
         {

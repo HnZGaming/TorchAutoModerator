@@ -5,7 +5,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using NLog;
 using Sandbox.Game.Entities;
-using Sandbox.Game.World;
 using Sandbox.ModAPI;
 using SpaceEngineers.Game.Entities.Blocks;
 using Utils.General;
@@ -18,7 +17,6 @@ namespace AutoModerator.Punishes
     {
         public interface IConfig
         {
-            double PunishmentInitialIdleTime { get; }
             LagPunishmentType PunishmentType { get; }
             double DamageNormalPerInterval { get; }
         }
@@ -39,14 +37,7 @@ namespace AutoModerator.Punishes
 
         public async Task Update(IReadOnlyDictionary<long, LagPunishmentSource> lags)
         {
-            var elapsedSessionTime = MySession.Static.ElapsedPlayTime;
-            Log.Trace($"elapsed play time: {elapsedSessionTime.TotalSeconds:0}secs");
-            if (elapsedSessionTime < _config.PunishmentInitialIdleTime.Seconds())
-            {
-                Log.Debug("skipped because server just started");
-                return;
-            }
-
+            // move to the game loop so we can synchronously operate on blocks
             await GameLoopObserver.MoveToGameLoop();
 
             foreach (var (gridId, lag) in lags)
@@ -60,66 +51,67 @@ namespace AutoModerator.Punishes
                 }
 
                 await PunishGrid(grid);
+
+                // move to the next frame so we won't lag the server
                 await GameLoopObserver.MoveToGameLoop();
 
                 Log.Trace($"finished \"{grid.DisplayName}\" {_config.PunishmentType}");
             }
 
+            // back to some worker thread
             await TaskUtils.MoveToThreadPool();
         }
 
         async Task PunishGrid(MyCubeGrid grid)
         {
-            Thread.CurrentThread.ThrowIfNotSessionThread();
-
             var blocks = grid.GetFatBlocks();
             for (var i = 0; i < blocks.Count; i++)
             {
+                // move to the next frame so we won't lag the server
                 if (i % ProcessedBlockCountPerFrame == 0)
                 {
                     await GameLoopObserver.MoveToGameLoop();
                 }
 
                 var block = blocks[i];
-                if (block != null)
+                if (block == null) continue;
+
+                switch (_config.PunishmentType)
                 {
-                    PunishBlock(block);
+                    case LagPunishmentType.Shutdown:
+                    {
+                        DisableFunctionalBlock(block);
+                        break;
+                    }
+                    case LagPunishmentType.Damage:
+                    {
+                        DamageBlock(block);
+                        break;
+                    }
                 }
             }
         }
 
-        void PunishBlock(MyCubeBlock block)
+        void DamageBlock(MyCubeBlock block)
         {
             Thread.CurrentThread.ThrowIfNotSessionThread();
 
-            switch (_config.PunishmentType)
+            var slimBlock = block.SlimBlock;
+            var damage = slimBlock.BlockDefinition.MaxIntegrity * (float) _config.DamageNormalPerInterval;
+            slimBlock.DoDamage(damage, MyDamageType.Fire);
+        }
+
+        void DisableFunctionalBlock(MyCubeBlock block)
+        {
+            Thread.CurrentThread.ThrowIfNotSessionThread();
+
+            if (block is IMyFunctionalBlock functionalBlock)
             {
-                case LagPunishmentType.None:
-                {
-                    return;
-                }
-                case LagPunishmentType.Disable:
-                {
-                    if (block is IMyFunctionalBlock functionalBlock)
-                    {
-                        if (block is MyParachute) return;
-                        if (block is MyButtonPanel) return;
-                        if (block is IMyPowerProducer) return;
+                if (block is MyParachute) return;
+                if (block is MyButtonPanel) return;
+                if (block is IMyPowerProducer) return;
 
-                        functionalBlock.Enabled = false;
-                    }
-
-                    return;
-                }
-                case LagPunishmentType.Damage:
-                {
-                    var slimBlock = block.SlimBlock;
-                    var damage = slimBlock.BlockDefinition.MaxIntegrity * (float) _config.DamageNormalPerInterval;
-                    slimBlock.DoDamage(damage, MyDamageType.Fire);
-
-                    return;
-                }
-                default: throw new ArgumentOutOfRangeException();
+                functionalBlock.Enabled = false;
             }
         }
     }

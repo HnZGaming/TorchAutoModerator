@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using NLog;
 using Sandbox.Game.Screens.Helpers;
+using Sandbox.Game.World;
 using TorchEntityGpsBroadcaster.Core;
 using Utils.General;
 using Utils.Torch;
@@ -12,11 +13,20 @@ namespace AutoModerator.Broadcasts
 {
     public sealed class EntityGpsBroadcaster
     {
+        public interface IConfig
+        {
+            string GpsNameFormat { get; }
+            string GpsDescriptionFormat { get; }
+            string GpsColorCode { get; }
+        }
+
         static readonly ILogger Log = LogManager.GetCurrentClassLogger();
+        readonly IConfig _config;
         readonly EntityIdGpsCollection _gpsCollection;
 
-        public EntityGpsBroadcaster()
+        public EntityGpsBroadcaster(IConfig config)
         {
+            _config = config;
             _gpsCollection = new EntityIdGpsCollection("<!> ");
         }
 
@@ -31,7 +41,7 @@ namespace AutoModerator.Broadcasts
         }
 
         public async Task ReplaceGpss(
-            IEnumerable<IEntityGpsSource> gpsSources,
+            IEnumerable<GridGpsSource> gpsSources,
             IEnumerable<long> receiverIdentityIds,
             CancellationToken canceller)
         {
@@ -39,7 +49,9 @@ namespace AutoModerator.Broadcasts
             _gpsCollection.SendReplaceAllTrackedGpss(gpss, receiverIdentityIds);
         }
 
-        async Task<IReadOnlyList<MyGps>> CreateGps(IEnumerable<IEntityGpsSource> gpsSources, CancellationToken canceller)
+        async Task<IReadOnlyList<MyGps>> CreateGps(
+            IEnumerable<GridGpsSource> gpsSources,
+            CancellationToken canceller)
         {
             try
             {
@@ -51,7 +63,7 @@ namespace AutoModerator.Broadcasts
                 var gpss = new List<MyGps>();
                 foreach (var gpsSource in gpsSources)
                 {
-                    if (gpsSource.TryCreateGps(out var gps))
+                    if (TryCreateGps(gpsSource, out var gps))
                     {
                         gpss.Add(gps);
                     }
@@ -68,6 +80,49 @@ namespace AutoModerator.Broadcasts
             {
                 // make sure we're out of the main thread
                 await TaskUtils.MoveToThreadPool(canceller);
+            }
+        }
+
+        bool TryCreateGps(GridGpsSource source, out MyGps gps)
+        {
+            if (!VRageUtils.TryGetCubeGridById(source.GridId, out var grid))
+            {
+                gps = default;
+                return false;
+            }
+
+            var playerName = (string) null;
+
+            if (!grid.BigOwners.TryGetFirst(out var playerId))
+            {
+                Log.Trace($"grid no owner: \"{grid.DisplayName}\"");
+            }
+            else if (!MySession.Static.Players.TryGetPlayerById(playerId, out var player))
+            {
+                Log.Trace($"player not found for grid: \"{grid.DisplayName}\": {playerId}");
+            }
+            else
+            {
+                playerName = player.DisplayName;
+            }
+
+            var faction = MySession.Static.Factions.GetPlayerFaction(playerId);
+            var factionTag = faction?.Tag;
+
+            var name = Format(_config.GpsNameFormat);
+            var description = Format(_config.GpsDescriptionFormat);
+            gps = GpsUtils.CreateGridGps(grid, name, description, _config.GpsColorCode);
+            return true;
+
+            string Format(string format)
+            {
+                return format
+                    .Replace("{grid}", grid.DisplayName)
+                    .Replace("{player}", playerName ?? "<none>")
+                    .Replace("{faction}", factionTag ?? "<none>")
+                    .Replace("{ratio}", $"{source.LongLagNormal * 100:0}%")
+                    .Replace("{rank}", GpsUtils.RankToString(source.Rank))
+                    .Replace("{time}", GpsUtils.RemainingTimeToString(source.RemainingTime));
             }
         }
     }

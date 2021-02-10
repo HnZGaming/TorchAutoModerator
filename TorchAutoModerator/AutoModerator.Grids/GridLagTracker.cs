@@ -18,7 +18,7 @@ namespace AutoModerator.Grids
         {
             double MaxGridMspf { get; }
             double GridWarningTime { get; }
-            double GridPinTime { get; }
+            double GridPunishTime { get; }
             bool IsFactionExempt(string factionTag);
         }
 
@@ -33,7 +33,7 @@ namespace AutoModerator.Grids
 
             public double LagThreshold => _masterConfig.MaxGridMspf;
             public TimeSpan PinWindow => _masterConfig.GridWarningTime.Seconds();
-            public TimeSpan PinLifeSpan => _masterConfig.GridPinTime.Seconds();
+            public TimeSpan PinLifeSpan => _masterConfig.GridPunishTime.Seconds();
             public bool IsFactionExempt(string factionTag) => _masterConfig.IsFactionExempt(factionTag);
         }
 

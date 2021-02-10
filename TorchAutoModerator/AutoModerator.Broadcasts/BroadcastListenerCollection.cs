@@ -19,7 +19,7 @@ namespace AutoModerator.Broadcasts
             /// <summary>
             /// Broadcast to admin players only.
             /// </summary>
-            bool AdminsOnly { get; }
+            bool BroadcastAdminsOnly { get; }
         }
 
         static readonly ILogger Log = LogManager.GetCurrentClassLogger();
@@ -50,12 +50,6 @@ namespace AutoModerator.Broadcasts
             return GetReceivers().Select(r => r.IdentityId);
         }
 
-        public bool CheckReceive(MyPlayer player)
-        {
-            UpdateCollection();
-            return CheckReceiveInternal(player);
-        }
-
         void UpdateCollection()
         {
             _mutedPlayerIds.Clear();
@@ -65,7 +59,7 @@ namespace AutoModerator.Broadcasts
         bool CheckReceiveInternal(MyPlayer player)
         {
             if (_mutedPlayerIds.Contains(player.SteamId())) return false;
-            if (_config.AdminsOnly && !player.IsAdmin()) return false;
+            if (_config.BroadcastAdminsOnly && !player.IsAdmin()) return false;
             return true;
         }
     }

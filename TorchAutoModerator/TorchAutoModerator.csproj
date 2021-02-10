@@ -158,7 +158,7 @@
         </Reference>
     </ItemGroup>
     <ItemGroup>
-        <Compile Include="AutoModerator.Broadcasts\IEntityGpsSource.cs" />
+        <Compile Include="AutoModerator.Broadcasts\GridGpsSource.cs" />
         <Compile Include="AutoModerator.Core\TrackedEntitySnapshot.cs" />
         <Compile Include="AutoModerator.Grids\GridLagTracker.cs" />
         <Compile Include="AutoModerator.Players\PlayerLagTracker.cs" />
@@ -174,8 +174,6 @@
         <Compile Include="AutoModerator.Core\EntityLagTracker.cs" />
         <Compile Include="AutoModerator.Core\EntityLagSnapshot.cs" />
         <Compile Include="AutoModerator.Core\ExpiryDictionary.cs" />
-        <Compile Include="AutoModerator.Grids\GridGpsSource.cs" />
-        <Compile Include="AutoModerator.Players\PlayerGpsSource.cs" />
         <Compile Include="AutoModerator.Warnings\LagWarningSource.cs" />
         <Compile Include="AutoModerator.Warnings\LagWarningDefaultTexts.cs" />
         <Compile Include="Properties\AssemblyInfo.cs" />
@@ -204,6 +202,7 @@
         <Compile Include="Utils.General\ThreadSafeThrottle.cs" />
         <Compile Include="Utils.Torch\CommandModuleUtils.cs" />
         <Compile Include="Utils.Torch\CommandOption.cs" />
+        <Compile Include="Utils.Torch\ConfigCommandIgnoreAttribute.cs" />
         <Compile Include="Utils.Torch\GameLoopObserver.cs" />
         <Compile Include="Utils.Torch\GameLoopObserverManager.cs" />
         <Compile Include="Utils.Torch\ReportGenerator.cs" />

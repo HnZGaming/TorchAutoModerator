@@ -37,13 +37,18 @@ namespace Utils.General
 
         public static bool TryGetFirst<T>(this IReadOnlyList<T> self, out T foundValue)
         {
-            if (self.Count == 0)
+            return self.TryGetElementAt(0, out foundValue);
+        }
+
+        public static bool TryGetElementAt<T>(this IReadOnlyList<T> self, int index, out T foundValue)
+        {
+            if (self.Count < index + 1)
             {
                 foundValue = default;
                 return false;
             }
 
-            foundValue = self[0];
+            foundValue = self[index];
             return true;
         }
 
@@ -258,6 +263,17 @@ namespace Utils.General
             }
 
             return dictionary;
+        }
+
+        public static IEnumerable<U> WhereCastable<T, U>(this IEnumerable<T> self) where U : T
+        {
+            foreach (var t in self)
+            {
+                if (t is U u)
+                {
+                    yield return u;
+                }
+            }
         }
     }
 }

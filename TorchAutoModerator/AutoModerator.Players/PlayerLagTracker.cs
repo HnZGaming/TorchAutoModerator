@@ -15,7 +15,7 @@ namespace AutoModerator.Players
         {
             double MaxPlayerMspf { get; }
             double PlayerWarningTime { get; }
-            double PlayerPinTime { get; }
+            double PlayerPunishTime { get; }
             bool IsFactionExempt(string factionTag);
         }
 
@@ -30,7 +30,7 @@ namespace AutoModerator.Players
 
             public double LagThreshold => _masterConfig.MaxPlayerMspf;
             public TimeSpan PinWindow => _masterConfig.PlayerWarningTime.Seconds();
-            public TimeSpan PinLifeSpan => _masterConfig.PlayerPinTime.Seconds();
+            public TimeSpan PinLifeSpan => _masterConfig.PlayerPunishTime.Seconds();
             public bool IsFactionExempt(string factionTag) => _masterConfig.IsFactionExempt(factionTag);
         }
 

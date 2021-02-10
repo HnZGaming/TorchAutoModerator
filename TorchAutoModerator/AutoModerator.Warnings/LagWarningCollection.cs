@@ -15,10 +15,11 @@ namespace AutoModerator.Warnings
         public interface IConfig
         {
             string WarningTitle { get; }
-            string WarningDetailMustProfileSelf { get; }
-            string WarningDetailMustDelagSelf { get; }
-            string WarningDetailMustWaitUnpinned { get; }
-            string WarningDetailEnded { get; }
+            string WarningDetailMustProfileSelfText { get; }
+            string WarningDetailMustDelagSelfText { get; }
+            string WarningDetailMustWaitUnpinnedText { get; }
+            string WarningDetailEndedText { get; }
+            string WarningCurrentLevelText { get; }
         }
 
         enum QuestState
@@ -117,7 +118,7 @@ namespace AutoModerator.Warnings
 
                 _quests[playerId].Latest = laggyPlayer;
 
-                var message = $"Your current L.A.G.S. level: {lag * 100:0}%";
+                var message = $"{_config.WarningCurrentLevelText}: {lag * 100:0}%";
                 if (laggyPlayer.IsPinned)
                 {
                     message += $" ({laggyPlayer.Pin.TotalSeconds:0} seconds left)";
@@ -176,25 +177,25 @@ namespace AutoModerator.Warnings
                 {
                     MyVisualScriptLogicProvider.SetQuestlog(true, _config.WarningTitle, playerId);
                     MyVisualScriptLogicProvider.RemoveQuestlogDetails(playerId);
-                    MyVisualScriptLogicProvider.AddQuestlogDetail(_config.WarningDetailMustProfileSelf, true, true, playerId);
+                    MyVisualScriptLogicProvider.AddQuestlogDetail(_config.WarningDetailMustProfileSelfText, true, true, playerId);
                     return;
                 }
                 case QuestState.MustDelagSelf:
                 {
                     MyVisualScriptLogicProvider.RemoveQuestlogDetails(playerId);
-                    MyVisualScriptLogicProvider.AddQuestlogDetail(_config.WarningDetailMustDelagSelf, true, true, playerId);
+                    MyVisualScriptLogicProvider.AddQuestlogDetail(_config.WarningDetailMustDelagSelfText, true, true, playerId);
                     return;
                 }
                 case QuestState.MustWaitUnpinned:
                 {
                     MyVisualScriptLogicProvider.RemoveQuestlogDetails(playerId);
-                    MyVisualScriptLogicProvider.AddQuestlogDetail(_config.WarningDetailMustWaitUnpinned, true, true, playerId);
+                    MyVisualScriptLogicProvider.AddQuestlogDetail(_config.WarningDetailMustWaitUnpinnedText, true, true, playerId);
                     return;
                 }
                 case QuestState.Ended:
                 {
                     MyVisualScriptLogicProvider.RemoveQuestlogDetails(playerId);
-                    MyVisualScriptLogicProvider.AddQuestlogDetail(_config.WarningDetailEnded, true, true, playerId);
+                    MyVisualScriptLogicProvider.AddQuestlogDetail(_config.WarningDetailEndedText, true, true, playerId);
                     return;
                 }
                 case QuestState.Cleared:

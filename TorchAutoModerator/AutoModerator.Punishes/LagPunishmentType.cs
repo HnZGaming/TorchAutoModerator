@@ -3,7 +3,8 @@
     public enum LagPunishmentType
     {
         None,
-        Disable,
+        Shutdown,
         Damage,
+        Broadcast,
     }
 }
