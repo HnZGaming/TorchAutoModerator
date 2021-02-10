@@ -63,8 +63,9 @@ namespace AutoModerator
         string _warningDetailMustWaitUnpinnedText = LagWarningDefaultTexts.MustWaitUnpinned;
         string _warningDetailEndedText = LagWarningDefaultTexts.Ended;
         LagPunishmentType _punishmentType;
-        double _damageNormal = 0.5d;
+        double _damageNormal = 0.05d;
         string _warningCurrentLevelText = LagWarningDefaultTexts.CurrentLevel;
+        double _minIntegrityNormal = 0.5d;
 
         [XmlElement(nameof(FirstIdleTime))]
         [Display(Order = 2, Name = "First idle seconds", GroupName = OpGroupName,
@@ -224,6 +225,15 @@ namespace AutoModerator
         {
             get => _damageNormal;
             set => SetValue(ref _damageNormal, value);
+        }
+
+        [XmlElement(nameof(MinIntegrityNormal))]
+        [Display(Order = 2, Name = "Integrity normal to stop damage (0-1)", GroupName = DamageGroupName,
+            Description = "Applies damage to subject blocks until reaching N times integrity.")]
+        public double MinIntegrityNormal
+        {
+            get => _minIntegrityNormal;
+            set => SetValue(ref _minIntegrityNormal, value);
         }
 
         [XmlElement(nameof(BroadcastAdminsOnly))]

@@ -104,7 +104,7 @@ namespace Utils.Torch
 
             if (!properties.TryGetFirst(p => p.Name == propertyName, out var property))
             {
-                self.Context.Respond($"Property not found: \"{properties}\"", Color.Red);
+                self.Context.Respond($"Property not found: \"{propertyName}\"", Color.Red);
                 self.ShowConfigurableProperties(config);
                 return;
             }

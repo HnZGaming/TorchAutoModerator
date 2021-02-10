@@ -19,6 +19,7 @@ namespace AutoModerator.Punishes
         {
             LagPunishmentType PunishmentType { get; }
             double DamageNormalPerInterval { get; }
+            double MinIntegrityNormal { get; }
         }
 
         const int ProcessedBlockCountPerFrame = 100;
@@ -97,8 +98,12 @@ namespace AutoModerator.Punishes
             Thread.CurrentThread.ThrowIfNotSessionThread();
 
             var slimBlock = block.SlimBlock;
-            var damage = slimBlock.BlockDefinition.MaxIntegrity * (float) _config.DamageNormalPerInterval;
-            slimBlock.DoDamage(damage, MyDamageType.Fire);
+            var maxIntegrity = slimBlock.BlockDefinition.MaxIntegrity;
+            if (slimBlock.Integrity / maxIntegrity > _config.MinIntegrityNormal)
+            {
+                var damage = maxIntegrity * (float) _config.DamageNormalPerInterval;
+                slimBlock.DoDamage(damage, MyDamageType.Fire, true, null, 0);
+            }
         }
 
         void DisableFunctionalBlock(MyCubeBlock block)
