@@ -83,7 +83,7 @@ namespace AutoModerator.Grids
                     continue;
                 }
 
-                if (grid.RemainingTime > TimeSpan.Zero) continue;
+                if (!grid.IsPinned) continue;
 
                 yield return (ownerId, grid);
             }
