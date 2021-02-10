@@ -2,10 +2,10 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Xml.Serialization;
-using AutoModerator.Broadcasts;
 using AutoModerator.Grids;
 using AutoModerator.Players;
 using AutoModerator.Punishes;
+using AutoModerator.Punishes.Broadcasts;
 using AutoModerator.Warnings;
 using Sandbox.Game.World;
 using Torch;
@@ -236,10 +236,10 @@ namespace AutoModerator
             set => SetValue(ref _minIntegrityNormal, value);
         }
 
-        [XmlElement(nameof(BroadcastAdminsOnly))]
+        [XmlElement(nameof(GpsAdminsOnly))]
         [Display(Order = 5, Name = "Broadcast to admins only", GroupName = BroadcastGroupName,
             Description = "Broadcasts GPS of laggy grids to admin players only.")]
-        public bool BroadcastAdminsOnly
+        public bool GpsAdminsOnly
         {
             get => _broadcastAdminsOnly;
             set => SetValue(ref _broadcastAdminsOnly, value);
@@ -340,7 +340,7 @@ namespace AutoModerator
             set => SetValue(ref _logFilePath, value);
         }
 
-        IEnumerable<ulong> BroadcastListenerCollection.IConfig.MutedPlayers => _mutedPlayerIds;
+        IEnumerable<ulong> BroadcastListenerCollection.IConfig.GpsMutedPlayers => _mutedPlayerIds;
 
         public void AddMutedPlayer(ulong mutedPlayerId)
         {

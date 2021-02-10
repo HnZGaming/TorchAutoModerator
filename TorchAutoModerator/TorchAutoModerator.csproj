@@ -158,7 +158,7 @@
         </Reference>
     </ItemGroup>
     <ItemGroup>
-        <Compile Include="AutoModerator.Broadcasts\GridGpsSource.cs" />
+        <Compile Include="AutoModerator.Punishes.Broadcasts\GridGpsSource.cs" />
         <Compile Include="AutoModerator.Core\TrackedEntitySnapshot.cs" />
         <Compile Include="AutoModerator.Grids\GridLagTracker.cs" />
         <Compile Include="AutoModerator.Players\PlayerLagTracker.cs" />
@@ -167,9 +167,9 @@
         <Compile Include="AutoModerator.Punishes\LagPunishmentType.cs" />
         <Compile Include="AutoModerator.Warnings\HudNotificationCollection.cs" />
         <Compile Include="AutoModerator.Warnings\LagWarningCollection.cs" />
-        <Compile Include="AutoModerator.Broadcasts\BroadcastListenerCollection.cs" />
-        <Compile Include="AutoModerator.Broadcasts\GpsUtils.cs" />
-        <Compile Include="AutoModerator.Broadcasts\EntityGpsBroadcaster.cs" />
+        <Compile Include="AutoModerator.Punishes.Broadcasts\BroadcastListenerCollection.cs" />
+        <Compile Include="AutoModerator.Punishes.Broadcasts\GpsUtils.cs" />
+        <Compile Include="AutoModerator.Punishes.Broadcasts\EntityGpsBroadcaster.cs" />
         <Compile Include="AutoModerator.Core\EntityLagTimeSeries.cs" />
         <Compile Include="AutoModerator.Core\EntityLagTracker.cs" />
         <Compile Include="AutoModerator.Core\EntityLagSnapshot.cs" />
