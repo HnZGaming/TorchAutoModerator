@@ -34,11 +34,13 @@ namespace AutoModerator.Punishes
 
         public async Task Update(IEnumerable<LagPunishChatSource> sources)
         {
+            var pinnedSources = sources.Where(s => s.IsPinned).ToArray();
+
             var grids = new Dictionary<long, MyCubeGrid>();
 
             await GameLoopObserver.MoveToGameLoop();
 
-            foreach (var src in sources)
+            foreach (var src in pinnedSources)
             {
                 var gridId = src.LaggiestGridId;
                 if (VRageUtils.TryGetCubeGridById(gridId, out var grid))
@@ -49,7 +51,7 @@ namespace AutoModerator.Punishes
 
             await TaskUtils.MoveToThreadPool();
 
-            foreach (var src in sources)
+            foreach (var src in pinnedSources)
             {
                 if (_pinnedPlayerIds.Contains(src.PlayerId)) continue;
 
@@ -75,11 +77,12 @@ namespace AutoModerator.Punishes
                     .Replace("{grid}", gridName)
                     .Replace("{level}", $"{src.LongLagNormal * 100:0}%");
 
+
                 _chatManager.SendMessage("L.A.G. Detector", 0, message);
             }
 
             _pinnedPlayerIds.Clear();
-            _pinnedPlayerIds.UnionWith(sources.Select(s => s.PlayerId));
+            _pinnedPlayerIds.UnionWith(pinnedSources.Select(s => s.PlayerId));
         }
     }
 }

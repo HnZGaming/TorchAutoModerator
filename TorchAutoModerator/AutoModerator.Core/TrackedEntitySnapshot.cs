@@ -14,5 +14,6 @@ namespace AutoModerator.Core
         public long Id { get; }
         public double LongLagNormal { get; }
         public TimeSpan RemainingTime { get; }
+        public bool IsPinned => RemainingTime > TimeSpan.Zero;
     }
 }
