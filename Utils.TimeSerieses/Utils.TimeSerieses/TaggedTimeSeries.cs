@@ -19,7 +19,7 @@ namespace Utils.TimeSerieses
 
         public IEnumerable<(T Key, ITimeSeries<E> TimeSeries)> GetAllTimeSeries()
         {
-            return _timeSeriesMap.Select(m => (m.Key, (ITimeSeries<E>) m.Value));
+            return _timeSeriesMap.Select(m => (m.Key, (ITimeSeries<E>) m.Value)).ToArray();
         }
 
         public bool TryGetTimeSeries(T tag, out ITimeSeries<E> timeSeries)
@@ -68,6 +68,11 @@ namespace Utils.TimeSerieses
             }
 
             _timeSeriesMap.Clear();
+        }
+
+        public void RemoveSeries(T key)
+        {
+            _timeSeriesMap.Remove(key);
         }
     }
 }

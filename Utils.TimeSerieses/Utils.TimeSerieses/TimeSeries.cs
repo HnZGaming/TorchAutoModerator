@@ -23,6 +23,11 @@ namespace Utils.TimeSerieses
             return new Timestamped<T>(_timestamps[index], _elements[index]);
         }
 
+        public bool IsAll(T element)
+        {
+            return _elements.All(e => e.Equals(element));
+        }
+
         TimeSpan GetLength()
         {
             if (_timestamps.Count < 2) return TimeSpan.Zero;

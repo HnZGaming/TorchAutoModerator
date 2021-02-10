@@ -39,34 +39,34 @@ namespace AutoModerator.Grids
 
         static readonly ILogger Log = LogManager.GetCurrentClassLogger();
         readonly EntityLagTracker _lagTracker;
-        readonly Dictionary<long, TrackedEntitySnapshot> _playerToLaggiestGrids;
+        readonly Dictionary<long, TrackedEntitySnapshot> _ownerToLaggiestGrids;
 
         public GridLagTracker(IConfig config)
         {
             _lagTracker = new EntityLagTracker(new BridgeConfig(config));
-            _playerToLaggiestGrids = new Dictionary<long, TrackedEntitySnapshot>();
+            _ownerToLaggiestGrids = new Dictionary<long, TrackedEntitySnapshot>();
         }
 
         [MethodImpl(MethodImplOptions.Synchronized)]
         public bool TryGetLaggiestGridOwnedBy(long ownerId, out TrackedEntitySnapshot ownedGridId)
         {
-            return _playerToLaggiestGrids.TryGetValue(ownerId, out ownedGridId);
+            return _ownerToLaggiestGrids.TryGetValue(ownerId, out ownedGridId);
         }
 
         [MethodImpl(MethodImplOptions.Synchronized)]
         public IEnumerable<(long OwnerId, TrackedEntitySnapshot Grid)> GetPlayerLaggiestGrids(double maxLongLagNormal)
         {
-            return _playerToLaggiestGrids
-                .ToTuples()
-                .Where(p => p.Value.LongLagNormal > maxLongLagNormal);
+            return _ownerToLaggiestGrids
+                .Where(p => p.Value.LongLagNormal > maxLongLagNormal)
+                .ToTuples();
         }
 
         [MethodImpl(MethodImplOptions.Synchronized)]
         public IEnumerable<(long OwnerId, TrackedEntitySnapshot Grid)> GetPlayerPinnedGrids()
         {
-            return _playerToLaggiestGrids
-                .ToTuples()
-                .Where(p => p.Value.RemainingTime > TimeSpan.Zero);
+            return _ownerToLaggiestGrids
+                .Where(p => p.Value.RemainingTime > TimeSpan.Zero)
+                .ToTuples();
         }
 
         [MethodImpl(MethodImplOptions.Synchronized)]
@@ -75,7 +75,7 @@ namespace AutoModerator.Grids
             Log.Debug("updating grid lags...");
 
             var lags = new List<EntityLagSnapshot>();
-            var laggiestGridToOwnerIds = new Dictionary<long, long>();
+            var latestLaggiestGridToOwnerIds = new Dictionary<long, long>();
             var ownerIds = new HashSet<long>();
 
             foreach (var (grid, profileEntity) in profileResult.GetTopEntities(50))
@@ -91,7 +91,7 @@ namespace AutoModerator.Grids
                 if (!ownerIds.Contains(ownerId)) // pick the laggiest grid
                 {
                     ownerIds.Add(ownerId);
-                    laggiestGridToOwnerIds.Add(grid.EntityId, ownerId);
+                    latestLaggiestGridToOwnerIds.Add(grid.EntityId, ownerId);
                 }
 
                 Log.Trace($"grid profiled: {grid.DisplayName} {mspf:0.00}ms/f");
@@ -102,18 +102,19 @@ namespace AutoModerator.Grids
             // update owner -> laggiest grid map w/ latest state
             foreach (var lag in _lagTracker.GetTrackedEntities(0))
             {
-                if (laggiestGridToOwnerIds.TryGetValue(lag.Id, out var ownerId))
+                if (latestLaggiestGridToOwnerIds.TryGetValue(lag.Id, out var ownerId))
                 {
-                    _playerToLaggiestGrids[ownerId] = lag;
+                    _ownerToLaggiestGrids[ownerId] = lag;
                 }
             }
 
-            var trackedGridIds = _lagTracker.GetTrackedEntityIds();
-            foreach (var (ownerId, laggiestGrid) in _playerToLaggiestGrids.ToArray())
+            var trackedGridIds = _lagTracker.GetTrackedEntityIds().ToSet();
+            foreach (var (ownerId, laggiestGrid) in _ownerToLaggiestGrids.ToArray())
             {
                 if (!trackedGridIds.Contains(laggiestGrid.Id))
                 {
-                    _playerToLaggiestGrids.Remove(ownerId);
+                    _ownerToLaggiestGrids.Remove(ownerId);
+                    Log.Trace($"removed untracked owner from owner map: {ownerId}");
                 }
             }
 
@@ -130,7 +131,7 @@ namespace AutoModerator.Grids
         public void Clear()
         {
             _lagTracker.Clear();
-            _playerToLaggiestGrids.Clear();
+            _ownerToLaggiestGrids.Clear();
         }
     }
 }

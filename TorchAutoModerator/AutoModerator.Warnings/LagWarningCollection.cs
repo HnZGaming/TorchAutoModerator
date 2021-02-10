@@ -6,6 +6,7 @@ using System.Runtime.CompilerServices;
 using NLog;
 using Sandbox.Game;
 using Sandbox.Game.World;
+using Utils.General;
 using Utils.Torch;
 
 namespace AutoModerator.Warnings
@@ -71,8 +72,12 @@ namespace AutoModerator.Warnings
         }
 
         [MethodImpl(MethodImplOptions.Synchronized)]
-        public void Update(IEnumerable<LagWarningSource> laggyPlayers)
+        public void Update(IEnumerable<LagWarningSource> players)
         {
+            var laggyPlayers = players
+                .Where(p => p.LongLagNormal > 1 || p.IsPinned)
+                .ToArray();
+
             foreach (var laggyPlayer in laggyPlayers)
             {
                 var playerId = laggyPlayer.PlayerId;
@@ -127,20 +132,20 @@ namespace AutoModerator.Warnings
                 _hudNotifications.Show(playerId, message);
             }
 
-            var latestPlayerIdSet = new HashSet<long>(laggyPlayers.Select(s => s.PlayerId));
-            foreach (var (playerId, state) in _quests.ToArray())
+            // removed
+            var latestLaggyPlayerIdSet = laggyPlayers.Select(s => s.PlayerId).ToSet();
+            foreach (var (existingPlayerId, state) in _quests.ToArray())
             {
-                if (state.Quest == QuestState.Ended)
+                if (state.Quest >= QuestState.Ended)
                 {
-                    _quests.Remove(playerId);
-                    UpdateQuestLog(QuestState.Cleared, playerId);
+                    _quests.Remove(existingPlayerId);
+                    UpdateQuestLog(QuestState.Cleared, existingPlayerId);
                 }
-
-                if (!latestPlayerIdSet.Contains(playerId) && state.Quest < QuestState.Ended)
+                else if (!latestLaggyPlayerIdSet.Contains(existingPlayerId)) // removed now
                 {
                     state.Quest = QuestState.Ended;
-                    UpdateQuestLog(state.Quest, playerId);
-                    _hudNotifications.Remove(playerId);
+                    UpdateQuestLog(state.Quest, existingPlayerId);
+                    _hudNotifications.Remove(existingPlayerId);
                 }
             }
 
@@ -169,7 +174,7 @@ namespace AutoModerator.Warnings
         void UpdateQuestLog(QuestState quest, long playerId)
         {
             var playerName = MySession.Static.Players.GetPlayerNameOrElse(playerId, $"{playerId}");
-            Log.Debug($"{playerName}: {quest}");
+            Log.Trace($"updating quest log: {playerName}: {quest}");
 
             switch (quest)
             {
