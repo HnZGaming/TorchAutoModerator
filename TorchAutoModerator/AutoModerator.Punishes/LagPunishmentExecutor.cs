@@ -20,7 +20,7 @@ namespace AutoModerator.Punishes
         {
             double PunishmentInitialIdleTime { get; }
             LagPunishmentType PunishmentType { get; }
-            double DamageNormal { get; }
+            double DamageNormalPerInterval { get; }
         }
 
         const int ProcessedBlockCountPerFrame = 100;
@@ -114,7 +114,7 @@ namespace AutoModerator.Punishes
                 case LagPunishmentType.Damage:
                 {
                     var slimBlock = block.SlimBlock;
-                    var damage = slimBlock.BlockDefinition.MaxIntegrity * (float) _config.DamageNormal;
+                    var damage = slimBlock.BlockDefinition.MaxIntegrity * (float) _config.DamageNormalPerInterval;
                     slimBlock.DoDamage(damage, MyDamageType.Fire);
 
                     return;

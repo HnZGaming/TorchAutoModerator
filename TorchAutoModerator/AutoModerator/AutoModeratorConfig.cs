@@ -33,7 +33,7 @@ namespace AutoModerator
         const string PlayerBroadcastGroupName = "Broadcasting (Players)";
         const string WarningGroupName = "Warnings";
         const string PunishGroupName = "Punishment";
-        const string LogGroupName = "Logging";
+        const string LogGroupName = "_Logging_";
         public const string DefaultLogFilePath = "Logs/AutoModerator-${shortdate}.log";
 
         bool _enableWarning = true;
@@ -279,9 +279,9 @@ namespace AutoModerator
             set => SetValue(ref _punishmentType, value);
         }
 
-        [XmlElement("DamageNormal")]
-        [Display(Order = 2, Name = "Damage normal (0-1)", GroupName = PunishGroupName)]
-        public double DamageNormal
+        [XmlElement("DamageNormalPerInterval")]
+        [Display(Order = 2, Name = "Damage per interval (0-1)", GroupName = PunishGroupName)]
+        public double DamageNormalPerInterval
         {
             get => _damageNormal;
             set => SetValue(ref _damageNormal, value);
