@@ -34,7 +34,7 @@ namespace AutoModerator.Warnings
         sealed class PlayerState
         {
             public QuestState Quest { get; set; }
-            public LaggyPlayerSnapshot Latest { get; set; }
+            public LagWarningSource Latest { get; set; }
         }
 
         static readonly ILogger Log = LogManager.GetCurrentClassLogger();
@@ -70,7 +70,7 @@ namespace AutoModerator.Warnings
         }
 
         [MethodImpl(MethodImplOptions.Synchronized)]
-        public void Update(IEnumerable<LaggyPlayerSnapshot> laggyPlayers)
+        public void Update(IEnumerable<LagWarningSource> laggyPlayers)
         {
             foreach (var laggyPlayer in laggyPlayers)
             {

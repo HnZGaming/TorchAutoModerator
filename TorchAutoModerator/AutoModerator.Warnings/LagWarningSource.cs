@@ -2,9 +2,9 @@
 
 namespace AutoModerator.Warnings
 {
-    public readonly struct LaggyPlayerSnapshot
+    public readonly struct LagWarningSource
     {
-        public LaggyPlayerSnapshot(
+        public LagWarningSource(
             long playerId, string playerName,
             double longLagNormal, TimeSpan pin,
             double gridLongLagNormal, TimeSpan gridPin)

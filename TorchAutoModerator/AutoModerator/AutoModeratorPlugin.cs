@@ -8,6 +8,7 @@ using System.Windows.Controls;
 using AutoModerator.Broadcasts;
 using AutoModerator.Grids;
 using AutoModerator.Players;
+using AutoModerator.Punishes;
 using AutoModerator.Warnings;
 using NLog;
 using Profiler.Basics;
@@ -36,6 +37,7 @@ namespace AutoModerator
         EntityGpsBroadcaster _entityGpsBroadcaster;
         BroadcastListenerCollection _gpsReceivers;
         LagWarningCollection _warningQuests;
+        LagPunishmentExecutor _punishmentExecutor;
 
         UserControl IWpfPlugin.GetControl() => _config.GetOrCreateUserControl(ref _userControl);
         public AutoModeratorConfig Config => _config.Data;
@@ -66,6 +68,7 @@ namespace AutoModerator
             _gpsReceivers = new BroadcastListenerCollection(Config);
             _entityGpsBroadcaster = new EntityGpsBroadcaster();
             _warningQuests = new LagWarningCollection(Config);
+            _punishmentExecutor = new LagPunishmentExecutor(Config);
         }
 
         void OnGameLoaded()
@@ -123,22 +126,22 @@ namespace AutoModerator
 
                 Log.Debug("profile done");
 
-                if (Config.EnableSelfModeration)
+                if (Config.EnableWarning)
                 {
-                    var laggyPlayers = _laggyPlayers.GetTrackedEntities(Config.SelfModerationNormal).ToDictionary(p => p.Id);
-                    var laggyGrids = _laggyGrids.GetPlayerLaggiestGrids(Config.SelfModerationNormal).ToDictionary();
-                    var laggyPlayerReports = new List<LaggyPlayerSnapshot>();
+                    var laggyPlayers = _laggyPlayers.GetTrackedEntities(Config.WarningNormal).ToDictionary(p => p.Id);
+                    var laggyGrids = _laggyGrids.GetPlayerLaggiestGrids(Config.WarningNormal).ToDictionary();
+                    var laggyPlayerReports = new List<LagWarningSource>();
                     foreach (var (playerId, (player, grid)) in laggyPlayers.Zip(laggyGrids))
                     {
                         if (playerId == 0) continue;
 
                         var playerName = MySession.Static.Players.GetPlayerNameOrElse(playerId, $"<{playerId}>");
 
-                        var laggyPlayerReport = new LaggyPlayerSnapshot(
+                        var laggyPlayerReport = new LagWarningSource(
                             playerId, playerName,
-                            player.LongLagNormal / Config.SelfModerationNormal,
+                            player.LongLagNormal / Config.WarningNormal,
                             player.RemainingTime,
-                            grid.LongLagNormal / Config.SelfModerationNormal,
+                            grid.LongLagNormal / Config.WarningNormal,
                             grid.RemainingTime);
 
                         laggyPlayerReports.Add(laggyPlayerReport);
@@ -148,16 +151,48 @@ namespace AutoModerator
                 }
                 else
                 {
-                    _warningQuests.Update(Enumerable.Empty<LaggyPlayerSnapshot>());
+                    _warningQuests.Clear();
                 }
 
                 Log.Debug("warnings done");
+
+                if (Config.PunishmentType > LagPunishmentType.None)
+                {
+                    var punishSources = new Dictionary<long, LagPunishmentSource>();
+                    foreach (var player in _laggyPlayers.GetTopPins())
+                    {
+                        var playerId = player.Id;
+                        if (!_laggyGrids.TryGetLaggiestGridOwnedBy(playerId, out var laggiestGrid))
+                        {
+                            var playerName = MySession.Static.Players.GetPlayerNameOrElse(playerId, $"<{playerId}>");
+                            Log.Warn($"laggy grid not found for laggy player: {playerName}");
+                            continue;
+                        }
+
+                        var src = new LagPunishmentSource(laggiestGrid.Id, laggiestGrid.RemainingTime > TimeSpan.Zero);
+                        punishSources[src.GridId] = src;
+                    }
+
+                    foreach (var grid in _laggyGrids.GetTopPins())
+                    {
+                        var gpsSource = new LagPunishmentSource(grid.Id, grid.RemainingTime > TimeSpan.Zero);
+                        punishSources[gpsSource.GridId] = gpsSource;
+                    }
+
+                    await _punishmentExecutor.Update(punishSources);
+                }
+                else
+                {
+                    _punishmentExecutor.Clear();
+                }
+
+                Log.Debug("punishment done");
 
                 var allGpsSources = new Dictionary<long, IEntityGpsSource>();
 
                 if (Config.EnablePlayerBroadcasting)
                 {
-                    foreach (var (player, rank) in _laggyPlayers.GetTopPins())
+                    foreach (var (player, rank) in _laggyPlayers.GetTopPins().Indexed())
                     {
                         var playerId = player.Id;
                         if (!_laggyGrids.TryGetLaggiestGridOwnedBy(playerId, out var laggiestGrid))
@@ -174,7 +209,7 @@ namespace AutoModerator
 
                 if (Config.EnableGridBroadcasting)
                 {
-                    foreach (var (grid, rank) in _laggyGrids.GetTopPins())
+                    foreach (var (grid, rank) in _laggyGrids.GetTopPins().Indexed())
                     {
                         var gpsSource = new GridGpsSource(Config, grid, rank);
                         allGpsSources[gpsSource.GridId] = gpsSource;
