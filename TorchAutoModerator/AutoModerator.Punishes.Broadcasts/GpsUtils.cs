@@ -5,11 +5,9 @@ using Sandbox.Game.Entities;
 using Sandbox.Game.Screens.Helpers;
 using Torch.Utils;
 using Utils.Torch;
-using VRage;
 using VRage.Game;
-using VRageMath;
 
-namespace AutoModerator.Broadcasts
+namespace AutoModerator.Punishes.Broadcasts
 {
     public static class GpsUtils
     {

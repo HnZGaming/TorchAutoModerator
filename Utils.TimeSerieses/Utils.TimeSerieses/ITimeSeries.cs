@@ -7,5 +7,6 @@ namespace Utils.TimeSerieses
         int Count { get; }
         TimeSpan Length { get; }
         Timestamped<T> GetPointAt(int index);
+        bool IsAll(T element);
     }
 }

@@ -97,6 +97,24 @@ namespace AutoModerator.Core
             return normals;
         }
 
+        [MethodImpl(MethodImplOptions.Synchronized)]
+        public void RemoveInactiveSerieses()
+        {
+            var inactiveSeriesTags = new List<long>();
+            foreach (var (entityId, timeSeries) in _taggedTimeSeries.GetAllTimeSeries())
+            {
+                if (timeSeries.IsAll(0d))
+                {
+                    inactiveSeriesTags.Add(entityId);
+                }
+            }
+
+            foreach (var inactiveSeriesTag in inactiveSeriesTags)
+            {
+                _taggedTimeSeries.RemoveSeries(inactiveSeriesTag);
+            }
+        }
+
         public IReadOnlyDictionary<long, double> GetLongLagNormalDictionary(double minNormal)
         {
             return GetLongLagNormals(minNormal).ToDictionary();

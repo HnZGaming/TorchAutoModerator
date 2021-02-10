@@ -9,7 +9,7 @@ using TorchEntityGpsBroadcaster.Core;
 using Utils.General;
 using Utils.Torch;
 
-namespace AutoModerator.Broadcasts
+namespace AutoModerator.Punishes.Broadcasts
 {
     public sealed class EntityGpsBroadcaster
     {

@@ -49,6 +49,7 @@ namespace AutoModerator.Core
             // clean up old data
             _pinnedIds.RemoveExpired();
             _lagTimeSeries.RemovePointsOlderThan(_config.PinWindow);
+            _lagTimeSeries.RemoveInactiveSerieses();
 
             foreach (var lag in entityLags)
             {

@@ -160,6 +160,11 @@ namespace Utils.General
             return self.Select(kv => (kv.Key, kv.Value));
         }
 
+        public static IEnumerable<(K Key, V Value)> ToTuples<K, V>(this IEnumerable<KeyValuePair<K, V>> self)
+        {
+            return self.Select(kv => (kv.Key, kv.Value));
+        }
+
         public static IEnumerable<T> GetExceptWith<T>(this IEnumerable<T> self, IEnumerable<T> other)
         {
             var selfSet = self as ISet<T> ?? new HashSet<T>(self);

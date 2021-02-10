@@ -2,10 +2,10 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Xml.Serialization;
-using AutoModerator.Broadcasts;
 using AutoModerator.Grids;
 using AutoModerator.Players;
 using AutoModerator.Punishes;
+using AutoModerator.Punishes.Broadcasts;
 using AutoModerator.Warnings;
 using Sandbox.Game.World;
 using Torch;
@@ -23,7 +23,8 @@ namespace AutoModerator
         GridLagTracker.IConfig,
         PlayerLagTracker.IConfig,
         LagWarningCollection.IConfig,
-        LagPunishmentExecutor.IConfig
+        LagPunishExecutor.IConfig,
+        LagPunishChatFeed.IConfig
     {
         const string OpGroupName = "Auto Moderator";
         const string OpGridGroupName = "Auto Moderator (Grids)";
@@ -51,7 +52,7 @@ namespace AutoModerator
         string _gridGpsNameFormat = "[{faction}] {grid} {ratio} ({time})";
         string _gridGpsDescriptionFormat = "The {rank} laggiest grid. Get 'em!";
         string _gpsColor = "#FF00FF";
-        List<ulong> _mutedPlayerIds = new List<ulong>();
+        List<ulong> _gpsMutedPlayerIds = new List<ulong>();
         List<string> _exemptFactionTags = new List<string>();
         bool _suppressWpfOutput;
         bool _enableLoggingTrace;
@@ -62,10 +63,12 @@ namespace AutoModerator
         string _warningDetailMustDelagSelfText = LagWarningDefaultTexts.MustDelagSelf;
         string _warningDetailMustWaitUnpinnedText = LagWarningDefaultTexts.MustWaitUnpinned;
         string _warningDetailEndedText = LagWarningDefaultTexts.Ended;
-        LagPunishmentType _punishmentType;
+        LagPunishType _punishType;
         double _damageNormal = 0.05d;
         string _warningCurrentLevelText = LagWarningDefaultTexts.CurrentLevel;
         double _minIntegrityNormal = 0.5d;
+        bool _enablePunishChatFeed = true;
+        string _punishReportChatFormat = "[{faction}] {player} \"{grid}\" ({level})";
 
         [XmlElement(nameof(FirstIdleTime))]
         [Display(Order = 2, Name = "First idle seconds", GroupName = OpGroupName,
@@ -76,15 +79,6 @@ namespace AutoModerator
             set => SetValue(ref _firstIdleTime, value);
         }
 
-        [XmlElement(nameof(MaxGridMspf))]
-        [Display(Order = 3, Name = "Max grid ms/f", GroupName = OpGridGroupName,
-            Description = "Allows N milliseconds per game loop for each grid to consume.")]
-        public double MaxGridMspf
-        {
-            get => _maxGridMspf;
-            set => SetValue(ref _maxGridMspf, Math.Max(value, 0.001f));
-        }
-
         [XmlElement(nameof(IntervalFrequency))]
         [Display(Order = 5, Name = "Interval frequency (seconds)", GroupName = OpGroupName,
             Description = "Profiles N seconds per interval.")]
@@ -92,6 +86,31 @@ namespace AutoModerator
         {
             get => _sampleFrequency;
             set => SetValue(ref _sampleFrequency, Math.Max(value, 5));
+        }
+
+        [XmlElement(nameof(IgnoreNpcFactions))]
+        [Display(Order = 10, Name = "Ignore NPC factions", GroupName = OpGroupName)]
+        public bool IgnoreNpcFactions
+        {
+            get => _exemptNpcFactions;
+            set => SetValue(ref _exemptNpcFactions, value);
+        }
+
+        [XmlElement(nameof(ExemptFactionTags))]
+        [Display(Order = 11, Name = "Exempt faction tags", GroupName = OpGroupName)]
+        public List<string> ExemptFactionTags
+        {
+            get => _exemptFactionTags;
+            set => SetValue(ref _exemptFactionTags, new HashSet<string>(value).ToList());
+        }
+
+        [XmlElement(nameof(MaxGridMspf))]
+        [Display(Order = 3, Name = "Max grid ms/f", GroupName = OpGridGroupName,
+            Description = "Allows N milliseconds per game loop for each grid to consume.")]
+        public double MaxGridMspf
+        {
+            get => _maxGridMspf;
+            set => SetValue(ref _maxGridMspf, Math.Max(value, 0.001f));
         }
 
         [XmlElement(nameof(GridWarningTime))]
@@ -210,12 +229,29 @@ namespace AutoModerator
             set => SetValue(ref _warningCurrentLevelText, value);
         }
 
-        [XmlElement(nameof(PunishmentType))]
+        [XmlElement(nameof(PunishType))]
         [Display(Order = 1, Name = "Punishment type", GroupName = PunishGroupName)]
-        public LagPunishmentType PunishmentType
+        public LagPunishType PunishType
         {
-            get => _punishmentType;
-            set => SetValue(ref _punishmentType, value);
+            get => _punishType;
+            set => SetValue(ref _punishType, value);
+        }
+
+        [XmlElement(nameof(EnablePunishChatFeed))]
+        [Display(Order = 2, Name = "Enable punishment chat", GroupName = PunishGroupName)]
+        public bool EnablePunishChatFeed
+        {
+            get => _enablePunishChatFeed;
+            set => SetValue(ref _enablePunishChatFeed, value);
+        }
+
+        [ConfigCommandIgnore]
+        [XmlElement(nameof(PunishReportChatFormat))]
+        [Display(Order = 3, Name = "Chat format", GroupName = PunishGroupName)]
+        public string PunishReportChatFormat
+        {
+            get => _punishReportChatFormat;
+            set => SetValue(ref _punishReportChatFormat, value);
         }
 
         [XmlElement(nameof(DamageNormalPerInterval))]
@@ -236,10 +272,10 @@ namespace AutoModerator
             set => SetValue(ref _minIntegrityNormal, value);
         }
 
-        [XmlElement(nameof(BroadcastAdminsOnly))]
+        [XmlElement(nameof(GpsAdminsOnly))]
         [Display(Order = 5, Name = "Broadcast to admins only", GroupName = BroadcastGroupName,
             Description = "Broadcasts GPS of laggy grids to admin players only.")]
-        public bool BroadcastAdminsOnly
+        public bool GpsAdminsOnly
         {
             get => _broadcastAdminsOnly;
             set => SetValue(ref _broadcastAdminsOnly, value);
@@ -254,9 +290,18 @@ namespace AutoModerator
             set => SetValue(ref _maxLaggyGpsCountPerScan, value);
         }
 
+        [XmlElement(nameof(GpsMutedPlayerIds))]
+        [Display(Order = 12, Name = "Muted players", GroupName = BroadcastGroupName,
+            Description = "Won't send chat or GPS to muted players.")]
+        public List<ulong> GpsMutedPlayerIds
+        {
+            get => _gpsMutedPlayerIds;
+            set => SetValue(ref _gpsMutedPlayerIds, new HashSet<ulong>(value).ToList());
+        }
+
         [ConfigCommandIgnore]
         [XmlElement(nameof(GpsNameFormat))]
-        [Display(Order = 7, Name = "GPS name format", GroupName = BroadcastGroupName)]
+        [Display(Order = 17, Name = "GPS name format", GroupName = BroadcastGroupName)]
         public string GpsNameFormat
         {
             get => _gridGpsNameFormat;
@@ -265,7 +310,7 @@ namespace AutoModerator
 
         [ConfigCommandIgnore]
         [XmlElement(nameof(GpsDescriptionFormat))]
-        [Display(Order = 8, Name = "GPS description format", GroupName = BroadcastGroupName)]
+        [Display(Order = 18, Name = "GPS description format", GroupName = BroadcastGroupName)]
         public string GpsDescriptionFormat
         {
             get => _gridGpsDescriptionFormat;
@@ -273,35 +318,11 @@ namespace AutoModerator
         }
 
         [XmlElement(nameof(GpsColorCode))]
-        [Display(Order = 9, Name = "GPS text color", GroupName = BroadcastGroupName)]
+        [Display(Order = 19, Name = "GPS text color", GroupName = BroadcastGroupName)]
         public string GpsColorCode
         {
             get => _gpsColor;
             set => SetValue(ref _gpsColor, value);
-        }
-
-        [XmlElement(nameof(IgnoreNpcFactions))]
-        [Display(Order = 10, Name = "Ignore NPC factions", GroupName = OpGroupName)]
-        public bool IgnoreNpcFactions
-        {
-            get => _exemptNpcFactions;
-            set => SetValue(ref _exemptNpcFactions, value);
-        }
-
-        [XmlElement(nameof(ExemptFactionTags))]
-        [Display(Order = 11, Name = "Exempt faction tags", GroupName = OpGroupName)]
-        public List<string> ExemptFactionTags
-        {
-            get => _exemptFactionTags;
-            set => SetValue(ref _exemptFactionTags, new HashSet<string>(value).ToList());
-        }
-
-        [XmlElement(nameof(MutedPlayerIds))]
-        [Display(Order = 12, Name = "Muted players", GroupName = BroadcastGroupName)]
-        public List<ulong> MutedPlayerIds
-        {
-            get => _mutedPlayerIds;
-            set => SetValue(ref _mutedPlayerIds, new HashSet<ulong>(value).ToList());
         }
 
         [ConfigCommandIgnore]
@@ -340,29 +361,29 @@ namespace AutoModerator
             set => SetValue(ref _logFilePath, value);
         }
 
-        IEnumerable<ulong> BroadcastListenerCollection.IConfig.MutedPlayers => _mutedPlayerIds;
+        IEnumerable<ulong> BroadcastListenerCollection.IConfig.GpsMutedPlayers => _gpsMutedPlayerIds;
 
         public void AddMutedPlayer(ulong mutedPlayerId)
         {
-            if (!_mutedPlayerIds.Contains(mutedPlayerId))
+            if (!_gpsMutedPlayerIds.Contains(mutedPlayerId))
             {
-                _mutedPlayerIds.Add(mutedPlayerId);
-                OnPropertyChanged(nameof(MutedPlayerIds));
+                _gpsMutedPlayerIds.Add(mutedPlayerId);
+                OnPropertyChanged(nameof(GpsMutedPlayerIds));
             }
         }
 
         public void RemoveMutedPlayer(ulong unmutedPlayerId)
         {
-            if (_mutedPlayerIds.Remove(unmutedPlayerId))
+            if (_gpsMutedPlayerIds.Remove(unmutedPlayerId))
             {
-                OnPropertyChanged(nameof(MutedPlayerIds));
+                OnPropertyChanged(nameof(GpsMutedPlayerIds));
             }
         }
 
         public void RemoveAllMutedPlayers()
         {
-            _mutedPlayerIds.Clear();
-            OnPropertyChanged(nameof(MutedPlayerIds));
+            _gpsMutedPlayerIds.Clear();
+            OnPropertyChanged(nameof(GpsMutedPlayerIds));
         }
 
         public bool IsFactionExempt(string factionTag)

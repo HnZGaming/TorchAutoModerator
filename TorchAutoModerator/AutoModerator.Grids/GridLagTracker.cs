@@ -38,29 +38,55 @@ namespace AutoModerator.Grids
         }
 
         static readonly ILogger Log = LogManager.GetCurrentClassLogger();
-        readonly IConfig _config;
         readonly EntityLagTracker _lagTracker;
-        readonly Dictionary<long, TrackedEntitySnapshot> _playerToLaggiestGrids;
+        readonly Dictionary<long, long> _ownerToLaggiestGrids;
 
         public GridLagTracker(IConfig config)
         {
-            _config = config;
-            _lagTracker = new EntityLagTracker(new BridgeConfig(_config));
-            _playerToLaggiestGrids = new Dictionary<long, TrackedEntitySnapshot>();
+            _lagTracker = new EntityLagTracker(new BridgeConfig(config));
+            _ownerToLaggiestGrids = new Dictionary<long, long>();
         }
 
         [MethodImpl(MethodImplOptions.Synchronized)]
-        public bool TryGetLaggiestGridOwnedBy(long ownerId, out TrackedEntitySnapshot ownedGridId)
+        public bool TryGetLaggiestGridOwnedBy(long ownerId, out TrackedEntitySnapshot grid)
         {
-            return _playerToLaggiestGrids.TryGetValue(ownerId, out ownedGridId);
+            grid = default;
+            return _ownerToLaggiestGrids.TryGetValue(ownerId, out var gridId) &&
+                   _lagTracker.TryGetTrackedEntity(gridId, out grid);
         }
 
         [MethodImpl(MethodImplOptions.Synchronized)]
         public IEnumerable<(long OwnerId, TrackedEntitySnapshot Grid)> GetPlayerLaggiestGrids(double maxLongLagNormal)
         {
-            return _playerToLaggiestGrids
-                .ToTuples()
-                .Where(p => p.Value.LongLagNormal > maxLongLagNormal);
+            foreach (var (ownerId, laggiestGridId) in _ownerToLaggiestGrids)
+            {
+                if (!_lagTracker.TryGetTrackedEntity(laggiestGridId, out var grid))
+                {
+                    Log.Warn($"grid deleted by player: {grid.Id} by {ownerId}");
+                    continue;
+                }
+
+                if (grid.LongLagNormal < maxLongLagNormal) continue;
+
+                yield return (ownerId, grid);
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.Synchronized)]
+        public IEnumerable<(long OwnerId, TrackedEntitySnapshot Grid)> GetPlayerPinnedGrids()
+        {
+            foreach (var (ownerId, laggiestGridId) in _ownerToLaggiestGrids)
+            {
+                if (!_lagTracker.TryGetTrackedEntity(laggiestGridId, out var grid))
+                {
+                    Log.Warn($"grid deleted by player: {grid.Id} by {ownerId}");
+                    continue;
+                }
+
+                if (grid.RemainingTime > TimeSpan.Zero) continue;
+
+                yield return (ownerId, grid);
+            }
         }
 
         [MethodImpl(MethodImplOptions.Synchronized)]
@@ -69,7 +95,7 @@ namespace AutoModerator.Grids
             Log.Debug("updating grid lags...");
 
             var lags = new List<EntityLagSnapshot>();
-            var gridToOwnerIds = new Dictionary<long, long>();
+            var latestLaggiestGridToOwnerIds = new Dictionary<long, long>();
             var ownerIds = new HashSet<long>();
 
             foreach (var (grid, profileEntity) in profileResult.GetTopEntities(50))
@@ -85,7 +111,7 @@ namespace AutoModerator.Grids
                 if (!ownerIds.Contains(ownerId)) // pick the laggiest grid
                 {
                     ownerIds.Add(ownerId);
-                    gridToOwnerIds.Add(grid.EntityId, ownerId);
+                    latestLaggiestGridToOwnerIds.Add(grid.EntityId, ownerId);
                 }
 
                 Log.Trace($"grid profiled: {grid.DisplayName} {mspf:0.00}ms/f");
@@ -94,11 +120,21 @@ namespace AutoModerator.Grids
             _lagTracker.Update(lags);
 
             // update owner -> laggiest grid map w/ latest state
-            foreach (var lag in _lagTracker.GetTrackedEntities(0))
+            foreach (var trackedGrid in _lagTracker.GetTrackedEntities(0))
             {
-                if (gridToOwnerIds.TryGetValue(lag.Id, out var ownerId))
+                if (latestLaggiestGridToOwnerIds.TryGetValue(trackedGrid.Id, out var ownerId))
                 {
-                    _playerToLaggiestGrids[ownerId] = lag;
+                    _ownerToLaggiestGrids[ownerId] = trackedGrid.Id;
+                }
+            }
+
+            var trackedGridIds = _lagTracker.GetTrackedEntityIds().ToSet();
+            foreach (var (ownerId, laggiestGridId) in _ownerToLaggiestGrids.ToArray())
+            {
+                if (!trackedGridIds.Contains(laggiestGridId))
+                {
+                    _ownerToLaggiestGrids.Remove(ownerId);
+                    Log.Trace($"removed untracked owner from owner map: {ownerId}");
                 }
             }
 
@@ -106,7 +142,7 @@ namespace AutoModerator.Grids
         }
 
         [MethodImpl(MethodImplOptions.Synchronized)]
-        public IEnumerable<TrackedEntitySnapshot> GetTopPins()
+        public IEnumerable<TrackedEntitySnapshot> GetPinnedGrids()
         {
             return _lagTracker.GetTopPins();
         }
@@ -115,7 +151,7 @@ namespace AutoModerator.Grids
         public void Clear()
         {
             _lagTracker.Clear();
-            _playerToLaggiestGrids.Clear();
+            _ownerToLaggiestGrids.Clear();
         }
     }
 }
