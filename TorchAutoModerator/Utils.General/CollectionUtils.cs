@@ -145,7 +145,7 @@ namespace Utils.General
             return false;
         }
 
-        public static IReadOnlyDictionary<K, V> ToDictionary<K, V>(this IEnumerable<(K, V)> self)
+        public static Dictionary<K, V> ToDictionary<K, V>(this IEnumerable<(K, V)> self)
         {
             return self.ToDictionary(p => p.Item1, p => p.Item2);
         }

@@ -147,6 +147,14 @@ namespace Utils.Torch
             return self.ManagedThreadId == MySandboxGame.Static.UpdateThread.ManagedThreadId;
         }
 
+        public static void ThrowIfNotSessionThread(this Thread self)
+        {
+            if (!self.IsSessionThread())
+            {
+                throw new Exception("not main thread");
+            }
+        }
+
         public static void SendAddGps(this MyGpsCollection self, long identityId, MyGps gps, bool playSound)
         {
             self.SendAddGps(identityId, ref gps, gps.EntityId, playSound);

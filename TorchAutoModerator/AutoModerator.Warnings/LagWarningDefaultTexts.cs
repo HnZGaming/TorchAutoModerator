@@ -8,14 +8,14 @@ namespace AutoModerator.Warnings
 
         public static string MustProfileSelf => ToString(new[]
         {
-            "Hello engineer, Auto Moderator here! We have detected an excessive level of L.A.G.S. particles from your assets!",
-            "L.A.G.S. can travel several light years and draw space pirates to your location!",
+            "Hello engineer, Auto Moderator here! We have detected an excessive density of L.A.G.S. particles around your assets!",
+            "L.A.G.S. is a highly electric substance that could damage your construction and lure in space pirates from afar!",
             "Scan yourself with this chat command right now:\n!lags scan",
         });
 
         public static string MustDelagSelf => ToString(new[]
         {
-            "You've successfully scanned yourself!",
+            "You've successfully scanned your constructions!",
             "Now, lower your L.A.G.S. level as much as possible!",
             "You may disable or reduce the number of suspicious blocks to start with.",
         });

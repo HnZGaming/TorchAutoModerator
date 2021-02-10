@@ -106,9 +106,9 @@ namespace AutoModerator.Grids
         }
 
         [MethodImpl(MethodImplOptions.Synchronized)]
-        public IEnumerable<(TrackedEntitySnapshot GridLag, int Rank)> GetTopPins()
+        public IEnumerable<TrackedEntitySnapshot> GetTopPins()
         {
-            return _lagTracker.GetTopPins().Indexed();
+            return _lagTracker.GetTopPins();
         }
 
         [MethodImpl(MethodImplOptions.Synchronized)]

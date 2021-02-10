@@ -5,6 +5,7 @@ using System.Xml.Serialization;
 using AutoModerator.Broadcasts;
 using AutoModerator.Grids;
 using AutoModerator.Players;
+using AutoModerator.Punishes;
 using AutoModerator.Warnings;
 using Sandbox.Game.World;
 using Torch;
@@ -21,7 +22,8 @@ namespace AutoModerator
         PlayerGpsSource.IConfig,
         GridLagTracker.IConfig,
         PlayerLagTracker.IConfig,
-        LagWarningCollection.IConfig
+        LagWarningCollection.IConfig,
+        LagPunishmentExecutor.IConfig
     {
         const string OpGroupName = "Auto Moderator";
         const string OpGridGroupName = "Auto Moderator (Grids)";
@@ -30,10 +32,11 @@ namespace AutoModerator
         const string GridBroadcastGroupName = "Broadcasting (Grids)";
         const string PlayerBroadcastGroupName = "Broadcasting (Players)";
         const string WarningGroupName = "Warnings";
-        const string LogGroupName = "Logging";
+        const string PunishGroupName = "Punishment";
+        const string LogGroupName = "_Logging_";
         public const string DefaultLogFilePath = "Logs/AutoModerator-${shortdate}.log";
 
-        bool _enableSelfModeration = true;
+        bool _enableWarning = true;
         double _firstIdleTime = 180;
         bool _enableGridBroadcasting = true;
         bool _enablePlayerBroadcasting = true;
@@ -46,7 +49,7 @@ namespace AutoModerator
         double _playerWarningTime = 300d;
         double _playerPinTime = 600d;
         double _sampleFrequency = 5;
-        double _selfModerationNormal = 0.7d;
+        double _warningNormal = 0.7d;
         bool _exemptNpcFactions = true;
         string _gridGpsNameFormat = "[{faction}] {grid} {ratio} ({time})";
         string _gridGpsDescriptionFormat = "The {rank} laggiest grid. Get 'em!";
@@ -64,6 +67,9 @@ namespace AutoModerator
         string _warningDetailMustDelagSelf = LagWarningDefaultTexts.MustDelagSelf;
         string _warningDetailMustWaitUnpinned = LagWarningDefaultTexts.MustWaitUnpinned;
         string _warningDetailEnded = LagWarningDefaultTexts.Ended;
+        LagPunishmentType _punishmentType;
+        double _damageNormal = 0.5d;
+        double _punishmentInitialIdleTime = 300d;
 
         [XmlElement("EnableGridBroadcasting")]
         [Display(Order = 0, Name = "Enable grid broadcast", GroupName = GridBroadcastGroupName)]
@@ -201,20 +207,20 @@ namespace AutoModerator
             set => SetValue(ref _gpsColor, value);
         }
 
-        [XmlElement("EnableSelfModeration")]
-        [Display(Order = 0, Name = "Enable self moderation", GroupName = WarningGroupName)]
-        public bool EnableSelfModeration
+        [XmlElement("EnableWarning")]
+        [Display(Order = 0, Name = "Enable warning", GroupName = WarningGroupName)]
+        public bool EnableWarning
         {
-            get => _enableSelfModeration;
-            set => SetValue(ref _enableSelfModeration, value);
+            get => _enableWarning;
+            set => SetValue(ref _enableWarning, value);
         }
 
-        [XmlElement("SelfModerationNormal")]
-        [Display(Order = 1, Name = "Self moderation normal", GroupName = WarningGroupName)]
-        public double SelfModerationNormal
+        [XmlElement("WarningNormal")]
+        [Display(Order = 1, Name = "Warning normal (0-1)", GroupName = WarningGroupName)]
+        public double WarningNormal
         {
-            get => _selfModerationNormal;
-            set => SetValue(ref _selfModerationNormal, value);
+            get => _warningNormal;
+            set => SetValue(ref _warningNormal, value);
         }
 
         [XmlElement("WarningTitle")]
@@ -255,6 +261,30 @@ namespace AutoModerator
         {
             get => _warningDetailEnded;
             set => SetValue(ref _warningDetailEnded, value);
+        }
+
+        [XmlElement("PunishmentInitialIdleTime")]
+        [Display(Order = 0, Name = "First idle time (seconds)", GroupName = PunishGroupName)]
+        public double PunishmentInitialIdleTime
+        {
+            get => _punishmentInitialIdleTime;
+            set => SetValue(ref _punishmentInitialIdleTime, value);
+        }
+
+        [XmlElement("PunishmentType")]
+        [Display(Order = 1, Name = "Punishment type", GroupName = PunishGroupName)]
+        public LagPunishmentType PunishmentType
+        {
+            get => _punishmentType;
+            set => SetValue(ref _punishmentType, value);
+        }
+
+        [XmlElement("DamageNormalPerInterval")]
+        [Display(Order = 2, Name = "Damage per interval (0-1)", GroupName = PunishGroupName)]
+        public double DamageNormalPerInterval
+        {
+            get => _damageNormal;
+            set => SetValue(ref _damageNormal, value);
         }
 
         [XmlElement("IgnoreNpcFactions")]
