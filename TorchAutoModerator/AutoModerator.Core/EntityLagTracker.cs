@@ -13,6 +13,7 @@ namespace AutoModerator.Core
         public interface IConfig
         {
             double LagThreshold { get; }
+            int SafetyInterval { get; }
             TimeSpan PinWindow { get; }
             TimeSpan PinLifeSpan { get; }
             bool IsFactionExempt(string factionTag);
@@ -123,9 +124,9 @@ namespace AutoModerator.Core
                 .Zip(_pinnedIds.ToDictionary());
 
             var snapshots = new List<TrackedEntitySnapshot>();
-            foreach (var (entityId, (longNormal, remainingTime)) in zip)
+            foreach (var (entityId, (longLagNormal, remainingTime)) in zip)
             {
-                var snapshot = new TrackedEntitySnapshot(entityId, longNormal, remainingTime);
+                var snapshot = new TrackedEntitySnapshot(entityId, longLagNormal, remainingTime);
                 snapshots.Add(snapshot);
             }
 
@@ -138,8 +139,8 @@ namespace AutoModerator.Core
             var snapshots = new List<TrackedEntitySnapshot>();
             foreach (var (entityId, remainingTime) in _pinnedIds.GetRemainingTimes())
             {
-                var longNormal = TryGetLongLagNormal(entityId, out var n) ? n : 0d;
-                var snapshot = new TrackedEntitySnapshot(entityId, longNormal, remainingTime);
+                var longLagNormal = TryGetLongLagNormal(entityId, out var n) ? n : 0d;
+                var snapshot = new TrackedEntitySnapshot(entityId, longLagNormal, remainingTime);
                 snapshots.Add(snapshot);
             }
 
@@ -158,38 +159,53 @@ namespace AutoModerator.Core
             var normals = new List<(long, double)>();
             foreach (var (entityId, timeSeries) in _lagTimeSeries.GetAllTimeSeries())
             {
-                var lagNormal = CalcLongLagNormal(timeSeries);
-                if (lagNormal > minNormal)
+                var longLagNormal = CalcLongLagNormal(timeSeries);
+                if (longLagNormal > minNormal)
                 {
-                    normals.Add((entityId, lagNormal));
+                    normals.Add((entityId, longLagNormal));
                 }
             }
 
             return normals;
         }
 
-        bool TryGetLongLagNormal(long entityId, out double normal)
+        bool TryGetLongLagNormal(long entityId, out double longLagNormal)
         {
             if (_lagTimeSeries.TryGetTimeSeries(entityId, out var timeSeries))
             {
-                normal = CalcLongLagNormal(timeSeries);
+                longLagNormal = CalcLongLagNormal(timeSeries);
                 return true;
             }
 
-            normal = 0d;
+            longLagNormal = 0d;
             return false;
         }
 
+        // returning 1.0 (or higher) will make the tracker pin the entity
         double CalcLongLagNormal(ITimeSeries<double> timeSeries)
         {
             if (timeSeries.Count == 0) return 0;
 
+            // don't evaluate until sufficient data is available
+            var oldestTimestamp = timeSeries[0].Timestamp;
+            var minTimestamp = DateTime.UtcNow - _config.PinWindow;
+            if (oldestTimestamp > minTimestamp) return 0;
+
             var sumNormal = 0d;
             var sumCount = 0;
-            for (var i = timeSeries.Count - 1; i >= 0; i--)
+            var consecutiveLaggyFrameCount = 0;
+            for (var i = 0; i < timeSeries.Count; i++)
             {
-                // if you wanna do something complex you might use the timestamp
                 var (timestamp, normal) = timeSeries[i];
+
+                if (normal < 1)
+                {
+                    consecutiveLaggyFrameCount = 0;
+                }
+                else if (consecutiveLaggyFrameCount++ < _config.SafetyInterval)
+                {
+                    normal = 1; // flatten to 1 if it's potentially a server hiccup
+                }
 
                 sumNormal += normal;
                 sumCount += 1;
