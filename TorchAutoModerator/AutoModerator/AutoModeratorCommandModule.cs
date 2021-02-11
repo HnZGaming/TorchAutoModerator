@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using NLog;
 using Profiler.Basics;
 using Profiler.Core;
+using Sandbox.Game.Entities;
 using Torch.Commands;
 using Torch.Commands.Permissions;
 using Utils.General;
@@ -107,7 +108,7 @@ namespace AutoModerator
             Plugin.ClearQuestForUser(Context.Player.IdentityId);
         });
 
-        [Command("scan", "Self-profiler for players. `-this` to profile the seated grid.")]
+        [Command("scan", "Self-profiler for players. `-this` or `-name=` to profile a specific grid.")]
         [Permission(MyPromoteLevel.None)]
         public void ProfilePlayer() => this.CatchAndReport(async () =>
         {
@@ -124,15 +125,34 @@ namespace AutoModerator
 
                 if (option.IsParameterless("this"))
                 {
-                    var grid = Context.Player?.Controller?.ControlledEntity?.Entity;
-                    if (grid == null)
+                    if (Context.Player.TryGetSelectedGrid(out var grid))
                     {
-                        Context.Respond("You're not sitting in a control seat", Color.Red);
-                        return;
+                        if (!grid.BigOwners.TryGetFirst(out var ownerId) ||
+                            ownerId != playerId)
+                        {
+                            Context.Respond($"Not your grid: {grid.DisplayName}", Color.Red);
+                            return;
+                        }
+
+                        gridId = grid.EntityId;
+                        continue;
                     }
 
-                    gridId = grid.EntityId;
-                    continue;
+                    Context.Respond("Grid not found", Color.Red);
+                    return;
+                }
+
+                if (option.TryParse("name", out var name))
+                {
+                    if (MyEntities.TryGetEntityByName(name, out var entity) &&
+                        entity is MyCubeGrid grid)
+                    {
+                        gridId = grid.EntityId;
+                        continue;
+                    }
+
+                    Context.Respond($"Grid not found by name: {name}", Color.Red);
+                    return;
                 }
 
                 if (option.TryParseInt("time", out var time))

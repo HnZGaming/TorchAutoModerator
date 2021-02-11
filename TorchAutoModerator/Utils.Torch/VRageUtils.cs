@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using Sandbox;
+using Sandbox.Engine.Physics;
 using Sandbox.Game.Entities;
 using Sandbox.Game.Multiplayer;
 using Sandbox.Game.Screens.Helpers;
@@ -232,6 +233,33 @@ namespace Utils.Torch
         public static string GetEntityNameOrElse(long entityId, string defaultName)
         {
             return MyEntities.TryGetEntityById(entityId, out var e) ? e.DisplayName : defaultName;
+        }
+
+        public static bool TryGetSelectedGrid(this IMyPlayer self, out MyCubeGrid selectedGrid)
+        {
+            if (self.Controller?.ControlledEntity?.Entity is MyCubeGrid seatedGrid)
+            {
+                selectedGrid = seatedGrid;
+                return true;
+            }
+
+            var from = self.GetPosition();
+            var vec = (self.Character.AimedPoint - from).Normalize();
+            var to = from + vec * 1000;
+            var hits = new List<MyPhysics.HitInfo>();
+            MyPhysics.CastRay(from, to, hits);
+            foreach (var hit in hits)
+            {
+                var hitEntity = hit.HkHitInfo.GetHitEntity();
+                if (hitEntity is MyCubeGrid hitGrid)
+                {
+                    selectedGrid = hitGrid;
+                    return true;
+                }
+            }
+
+            selectedGrid = null;
+            return false;
         }
     }
 }
