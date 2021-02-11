@@ -74,5 +74,13 @@ namespace Utils.TimeSerieses
         {
             _timeSeriesMap.Remove(key);
         }
+
+        public void RemoveSeriesRange(IEnumerable<T> keys)
+        {
+            foreach (var key in keys)
+            {
+                _timeSeriesMap.Remove(key);
+            }
+        }
     }
 }

@@ -22,8 +22,8 @@ namespace Utils.TimeSerieses.Test
             var nextCount = timeSeries.Count;
             Assert.AreEqual(2, nextCount);
 
-            Assert.AreEqual(1, timeSeries.GetPointAt(0).Element);
-            Assert.AreEqual(2, timeSeries.GetPointAt(1).Element);
+            Assert.AreEqual(1, timeSeries[0].Element);
+            Assert.AreEqual(2, timeSeries[1].Element);
         }
     }
 }

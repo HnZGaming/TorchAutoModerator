@@ -175,7 +175,6 @@
         <Compile Include="AutoModerator.Warnings\LagWarningCollection.cs" />
         <Compile Include="AutoModerator.Punishes.Broadcasts\GpsUtils.cs" />
         <Compile Include="AutoModerator.Punishes.Broadcasts\EntityGpsBroadcaster.cs" />
-        <Compile Include="AutoModerator.Core\EntityLagTimeSeries.cs" />
         <Compile Include="AutoModerator.Core\EntityLagTracker.cs" />
         <Compile Include="AutoModerator.Core\EntityLagSnapshot.cs" />
         <Compile Include="AutoModerator.Core\ExpiryDictionary.cs" />

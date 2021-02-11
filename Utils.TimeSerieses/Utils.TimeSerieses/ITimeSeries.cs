@@ -1,12 +1,10 @@
 ﻿using System;
+using System.Collections.Generic;
 
 namespace Utils.TimeSerieses
 {
-    public interface ITimeSeries<T>
+    public interface ITimeSeries<T> : IReadOnlyList<Timestamped<T>>
     {
-        int Count { get; }
         TimeSpan Length { get; }
-        Timestamped<T> GetPointAt(int index);
-        bool IsAll(T element);
     }
 }
