@@ -142,13 +142,14 @@ namespace AutoModerator
                         if (playerId == 0) continue; // grid not owned
 
                         var playerName = MySession.Static.Players.GetPlayerNameOrElse(playerId, $"<{playerId}>");
+                        var usePins = Config.PunishType != LagPunishType.None;
 
                         var src = new LagWarningSource(
                             playerId, playerName,
                             player.LongLagNormal / Config.WarningNormal,
-                            player.RemainingTime,
+                            usePins ? player.RemainingTime : TimeSpan.Zero,
                             grid.LongLagNormal / Config.WarningNormal,
-                            grid.RemainingTime);
+                            usePins ? grid.RemainingTime : TimeSpan.Zero);
 
                         sources.Add(src);
                     }

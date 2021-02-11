@@ -117,7 +117,7 @@ namespace AutoModerator.Warnings
                 }
                 else if (!laggyPlayer.IsPinned && playerState.Quest == QuestState.MustWaitUnpinned)
                 {
-                    playerState.Quest = QuestState.Ended;
+                    playerState.Quest = lag >= 1f ? QuestState.MustDelagSelf : QuestState.Ended;
                     UpdateQuestLog(playerState.Quest, playerId);
                 }
 
