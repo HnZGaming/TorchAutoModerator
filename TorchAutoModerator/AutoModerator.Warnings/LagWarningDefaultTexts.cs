@@ -9,29 +9,27 @@ namespace AutoModerator.Warnings
 
         public static string MustProfileSelf => ToString(new[]
         {
-            "Hello engineer, Auto Moderator here! We have detected an excessive density of L.A.G. particles around your assets!",
-            "L.A.G. is a highly electric substance that could damage your construction and lure in space pirates from afar!",
-            "Scan yourself with this chat command right now:\n!lags scan",
+            "Hello engineer, be advised! We have detected a critical level of L.A.G. particles around your assets!",
+            "L.A.G. is highly corrosive substance that could do all sorts of harm if you keep them around!",
+            "Scan yourself with this chat command right now:\n!lag scan",
         });
 
         public static string MustDelagSelf => ToString(new[]
         {
-            "You've successfully scanned your constructions!",
-            "Now, lower your L.A.G. level as much as possible!",
-            "You may disable or reduce the number of suspicious blocks to start with.",
+            "You've successfully scanned your L.A.G. level!",
+            "To lower your L.A.G. level, you may disable or reduce the number of suspicious blocks.",
+            "To scan your current L.A.G. level, type in \"!lag scan\" anytime you want!",
         });
 
         public static string MustWaitUnpinned => ToString(new[]
         {
-            "Oh no! I'm afraid but your location is known by everyone by now...",
-            "We can't help you at this point!",
-            "Defend yourself until your L.A.G. particles are eliminated!",
+            "OH NO! I'm afraid but L.A.G. is taking over your assets... We can't help you at this point!",
+            "You can still try to lower your L.A.G. level so you can recover faster!",
         });
 
         public static string Ended => ToString(new[]
         {
-            "Congratulations! Your L.A.G. level is now sufficiently low.",
-            "Space pirates can't find you anymore!",
+            "Congratulations! Your L.A.G. level is now sufficiently low. You'll be safe!",
             "I'll see myself out -- safe travel, fellow engineer!"
         });
 
