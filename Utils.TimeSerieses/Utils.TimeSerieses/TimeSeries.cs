@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -15,17 +16,19 @@ namespace Utils.TimeSerieses
             _elements = new List<T>();
         }
 
+        public Timestamped<T> this[int index] => new Timestamped<T>(_timestamps[index], _elements[index]);
+
         public int Count => _timestamps.Count;
         public TimeSpan Length => GetLength();
 
-        public Timestamped<T> GetPointAt(int index)
+        public IEnumerator<Timestamped<T>> GetEnumerator()
         {
-            return new Timestamped<T>(_timestamps[index], _elements[index]);
+            return _timestamps.Zip(_elements, (t, e) => new Timestamped<T>(t, e)).GetEnumerator();
         }
 
-        public bool IsAll(T element)
+        IEnumerator IEnumerable.GetEnumerator()
         {
-            return _elements.All(e => e.Equals(element));
+            return GetEnumerator();
         }
 
         TimeSpan GetLength()

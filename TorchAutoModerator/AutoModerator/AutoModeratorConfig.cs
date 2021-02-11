@@ -69,6 +69,7 @@ namespace AutoModerator
         double _minIntegrityNormal = 0.5d;
         bool _enablePunishChatFeed = true;
         string _punishReportChatFormat = "[{faction}] {player} \"{grid}\" ({level})";
+        int _safetyInterval = 1;
 
         [XmlElement(nameof(FirstIdleTime))]
         [Display(Order = 2, Name = "First idle seconds", GroupName = OpGroupName,
@@ -86,6 +87,15 @@ namespace AutoModerator
         {
             get => _sampleFrequency;
             set => SetValue(ref _sampleFrequency, Math.Max(value, 5));
+        }
+
+        [XmlElement(nameof(SafetyInterval))]
+        [Display(Order = 6, Name = "Safety interval", GroupName = OpGroupName,
+            Description = "Ignores up to N consecutive frames where a grid/player is potentially \"laggy by accident\".")]
+        public int SafetyInterval
+        {
+            get => _safetyInterval;
+            set => SetValue(ref _safetyInterval, value);
         }
 
         [XmlElement(nameof(IgnoreNpcFactions))]
@@ -264,7 +274,7 @@ namespace AutoModerator
         }
 
         [XmlElement(nameof(MinIntegrityNormal))]
-        [Display(Order = 2, Name = "Integrity normal to stop damage (0-1)", GroupName = DamageGroupName,
+        [Display(Order = 2, Name = "Lowest integrity normal (0-1)", GroupName = DamageGroupName,
             Description = "Applies damage to subject blocks until reaching N times integrity.")]
         public double MinIntegrityNormal
         {
