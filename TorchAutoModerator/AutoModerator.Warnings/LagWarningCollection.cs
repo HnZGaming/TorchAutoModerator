@@ -15,6 +15,7 @@ namespace AutoModerator.Warnings
     {
         public interface IConfig
         {
+            double WarningLagNormal { get; }
             string WarningTitle { get; }
             string WarningDetailMustProfileSelfText { get; }
             string WarningDetailMustDelagSelfText { get; }
@@ -75,7 +76,7 @@ namespace AutoModerator.Warnings
         public void Update(IEnumerable<LagWarningSource> players)
         {
             var laggyPlayers = players
-                .Where(p => p.LongLagNormal > 1 || p.IsPinned)
+                .Where(p => p.LongLagNormal >= _config.WarningLagNormal || p.IsPinned)
                 .ToArray();
 
             foreach (var laggyPlayer in laggyPlayers)
@@ -105,19 +106,19 @@ namespace AutoModerator.Warnings
                     playerState.Quest = QuestState.MustWaitUnpinned;
                     UpdateQuestLog(playerState.Quest, playerId);
                 }
-                else if (lag < 1f && playerState.Quest <= QuestState.MustDelagSelf)
+                else if (!(lag > _config.WarningLagNormal) && playerState.Quest <= QuestState.MustDelagSelf)
                 {
                     playerState.Quest = QuestState.Ended;
                     UpdateQuestLog(playerState.Quest, playerId);
                 }
-                else if (lag >= 1f && playerState.Quest >= QuestState.Ended)
+                else if (lag > _config.WarningLagNormal && playerState.Quest >= QuestState.Ended)
                 {
                     playerState.Quest = QuestState.MustProfileSelf;
                     UpdateQuestLog(playerState.Quest, playerId);
                 }
                 else if (!laggyPlayer.IsPinned && playerState.Quest == QuestState.MustWaitUnpinned)
                 {
-                    playerState.Quest = lag >= 1f ? QuestState.MustDelagSelf : QuestState.Ended;
+                    playerState.Quest = lag > _config.WarningLagNormal ? QuestState.MustDelagSelf : QuestState.Ended;
                     UpdateQuestLog(playerState.Quest, playerId);
                 }
 
@@ -163,7 +164,7 @@ namespace AutoModerator.Warnings
                 var lagNormal = state.Latest.LongLagNormal;
                 if (state.Quest <= QuestState.MustProfileSelf)
                 {
-                    state.Quest = lagNormal >= 1f
+                    state.Quest = lagNormal >= _config.WarningLagNormal
                         ? QuestState.MustDelagSelf
                         : QuestState.MustWaitUnpinned;
                     UpdateQuestLog(state.Quest, playerId);

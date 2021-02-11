@@ -134,8 +134,8 @@ namespace AutoModerator
 
                 if (Config.EnableWarning)
                 {
-                    var players = _laggyPlayers.GetTrackedEntities(Config.WarningNormal).ToDictionary(p => p.Id);
-                    var grids = _laggyGrids.GetPlayerLaggiestGrids(Config.WarningNormal).ToDictionary();
+                    var players = _laggyPlayers.GetTrackedEntities(Config.WarningLagNormal).ToDictionary(p => p.Id);
+                    var grids = _laggyGrids.GetPlayerLaggiestGrids(Config.WarningLagNormal).ToDictionary();
                     var sources = new List<LagWarningSource>();
                     foreach (var (playerId, (player, grid)) in players.Zip(grids))
                     {
@@ -146,9 +146,9 @@ namespace AutoModerator
 
                         var src = new LagWarningSource(
                             playerId, playerName,
-                            player.LongLagNormal / Config.WarningNormal,
+                            player.LongLagNormal,
                             usePins ? player.RemainingTime : TimeSpan.Zero,
-                            grid.LongLagNormal / Config.WarningNormal,
+                            grid.LongLagNormal,
                             usePins ? grid.RemainingTime : TimeSpan.Zero);
 
                         sources.Add(src);

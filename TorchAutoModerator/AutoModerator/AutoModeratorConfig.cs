@@ -166,10 +166,10 @@ namespace AutoModerator
             set => SetValue(ref _enableWarning, value);
         }
 
-        [XmlElement(nameof(WarningNormal))]
+        [XmlElement(nameof(WarningLagNormal))]
         [Display(Order = 1, Name = "Normal (0-1)", GroupName = WarningGroupName,
             Description = "Send a warning to players when they exceed N times the max allowed lag per grid or player.")]
-        public double WarningNormal
+        public double WarningLagNormal
         {
             get => _warningNormal;
             set => SetValue(ref _warningNormal, value);
