@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using MathNet.Numerics.Statistics;
 using NLog;
 using Utils.General;
 using Utils.TimeSerieses;
@@ -12,9 +13,9 @@ namespace AutoModerator.Core
     {
         public interface IConfig
         {
-            double LagThreshold { get; }
-            TimeSpan SafetySpan { get; }
+            double MaxLag { get; }
             TimeSpan TrackingSpan { get; }
+            double OutlierFenceNormal { get; }
             TimeSpan PinLifeSpan { get; }
             bool IsFactionExempt(string factionTag);
         }
@@ -44,7 +45,7 @@ namespace AutoModerator.Core
             var now = DateTime.UtcNow;
             foreach (var lag in entityLags)
             {
-                var lagNormal = lag.LagMspf / _config.LagThreshold;
+                var lagNormal = lag.LagMspf / _config.MaxLag;
                 _lagTimeSeries.AddPoint(lag.EntityId, now, lagNormal);
             }
 
@@ -191,25 +192,22 @@ namespace AutoModerator.Core
             var minTimestamp = DateTime.UtcNow - _config.TrackingSpan;
             if (oldestTimestamp > minTimestamp) return 0;
 
+            var mean = timeSeries.Elements.Mean();
+            var stdev = timeSeries.Elements.StandardDeviation();
+
             var sumNormal = 0d;
-            var firstLaggyTimestamp = (DateTime?) null;
             foreach (var (timestamp, normal) in timeSeries)
             {
                 if (normal < 1)
                 {
-                    firstLaggyTimestamp = null;
                     sumNormal += normal;
                     continue;
                 }
 
-                if (!firstLaggyTimestamp.HasValue)
+                var test = (normal - mean) / stdev;
+                if (test > _config.OutlierFenceNormal)
                 {
-                    firstLaggyTimestamp = timestamp;
-                }
-
-                if (timestamp - firstLaggyTimestamp < _config.SafetySpan)
-                {
-                    sumNormal += 1; // flatten to 1 if it's potentially a server hiccup
+                    sumNormal += 1;
                     continue;
                 }
 

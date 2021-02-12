@@ -19,7 +19,7 @@ namespace AutoModerator.Grids
             double MaxGridMspf { get; }
             double GridTrackingTime { get; }
             double GridPunishTime { get; }
-            double SafetyTime { get; }
+            double OutlierFenceNormal { get; }
             bool IsFactionExempt(string factionTag);
         }
 
@@ -32,8 +32,8 @@ namespace AutoModerator.Grids
                 _masterConfig = masterConfig;
             }
 
-            public double LagThreshold => _masterConfig.MaxGridMspf;
-            public TimeSpan SafetySpan => _masterConfig.SafetyTime.Seconds();
+            public double MaxLag => _masterConfig.MaxGridMspf;
+            public double OutlierFenceNormal=> _masterConfig.OutlierFenceNormal;
             public TimeSpan TrackingSpan => _masterConfig.GridTrackingTime.Seconds();
             public TimeSpan PinLifeSpan => _masterConfig.GridPunishTime.Seconds();
             public bool IsFactionExempt(string factionTag) => _masterConfig.IsFactionExempt(factionTag);

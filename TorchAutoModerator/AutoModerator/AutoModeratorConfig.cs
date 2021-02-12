@@ -69,7 +69,7 @@ namespace AutoModerator
         double _minIntegrityNormal = 0.5d;
         bool _enablePunishChatFeed = true;
         string _punishReportChatFormat = "[{faction}] {player} \"{grid}\" ({level})";
-        double _safetyTime = 1;
+        double _outlierFenceNormal = 1;
 
         [XmlElement(nameof(FirstIdleTime))]
         [Display(Order = 2, Name = "First idle seconds", GroupName = OpGroupName,
@@ -89,13 +89,13 @@ namespace AutoModerator
             set => SetValue(ref _sampleFrequency, Math.Max(value, 5));
         }
 
-        [XmlElement(nameof(SafetyTime))]
-        [Display(Order = 6, Name = "Safety interval", GroupName = OpGroupName,
-            Description = "Ignores up to N seconds in case a grid/player is potentially laggy by accident.")]
-        public double SafetyTime
+        [XmlElement(nameof(OutlierFenceNormal))]
+        [Display(Order = 6, Name = "Outlier fence (0-1)", GroupName = OpGroupName,
+            Description = "Ignores lags N times larger than the standard deviation of given grid/player's timeline.")]
+        public double OutlierFenceNormal
         {
-            get => _safetyTime;
-            set => SetValue(ref _safetyTime, value);
+            get => _outlierFenceNormal;
+            set => SetValue(ref _outlierFenceNormal, value);
         }
 
         [XmlElement(nameof(IgnoreNpcFactions))]
@@ -177,7 +177,7 @@ namespace AutoModerator
         }
 
         [XmlElement(nameof(WarningLagNormal))]
-        [Display(Order = 1, Name = "Normal (0-1)", GroupName = WarningGroupName,
+        [Display(Order = 1, Name = "Lag threshold (0-1)", GroupName = WarningGroupName,
             Description = "Send a warning to players when they exceed N times the max allowed lag per grid or player.")]
         public double WarningLagNormal
         {
