@@ -69,7 +69,7 @@ namespace AutoModerator
         double _minIntegrityNormal = 0.5d;
         bool _enablePunishChatFeed = true;
         string _punishReportChatFormat = "[{faction}] {player} \"{grid}\" ({level})";
-        int _safetyInterval = 1;
+        double _safetyTime = 1;
 
         [XmlElement(nameof(FirstIdleTime))]
         [Display(Order = 2, Name = "First idle seconds", GroupName = OpGroupName,
@@ -89,13 +89,13 @@ namespace AutoModerator
             set => SetValue(ref _sampleFrequency, Math.Max(value, 5));
         }
 
-        [XmlElement(nameof(SafetyInterval))]
+        [XmlElement(nameof(SafetyTime))]
         [Display(Order = 6, Name = "Safety interval", GroupName = OpGroupName,
-            Description = "Ignores up to N consecutive frames where a grid/player is potentially \"laggy by accident\".")]
-        public int SafetyInterval
+            Description = "Ignores up to N seconds in case a grid/player is potentially laggy by accident.")]
+        public double SafetyTime
         {
-            get => _safetyInterval;
-            set => SetValue(ref _safetyInterval, value);
+            get => _safetyTime;
+            set => SetValue(ref _safetyTime, value);
         }
 
         [XmlElement(nameof(IgnoreNpcFactions))]
@@ -123,10 +123,10 @@ namespace AutoModerator
             set => SetValue(ref _maxGridMspf, Math.Max(value, 0.001f));
         }
 
-        [XmlElement(nameof(GridWarningTime))]
-        [Display(Order = 6, Name = "Warning time (seconds)", GroupName = OpGridGroupName,
+        [XmlElement(nameof(GridTrackingTime))]
+        [Display(Order = 6, Name = "Tracking time (seconds)", GroupName = OpGridGroupName,
             Description = "Gives players a chance of N seconds before the punishment of per-grid lag violation.")]
-        public double GridWarningTime
+        public double GridTrackingTime
         {
             get => _gridWarningTime;
             set => SetValue(ref _gridWarningTime, value);
@@ -150,10 +150,10 @@ namespace AutoModerator
             set => SetValue(ref _maxPlayerMspf, value);
         }
 
-        [XmlElement(nameof(PlayerWarningTime))]
-        [Display(Order = 6, Name = "Warning time (seconds)", GroupName = OpPlayerGroupName,
+        [XmlElement(nameof(PlayerTrackingTime))]
+        [Display(Order = 6, Name = "Tracking time (seconds)", GroupName = OpPlayerGroupName,
             Description = "Gives players a chance of N seconds before the punishment of per-player lag violation.")]
-        public double PlayerWarningTime
+        public double PlayerTrackingTime
         {
             get => _playerWarningTime;
             set => SetValue(ref _playerWarningTime, value);

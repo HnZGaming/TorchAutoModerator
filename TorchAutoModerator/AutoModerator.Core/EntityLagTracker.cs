@@ -13,8 +13,8 @@ namespace AutoModerator.Core
         public interface IConfig
         {
             double LagThreshold { get; }
-            int SafetyInterval { get; }
-            TimeSpan PinWindow { get; }
+            TimeSpan SafetySpan { get; }
+            TimeSpan TrackingSpan { get; }
             TimeSpan PinLifeSpan { get; }
             bool IsFactionExempt(string factionTag);
         }
@@ -50,28 +50,28 @@ namespace AutoModerator.Core
 
             // append zero to time series that didn't have new input
             var profiledEntityIdSet = entityLags.Select(r => r.EntityId).ToSet();
-            foreach (var existingGridId in _lagTimeSeries.Tags)
+            foreach (var existingEntityId in _lagTimeSeries.Tags)
             {
-                if (!profiledEntityIdSet.Contains(existingGridId))
+                if (!profiledEntityIdSet.Contains(existingEntityId))
                 {
-                    _lagTimeSeries.AddPoint(existingGridId, now, 0);
+                    _lagTimeSeries.AddPoint(existingEntityId, now, 0);
                 }
             }
 
-            // keep track of laggy grids & lifespan
-            var laggyGridIds = GetLongLagNormals(1d).Select(p => p.EntityId).ToArray();
-            _pinnedIds.AddOrUpdate(laggyGridIds, _config.PinLifeSpan);
+            // keep track of laggy entities & lifespan
+            var laggyEntityIds = GetLongLagNormals(1d).Select(p => p.EntityId).ToArray();
+            _pinnedIds.AddOrUpdate(laggyEntityIds, _config.PinLifeSpan);
 
             // clean up old data
             _pinnedIds.RemoveExpired();
-            _lagTimeSeries.RemovePointsOlderThan(DateTime.UtcNow - _config.PinWindow);
+            _lagTimeSeries.RemovePointsOlderThan(DateTime.UtcNow - _config.TrackingSpan);
 
-            var quietGridIds = _lagTimeSeries
+            var quietEntityIds = _lagTimeSeries
                 .GetAllTimeSeries()
                 .Where(p => p.TimeSeries.All(t => t.Element == 0d))
                 .Select(p => p.Key);
 
-            _lagTimeSeries.RemoveSeriesRange(quietGridIds);
+            _lagTimeSeries.RemoveSeriesRange(quietEntityIds);
 
             // for debugging
             foreach (var lag in entityLags)
@@ -81,15 +81,15 @@ namespace AutoModerator.Core
 
             if (Log.IsTraceEnabled)
             {
-                foreach (var grid in GetTrackedEntities(.5d))
+                foreach (var entity in GetTrackedEntities(.5d))
                 {
-                    var name = _names.GetOrElse(grid.Id, $"{grid.Id}");
-                    Log.Trace($"entity lag: \"{name}\" -> {grid.LongLagNormal * 100:0}% {grid.RemainingTime.TotalSeconds:0}s");
+                    var name = _names.GetOrElse(entity.Id, $"{entity.Id}");
+                    Log.Trace($"entity lag: \"{name}\" -> {entity.LongLagNormal * 100:0}% {entity.RemainingTime.TotalSeconds:0}s");
                 }
             }
 
             Log.Debug($"{entityLags.Count(s => s.LagMspf >= 1f)} laggy entities");
-            Log.Debug($"{_pinnedIds.Count} pinned entities (new: {laggyGridIds.Length})");
+            Log.Debug($"{_pinnedIds.Count} pinned entities (new: {laggyEntityIds.Length})");
         }
 
         [MethodImpl(MethodImplOptions.Synchronized)]
@@ -188,30 +188,35 @@ namespace AutoModerator.Core
 
             // don't evaluate until sufficient data is available
             var oldestTimestamp = timeSeries[0].Timestamp;
-            var minTimestamp = DateTime.UtcNow - _config.PinWindow;
+            var minTimestamp = DateTime.UtcNow - _config.TrackingSpan;
             if (oldestTimestamp > minTimestamp) return 0;
 
             var sumNormal = 0d;
-            var sumCount = 0;
-            var consecutiveLaggyFrameCount = 0;
-            for (var i = 0; i < timeSeries.Count; i++)
+            var firstLaggyTimestamp = (DateTime?) null;
+            foreach (var (timestamp, normal) in timeSeries)
             {
-                var (timestamp, normal) = timeSeries[i];
-
                 if (normal < 1)
                 {
-                    consecutiveLaggyFrameCount = 0;
+                    firstLaggyTimestamp = null;
+                    sumNormal += normal;
+                    continue;
                 }
-                else if (consecutiveLaggyFrameCount++ < _config.SafetyInterval)
+
+                if (!firstLaggyTimestamp.HasValue)
                 {
-                    normal = 1; // flatten to 1 if it's potentially a server hiccup
+                    firstLaggyTimestamp = timestamp;
+                }
+
+                if (timestamp - firstLaggyTimestamp < _config.SafetySpan)
+                {
+                    sumNormal += 1; // flatten to 1 if it's potentially a server hiccup
+                    continue;
                 }
 
                 sumNormal += normal;
-                sumCount += 1;
             }
 
-            var avgNormal = sumNormal / sumCount;
+            var avgNormal = sumNormal / timeSeries.Count;
             return avgNormal;
         }
     }

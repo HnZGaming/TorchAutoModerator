@@ -14,9 +14,9 @@ namespace AutoModerator.Players
         public interface IConfig
         {
             double MaxPlayerMspf { get; }
-            double PlayerWarningTime { get; }
+            double PlayerTrackingTime { get; }
             double PlayerPunishTime { get; }
-            int SafetyInterval { get; set; }
+            double SafetyTime { get; }
             bool IsFactionExempt(string factionTag);
         }
 
@@ -30,8 +30,8 @@ namespace AutoModerator.Players
             }
 
             public double LagThreshold => _masterConfig.MaxPlayerMspf;
-            public int SafetyInterval => _masterConfig.SafetyInterval;
-            public TimeSpan PinWindow => _masterConfig.PlayerWarningTime.Seconds();
+            public TimeSpan SafetySpan => _masterConfig.SafetyTime.Seconds();
+            public TimeSpan TrackingSpan => _masterConfig.PlayerTrackingTime.Seconds();
             public TimeSpan PinLifeSpan => _masterConfig.PlayerPunishTime.Seconds();
             public bool IsFactionExempt(string factionTag) => _masterConfig.IsFactionExempt(factionTag);
         }
