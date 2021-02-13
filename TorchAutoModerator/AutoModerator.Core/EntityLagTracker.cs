@@ -13,10 +13,10 @@ namespace AutoModerator.Core
     {
         public interface IConfig
         {
-            double MaxLag { get; }
-            TimeSpan TrackingSpan { get; }
+            double PinLag { get; }
             double OutlierFenceNormal { get; }
-            TimeSpan PinLifeSpan { get; }
+            TimeSpan TrackingSpan { get; }
+            TimeSpan PinSpan { get; }
             bool IsFactionExempt(string factionTag);
         }
 
@@ -35,62 +35,65 @@ namespace AutoModerator.Core
         }
 
         [MethodImpl(MethodImplOptions.Synchronized)]
-        public void Update(IEnumerable<EntityLagSnapshot> entityLags)
+        public void Update(IEnumerable<EntityLagSource> sources)
         {
             // skip exempt factions
-            entityLags = entityLags.WhereNot(s =>
-                s.FactionTag is string factionTag &&
-                _config.IsFactionExempt(factionTag));
+            sources = sources
+                .WhereNot(s =>
+                    s.FactionTag is string factionTag &&
+                    _config.IsFactionExempt(factionTag))
+                .ToArray();
 
+            Log.Debug($"{sources.Count(s => s.LagMspf >= 1f)} laggy entities profiled in this interval");
+
+            var sourceMap = sources.ToDictionary(l => l.EntityId);
+
+            // track entities
             var now = DateTime.UtcNow;
-            foreach (var lag in entityLags)
+            foreach (var src in sources)
             {
-                var lagNormal = lag.LagMspf / _config.MaxLag;
-                _lagTimeSeries.AddPoint(lag.EntityId, now, lagNormal);
+                var lagNormal = src.LagMspf / _config.PinLag;
+                _lagTimeSeries.AddPoint(src.EntityId, now, lagNormal);
             }
 
-            // append zero to time series that didn't have new input
-            var profiledEntityIdSet = entityLags.Select(r => r.EntityId).ToSet();
+            // update all tracked entities' interval with zero value if didn't get a new input
             foreach (var existingEntityId in _lagTimeSeries.Tags)
             {
-                if (!profiledEntityIdSet.Contains(existingEntityId))
+                if (!sourceMap.ContainsKey(existingEntityId))
                 {
                     _lagTimeSeries.AddPoint(existingEntityId, now, 0);
                 }
             }
 
-            // keep track of laggy entities & lifespan
-            var laggyEntityIds = GetLongLagNormals(1d).Select(p => p.EntityId).ToArray();
-            _pinnedIds.AddOrUpdate(laggyEntityIds, _config.PinLifeSpan);
+            // remove old points
+            _lagTimeSeries.RemovePointsOlderThan(DateTime.UtcNow - _config.TrackingSpan);
+
+            // stop tracking not-laggy entities
+            _lagTimeSeries.RemoveWhere(s => s.All(p => p.Element == 0d));
+
+            // keep track of laggy entities & pin span
+            var laggyEntityIds = GetLongLagNormals(1d).Select(p => p.EntityId);
+            _pinnedIds.AddOrUpdate(laggyEntityIds, _config.PinSpan);
 
             // clean up old data
             _pinnedIds.RemoveExpired();
-            _lagTimeSeries.RemovePointsOlderThan(DateTime.UtcNow - _config.TrackingSpan);
 
-            var quietEntityIds = _lagTimeSeries
-                .GetAllTimeSeries()
-                .Where(p => p.TimeSeries.All(t => t.Element == 0d))
-                .Select(p => p.Key);
-
-            _lagTimeSeries.RemoveSeriesRange(quietEntityIds);
-
-            // for debugging
-            foreach (var lag in entityLags)
+            if (Log.IsDebugEnabled)
             {
-                _names[lag.EntityId] = lag.Name;
-            }
+                foreach (var src in sources)
+                {
+                    _names[src.EntityId] = src.Name;
+                }
 
-            if (Log.IsTraceEnabled)
-            {
-                foreach (var entity in GetTrackedEntities(.5d))
+                foreach (var entity in GetTrackedEntities(0))
                 {
                     var name = _names.GetOrElse(entity.Id, $"{entity.Id}");
-                    Log.Trace($"entity lag: \"{name}\" -> {entity.LongLagNormal * 100:0}% {entity.RemainingTime.TotalSeconds:0}s");
+                    var latest = sourceMap.TryGetValue(entity.Id, out var e) ? $"{e.LagMspf:0.00}ms/f" : "--ms/f";
+                    Log.Debug($"tracked entity: \"{name}\" -> {latest} {entity.LongLagNormal * 100:0}% {entity.RemainingTime.TotalSeconds:0}s");
                 }
             }
 
-            Log.Debug($"{entityLags.Count(s => s.LagMspf >= 1f)} laggy entities");
-            Log.Debug($"{_pinnedIds.Count} pinned entities (new: {laggyEntityIds.Length})");
+            Log.Debug($"{_pinnedIds.Count} pinned entities");
         }
 
         [MethodImpl(MethodImplOptions.Synchronized)]
@@ -207,7 +210,7 @@ namespace AutoModerator.Core
                 var test = (normal - mean) / stdev;
                 if (test > _config.OutlierFenceNormal)
                 {
-                    sumNormal += 1;
+                    sumNormal += 1; // clamp top if possibly a server hiccup
                     continue;
                 }
 

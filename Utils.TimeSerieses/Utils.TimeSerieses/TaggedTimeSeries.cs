@@ -75,6 +75,17 @@ namespace Utils.TimeSerieses
             _timeSeriesMap.Remove(key);
         }
 
+        public void RemoveWhere(Func<ITimeSeries<E>, bool> f)
+        {
+            foreach (var p in _timeSeriesMap.ToArray())
+            {
+                if (f(p.Value))
+                {
+                    _timeSeriesMap.Remove(p.Key);
+                }
+            }
+        }
+
         public void RemoveSeriesRange(IEnumerable<T> keys)
         {
             foreach (var key in keys)

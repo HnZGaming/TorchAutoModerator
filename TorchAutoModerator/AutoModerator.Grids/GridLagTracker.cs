@@ -32,10 +32,10 @@ namespace AutoModerator.Grids
                 _masterConfig = masterConfig;
             }
 
-            public double MaxLag => _masterConfig.MaxGridMspf;
+            public double PinLag => _masterConfig.MaxGridMspf;
             public double OutlierFenceNormal=> _masterConfig.OutlierFenceNormal;
             public TimeSpan TrackingSpan => _masterConfig.GridTrackingTime.Seconds();
-            public TimeSpan PinLifeSpan => _masterConfig.GridPunishTime.Seconds();
+            public TimeSpan PinSpan => _masterConfig.GridPunishTime.Seconds();
             public bool IsFactionExempt(string factionTag) => _masterConfig.IsFactionExempt(factionTag);
         }
 
@@ -96,7 +96,7 @@ namespace AutoModerator.Grids
         {
             Log.Debug("updating grid lags...");
 
-            var lags = new List<EntityLagSnapshot>();
+            var lags = new List<EntityLagSource>();
             var latestLaggiestGridToOwnerIds = new Dictionary<long, long>();
             var ownerIds = new HashSet<long>();
 
@@ -107,7 +107,7 @@ namespace AutoModerator.Grids
                     ? MySession.Static.Factions.GetPlayerFactionTag(ownerId)
                     : null;
 
-                var lag = new EntityLagSnapshot(grid.EntityId, grid.DisplayName, mspf, factionTag);
+                var lag = new EntityLagSource(grid.EntityId, grid.DisplayName, mspf, factionTag);
                 lags.Add(lag);
 
                 if (!ownerIds.Contains(ownerId)) // pick the laggiest grid

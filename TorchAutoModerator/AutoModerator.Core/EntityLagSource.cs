@@ -1,8 +1,8 @@
 ﻿namespace AutoModerator.Core
 {
-    public readonly struct EntityLagSnapshot
+    public readonly struct EntityLagSource
     {
-        public EntityLagSnapshot(long entityId, string name, double lagMspf, string factionTag)
+        public EntityLagSource(long entityId, string name, double lagMspf, string factionTag)
         {
             EntityId = entityId;
             Name = name;

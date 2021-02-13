@@ -29,10 +29,10 @@ namespace AutoModerator.Players
                 _masterConfig = masterConfig;
             }
 
-            public double MaxLag => _masterConfig.MaxPlayerMspf;
+            public double PinLag => _masterConfig.MaxPlayerMspf;
             public double OutlierFenceNormal=> _masterConfig.OutlierFenceNormal;
             public TimeSpan TrackingSpan => _masterConfig.PlayerTrackingTime.Seconds();
-            public TimeSpan PinLifeSpan => _masterConfig.PlayerPunishTime.Seconds();
+            public TimeSpan PinSpan => _masterConfig.PlayerPunishTime.Seconds();
             public bool IsFactionExempt(string factionTag) => _masterConfig.IsFactionExempt(factionTag);
         }
 
@@ -51,12 +51,12 @@ namespace AutoModerator.Players
         {
             Log.Debug("updating player lags...");
 
-            var results = new List<EntityLagSnapshot>();
+            var results = new List<EntityLagSource>();
             foreach (var (player, profilerEntry) in profileResult.GetTopEntities(50))
             {
                 var mspf = profilerEntry.MainThreadTime / profileResult.TotalFrameCount;
                 var faction = MySession.Static.Factions.TryGetPlayerFaction(player.IdentityId);
-                var result = new EntityLagSnapshot(player.IdentityId, player.DisplayName, mspf, faction?.Tag);
+                var result = new EntityLagSource(player.IdentityId, player.DisplayName, mspf, faction?.Tag);
                 results.Add(result);
 
                 Log.Trace($"player profiled: {player.DisplayName} {mspf:0.00}ms/f");
