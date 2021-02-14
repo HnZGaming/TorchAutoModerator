@@ -277,7 +277,7 @@ namespace AutoModerator
 
                 var normalGraph = MakeOnelinerGraph(MaxWidth, 1, normal);
                 var outlierGraph = showOutlierTests ? MakeOnelinerGraph(MaxWidth, 3, outlierTest) : "";
-                msgBuilder.AppendLine($"{index} {normalGraph} {outlierGraph}");
+                msgBuilder.AppendLine($"{index:000} {normalGraph} {outlierGraph}");
             }
 
             Context.Respond(msgBuilder.ToString());

@@ -72,7 +72,7 @@ namespace AutoModerator.Punishes.Broadcasts
                 var timeSpent = stopwatch.ElapsedMilliseconds;
                 stopwatch.Stop();
 
-                Log.Debug($"Creating GPSs time spent: {timeSpent:0.00}ms");
+                Log.Trace($"Creating GPSs time spent: {timeSpent:0.00}ms");
 
                 return gpss;
             }
