@@ -1,6 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-    <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+    <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')"/>
     <PropertyGroup>
         <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
         <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
@@ -31,16 +31,17 @@
         <WarningLevel>4</WarningLevel>
     </PropertyGroup>
     <ItemGroup>
-        <Reference Include="HavokWrapper, Version=0.1.1.0, Culture=neutral, PublicKeyToken=null">
-          <HintPath>..\GameBinaries\HavokWrapper.dll</HintPath>
-        </Reference>
-        <Reference Include="PresentationCore" />
-        <Reference Include="PresentationFramework" />
-        <Reference Include="System" />
-        <Reference Include="System.Core" />
-        <Reference Include="System.Data" />
-        <Reference Include="System.Xml" />
-        <Reference Include="WindowsBase" />
+        <Reference Include="PresentationCore"/>
+        <Reference Include="PresentationFramework"/>
+        <Reference Include="System"/>
+        <Reference Include="System.Core"/>
+        <Reference Include="System.Data"/>
+        <Reference Include="System.Numerics"/>
+        <Reference Include="System.Runtime.Serialization"/>
+        <Reference Include="System.Xml"/>
+        <Reference Include="WindowsBase"/>
+    </ItemGroup>
+    <ItemGroup>
     </ItemGroup>
     <ItemGroup>
         <Reference Include="Newtonsoft.Json">
@@ -154,6 +155,9 @@
         <Reference Include="VRage.XmlSerializers">
             <HintPath>..\TorchBinaries\DedicatedServer64\VRage.XmlSerializers.dll</HintPath>
         </Reference>
+        <Reference Include="HavokWrapper">
+            <HintPath>..\GameBinaries\HavokWrapper.dll</HintPath>
+        </Reference>
     </ItemGroup>
     <ItemGroup>
         <Reference Include="Profiler">
@@ -161,76 +165,76 @@
         </Reference>
     </ItemGroup>
     <ItemGroup>
-        <Compile Include="AutoModerator.Punishes.Broadcasts\GridGpsSource.cs" />
-        <Compile Include="AutoModerator.Core\TrackedEntitySnapshot.cs" />
-        <Compile Include="AutoModerator.Grids\GridLagTracker.cs" />
-        <Compile Include="AutoModerator.Players\PlayerLagTracker.cs" />
-        <Compile Include="AutoModerator.Punishes.Broadcasts\BroadcastListenerCollection.cs" />
-        <Compile Include="AutoModerator.Punishes\LagPunishChatFeed.cs" />
-        <Compile Include="AutoModerator.Punishes\LagPunishChatSource.cs" />
-        <Compile Include="AutoModerator.Punishes\LagPunishExecutor.cs" />
-        <Compile Include="AutoModerator.Punishes\LagPunishSource.cs" />
-        <Compile Include="AutoModerator.Punishes\LagPunishType.cs" />
-        <Compile Include="AutoModerator.Warnings\HudNotificationCollection.cs" />
-        <Compile Include="AutoModerator.Warnings\LagWarningCollection.cs" />
-        <Compile Include="AutoModerator.Punishes.Broadcasts\GpsUtils.cs" />
-        <Compile Include="AutoModerator.Punishes.Broadcasts\EntityGpsBroadcaster.cs" />
-        <Compile Include="AutoModerator.Core\EntityLagTracker.cs" />
-        <Compile Include="AutoModerator.Core\EntityLagSnapshot.cs" />
-        <Compile Include="AutoModerator.Core\ExpiryDictionary.cs" />
-        <Compile Include="AutoModerator.Warnings\LagWarningSource.cs" />
-        <Compile Include="AutoModerator.Warnings\LagWarningDefaultTexts.cs" />
-        <Compile Include="Properties\AssemblyInfo.cs" />
-        <Compile Include="AutoModerator\AutoModeratorCommandModule.cs" />
-        <Compile Include="AutoModerator\AutoModeratorConfig.cs" />
-        <Compile Include="AutoModerator\AutoModeratorPlugin.cs" />
-        <Compile Include="Utils.General\AbsJsonConverter.cs" />
-        <Compile Include="Utils.General\ActionDisposable.cs" />
-        <Compile Include="Utils.General\ActionQueue.cs" />
-        <Compile Include="Utils.General\CollectionUtils.cs" />
-        <Compile Include="Utils.General\CsvDb.cs" />
-        <Compile Include="Utils.General\DebugUtils.cs" />
-        <Compile Include="Utils.General\ExpirationObserver.cs" />
-        <Compile Include="Utils.General\DisposableCollection.cs" />
-        <Compile Include="Utils.General\DisposableUtils.cs" />
-        <Compile Include="Utils.General\FileLoggingConfigurator.cs" />
-        <Compile Include="Utils.General\HttpUrlBuilder.cs" />
-        <Compile Include="Utils.General\LangUtils.cs" />
-        <Compile Include="Utils.General\LoggerUtils.cs" />
-        <Compile Include="Utils.General\MathUtils.cs" />
-        <Compile Include="Utils.General\ObjectPool.cs" />
-        <Compile Include="Utils.General\ReflectionUtils.cs" />
-        <Compile Include="Utils.General\StringFloatConverter.cs" />
-        <Compile Include="Utils.General\StupidDb.cs" />
-        <Compile Include="Utils.General\TaskUtils.cs" />
-        <Compile Include="Utils.General\ThreadSafeThrottle.cs" />
-        <Compile Include="Utils.Torch\CommandModuleUtils.cs" />
-        <Compile Include="Utils.Torch\CommandOption.cs" />
-        <Compile Include="Utils.Torch\ConfigCommandIgnoreAttribute.cs" />
-        <Compile Include="Utils.Torch\GameLoopObserver.cs" />
-        <Compile Include="Utils.Torch\GameLoopObserverManager.cs" />
-        <Compile Include="Utils.Torch\ReportGenerator.cs" />
-        <Compile Include="Utils.Torch\TorchPluginUtils.cs" />
-        <Compile Include="Utils.Torch\TorchUtils.cs" />
-        <Compile Include="Utils.Torch\VRageUtils.cs" />
-        <Compile Include="Utils.Torch\XmlUtils.cs" />
+        <Compile Include="AutoModerator.Punishes.Broadcasts\GridGpsSource.cs"/>
+        <Compile Include="AutoModerator.Core\TrackedEntitySnapshot.cs"/>
+        <Compile Include="AutoModerator.Grids\GridLagTracker.cs"/>
+        <Compile Include="AutoModerator.Players\PlayerLagTracker.cs"/>
+        <Compile Include="AutoModerator.Punishes.Broadcasts\BroadcastListenerCollection.cs"/>
+        <Compile Include="AutoModerator.Punishes\LagPunishChatFeed.cs"/>
+        <Compile Include="AutoModerator.Punishes\LagPunishChatSource.cs"/>
+        <Compile Include="AutoModerator.Punishes\LagPunishExecutor.cs"/>
+        <Compile Include="AutoModerator.Punishes\LagPunishSource.cs"/>
+        <Compile Include="AutoModerator.Punishes\LagPunishType.cs"/>
+        <Compile Include="AutoModerator.Warnings\HudNotificationCollection.cs"/>
+        <Compile Include="AutoModerator.Warnings\LagWarningCollection.cs"/>
+        <Compile Include="AutoModerator.Punishes.Broadcasts\GpsUtils.cs"/>
+        <Compile Include="AutoModerator.Punishes.Broadcasts\EntityGpsBroadcaster.cs"/>
+        <Compile Include="AutoModerator.Core\EntityLagTracker.cs"/>
+        <Compile Include="AutoModerator.Core\EntityLagSource.cs"/>
+        <Compile Include="AutoModerator.Core\ExpiryDictionary.cs"/>
+        <Compile Include="AutoModerator.Warnings\LagWarningSource.cs"/>
+        <Compile Include="AutoModerator.Warnings\LagWarningDefaultTexts.cs"/>
+        <Compile Include="Properties\AssemblyInfo.cs"/>
+        <Compile Include="AutoModerator\AutoModeratorCommandModule.cs"/>
+        <Compile Include="AutoModerator\AutoModeratorConfig.cs"/>
+        <Compile Include="AutoModerator\AutoModeratorPlugin.cs"/>
+        <Compile Include="Utils.General\AbsJsonConverter.cs"/>
+        <Compile Include="Utils.General\ActionDisposable.cs"/>
+        <Compile Include="Utils.General\ActionQueue.cs"/>
+        <Compile Include="Utils.General\CollectionUtils.cs"/>
+        <Compile Include="Utils.General\CsvDb.cs"/>
+        <Compile Include="Utils.General\DebugUtils.cs"/>
+        <Compile Include="Utils.General\ExpirationObserver.cs"/>
+        <Compile Include="Utils.General\DisposableCollection.cs"/>
+        <Compile Include="Utils.General\DisposableUtils.cs"/>
+        <Compile Include="Utils.General\FileLoggingConfigurator.cs"/>
+        <Compile Include="Utils.General\HttpUrlBuilder.cs"/>
+        <Compile Include="Utils.General\LangUtils.cs"/>
+        <Compile Include="Utils.General\LoggerUtils.cs"/>
+        <Compile Include="Utils.General\MathUtils.cs"/>
+        <Compile Include="Utils.General\ObjectPool.cs"/>
+        <Compile Include="Utils.General\ReflectionUtils.cs"/>
+        <Compile Include="Utils.General\StringFloatConverter.cs"/>
+        <Compile Include="Utils.General\StupidDb.cs"/>
+        <Compile Include="Utils.General\TaskUtils.cs"/>
+        <Compile Include="Utils.General\ThreadSafeThrottle.cs"/>
+        <Compile Include="Utils.Torch\CommandModuleUtils.cs"/>
+        <Compile Include="Utils.Torch\CommandOption.cs"/>
+        <Compile Include="Utils.Torch\ConfigCommandIgnoreAttribute.cs"/>
+        <Compile Include="Utils.Torch\GameLoopObserver.cs"/>
+        <Compile Include="Utils.Torch\GameLoopObserverManager.cs"/>
+        <Compile Include="Utils.Torch\ReportGenerator.cs"/>
+        <Compile Include="Utils.Torch\TorchPluginUtils.cs"/>
+        <Compile Include="Utils.Torch\TorchUtils.cs"/>
+        <Compile Include="Utils.Torch\VRageUtils.cs"/>
+        <Compile Include="Utils.Torch\XmlUtils.cs"/>
     </ItemGroup>
     <ItemGroup>
-        <Content Include="manifest.xml" />
-        <Content Include="postbuild.bat" />
-        <Content Include="symutil.bat" />
+        <Content Include="manifest.xml"/>
+        <Content Include="postbuild.bat"/>
+        <Content Include="symutil.bat"/>
     </ItemGroup>
     <ItemGroup>
-      <ProjectReference Include="..\Utils.EntityGps\Utils.EntityGps.csproj">
-        <Project>{d3f66ad3-9265-4ca7-b865-dedd0b20a8e7}</Project>
-        <Name>Utils.EntityGps</Name>
-      </ProjectReference>
-      <ProjectReference Include="..\Utils.TimeSerieses\Utils.TimeSerieses.csproj">
-        <Project>{7f42b008-0b81-4dcc-82e6-18125ac9524e}</Project>
-        <Name>Utils.TimeSerieses</Name>
-      </ProjectReference>
+        <ProjectReference Include="..\Utils.EntityGps\Utils.EntityGps.csproj">
+            <Project>{d3f66ad3-9265-4ca7-b865-dedd0b20a8e7}</Project>
+            <Name>Utils.EntityGps</Name>
+        </ProjectReference>
+        <ProjectReference Include="..\Utils.TimeSerieses\Utils.TimeSerieses.csproj">
+            <Project>{7f42b008-0b81-4dcc-82e6-18125ac9524e}</Project>
+            <Name>Utils.TimeSerieses</Name>
+        </ProjectReference>
     </ItemGroup>
-    <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+    <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets"/>
     <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
          Other similar extension points exist, see Microsoft.Common.targets.
     <Target Name="BeforeBuild">

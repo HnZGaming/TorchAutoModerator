@@ -49,7 +49,13 @@ namespace AutoModerator.Core
             return GetRemainingTimes().ToDictionary();
         }
 
-        public void AddOrUpdate(IEnumerable<K> keys, TimeSpan lifespan)
+        public void AddOrUpdate(K key, TimeSpan lifespan)
+        {
+            var startTime = DateTime.UtcNow;
+            _self[key] = startTime + lifespan;
+        }
+
+        public void AddOrUpdateRange(IEnumerable<K> keys, TimeSpan lifespan)
         {
             var startTime = DateTime.UtcNow;
             foreach (var key in keys)

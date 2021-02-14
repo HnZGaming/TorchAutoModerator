@@ -1,11 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using AutoModerator.Core;
 using NLog;
 using Profiler.Basics;
 using Sandbox.Game.World;
 using Utils.General;
+using Utils.TimeSerieses;
 
 namespace AutoModerator.Players
 {
@@ -14,10 +16,10 @@ namespace AutoModerator.Players
         public interface IConfig
         {
             double MaxPlayerMspf { get; }
-            double PlayerWarningTime { get; }
-            double PlayerPunishTime { get; }
-            int SafetyInterval { get; set; }
-            bool IsFactionExempt(string factionTag);
+            double TrackingTime { get; }
+            double PunishTime { get; }
+            double OutlierFenceNormal { get; }
+            bool IsFactionExempt(long factionId);
         }
 
         sealed class BridgeConfig : EntityLagTracker.IConfig
@@ -29,41 +31,37 @@ namespace AutoModerator.Players
                 _masterConfig = masterConfig;
             }
 
-            public double LagThreshold => _masterConfig.MaxPlayerMspf;
-            public int SafetyInterval => _masterConfig.SafetyInterval;
-            public TimeSpan PinWindow => _masterConfig.PlayerWarningTime.Seconds();
-            public TimeSpan PinLifeSpan => _masterConfig.PlayerPunishTime.Seconds();
-            public bool IsFactionExempt(string factionTag) => _masterConfig.IsFactionExempt(factionTag);
+            public double PinLag => _masterConfig.MaxPlayerMspf;
+            public double OutlierFenceNormal => _masterConfig.OutlierFenceNormal;
+            public TimeSpan TrackingSpan => _masterConfig.TrackingTime.Seconds();
+            public TimeSpan PinSpan => _masterConfig.PunishTime.Seconds();
+            public bool IsFactionExempt(long factionId) => _masterConfig.IsFactionExempt(factionId);
         }
 
         static readonly ILogger Log = LogManager.GetCurrentClassLogger();
-        readonly IConfig _config;
         readonly EntityLagTracker _lagTracker;
 
         public PlayerLagTracker(IConfig config)
         {
-            _config = config;
             _lagTracker = new EntityLagTracker(new BridgeConfig(config));
         }
 
         [MethodImpl(MethodImplOptions.Synchronized)]
         public void Update(BaseProfilerResult<MyIdentity> profileResult)
         {
-            Log.Debug("updating player lags...");
+            Log.Trace("updating player lags...");
 
-            var results = new List<EntityLagSnapshot>();
+            var results = new List<EntityLagSource>();
             foreach (var (player, profilerEntry) in profileResult.GetTopEntities(50))
             {
                 var mspf = profilerEntry.MainThreadTime / profileResult.TotalFrameCount;
                 var faction = MySession.Static.Factions.TryGetPlayerFaction(player.IdentityId);
-                var result = new EntityLagSnapshot(player.IdentityId, player.DisplayName, mspf, faction?.Tag);
+                var result = new EntityLagSource(player.IdentityId, player.DisplayName, mspf, faction.FactionId);
                 results.Add(result);
-
-                Log.Trace($"player profiled: {player.DisplayName} {mspf:0.00}ms/f");
             }
 
             _lagTracker.Update(results);
-            Log.Debug("updated player lags");
+            Log.Trace("updated player lags");
         }
 
         [MethodImpl(MethodImplOptions.Synchronized)]
@@ -73,15 +71,30 @@ namespace AutoModerator.Players
         }
 
         [MethodImpl(MethodImplOptions.Synchronized)]
-        public IEnumerable<TrackedEntitySnapshot> GetTrackedEntities(double minLagNormal)
+        public IEnumerable<TrackedEntitySnapshot> GetTrackedEntities(double lagNormal)
         {
-            return _lagTracker.GetTrackedEntities(minLagNormal);
+            return _lagTracker
+                .GetTrackedEntities()
+                .Where(e => e.LongLagNormal >= lagNormal)
+                .ToArray();
+        }
+
+        [MethodImpl(MethodImplOptions.Synchronized)]
+        public IEnumerable<TrackedEntitySnapshot> GetTrackedEntities()
+        {
+            return _lagTracker.GetTrackedEntities();
         }
 
         [MethodImpl(MethodImplOptions.Synchronized)]
         public void Clear()
         {
             _lagTracker.Clear();
+        }
+
+        [MethodImpl(MethodImplOptions.Synchronized)]
+        public bool TryGetTimeSeries(long entityId, out ITimeSeries<double> timeSeries)
+        {
+            return _lagTracker.TryGetTimeSeries(entityId, out timeSeries);
         }
     }
 }

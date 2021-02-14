@@ -13,6 +13,7 @@ namespace AutoModerator.Punishes
     {
         public interface IConfig
         {
+            string PunishReportChatName { get; }
             string PunishReportChatFormat { get; }
         }
 
@@ -77,8 +78,7 @@ namespace AutoModerator.Punishes
                     .Replace("{grid}", gridName)
                     .Replace("{level}", $"{src.LongLagNormal * 100:0}%");
 
-
-                _chatManager.SendMessage("L.A.G. Detector", 0, message);
+                _chatManager.SendMessage(_config.PunishReportChatName, 0, message);
             }
 
             _pinnedPlayerIds.Clear();

@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Controls;
+using AutoModerator.Core;
 using AutoModerator.Grids;
 using AutoModerator.Players;
 using AutoModerator.Punishes;
@@ -20,6 +21,7 @@ using Torch.API;
 using Torch.API.Managers;
 using Torch.API.Plugins;
 using Utils.General;
+using Utils.TimeSerieses;
 using Utils.Torch;
 
 namespace AutoModerator
@@ -120,32 +122,33 @@ namespace AutoModerator
                 using (ProfilerResultQueue.Profile(gridProfiler))
                 using (ProfilerResultQueue.Profile(playerProfiler))
                 {
-                    Log.Debug("auto-profile started");
+                    Log.Trace("auto-profile started");
                     gridProfiler.MarkStart();
                     playerProfiler.MarkStart();
                     await Task.Delay(Config.IntervalFrequency.Seconds(), canceller);
-                    Log.Debug("auto-profile done");
+                    Log.Trace("auto-profile done");
 
                     _laggyGrids.Update(gridProfiler.GetResult());
                     _laggyPlayers.Update(playerProfiler.GetResult());
                 }
 
-                Log.Debug("profile done");
+                Log.Trace("profile done");
 
                 if (Config.EnableWarning)
                 {
+                    var usePins = Config.PunishType != LagPunishType.None;
+                    Log.Debug($"punishment type: {Config.PunishType}, warning for punishment: {usePins}");
+
+                    var sources = new List<LagWarningSource>();
                     var players = _laggyPlayers.GetTrackedEntities(Config.WarningLagNormal).ToDictionary(p => p.Id);
                     var grids = _laggyGrids.GetPlayerLaggiestGrids(Config.WarningLagNormal).ToDictionary();
-                    var sources = new List<LagWarningSource>();
                     foreach (var (playerId, (player, grid)) in players.Zip(grids))
                     {
                         if (playerId == 0) continue; // grid not owned
 
-                        var playerName = MySession.Static.Players.GetPlayerNameOrElse(playerId, $"<{playerId}>");
-                        var usePins = Config.PunishType != LagPunishType.None;
-
                         var src = new LagWarningSource(
-                            playerId, playerName,
+                            playerId,
+                            MySession.Static.Players.GetPlayerNameOrElse(playerId, $"<{playerId}>"),
                             player.LongLagNormal,
                             usePins ? player.RemainingTime : TimeSpan.Zero,
                             grid.LongLagNormal,
@@ -161,7 +164,7 @@ namespace AutoModerator
                     _warningQuests.Clear();
                 }
 
-                Log.Debug("warnings done");
+                Log.Trace("warnings done");
 
                 if (Config.EnablePunishChatFeed)
                 {
@@ -214,7 +217,7 @@ namespace AutoModerator
                     _punishExecutor.Clear();
                 }
 
-                Log.Debug("punishment done");
+                Log.Trace("punishment done");
 
                 if (Config.PunishType == LagPunishType.Broadcast)
                 {
@@ -248,7 +251,7 @@ namespace AutoModerator
                     _entityGpsBroadcaster.ClearGpss();
                 }
 
-                Log.Debug("broadcast done");
+                Log.Trace("broadcast done");
                 Log.Debug("interval done");
             }
         }
@@ -272,6 +275,22 @@ namespace AutoModerator
         public void ClearQuestForUser(long playerId)
         {
             _warningQuests.Clear(playerId);
+        }
+
+        public bool TryGetTimeSeries(long entityId, out ITimeSeries<double> timeSeries)
+        {
+            return _laggyGrids.TryGetTimeSeries(entityId, out timeSeries) ||
+                   _laggyPlayers.TryGetTimeSeries(entityId, out timeSeries);
+        }
+
+        public IEnumerable<TrackedEntitySnapshot> GetTrackedGrids()
+        {
+            return _laggyGrids.GetTrackedEntities();
+        }
+
+        public IEnumerable<TrackedEntitySnapshot> GetTrackedPlayers()
+        {
+            return _laggyPlayers.GetTrackedEntities();
         }
     }
 }

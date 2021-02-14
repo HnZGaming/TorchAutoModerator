@@ -20,6 +20,7 @@ namespace Utils.TimeSerieses
 
         public int Count => _timestamps.Count;
         public TimeSpan Length => GetLength();
+        public IReadOnlyList<T> Elements => _elements;
 
         public IEnumerator<Timestamped<T>> GetEnumerator()
         {

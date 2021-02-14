@@ -47,9 +47,11 @@ namespace TorchEntityGpsBroadcaster.Core
 
             // delete all the GPSs but remember the structure
             var existedGPSs = new Dictionary<long, HashSet<long>>();
+            var existedEntityNames = new Dictionary<long, string>();
             foreach (var (identityId, gps) in _gpsCollection.GetAllGpss())
             {
                 existedGPSs.Add(identityId, gps.EntityId);
+                existedEntityNames[gps.EntityId] = gps.Name;
                 _gpsCollection.SendDeleteGps(identityId, gps.Hash);
             }
 
@@ -59,6 +61,26 @@ namespace TorchEntityGpsBroadcaster.Core
             {
                 var existed = existedGPSs.Contains(targetId, newGps.EntityId);
                 _gpsCollection.SendAddGps(targetId, newGps, !existed);
+
+                if (!existed)
+                {
+                    Log.Info($"New GPS: {newGps.Name}");
+                }
+
+                existedGPSs.Remove(targetId, newGps.EntityId);
+            }
+
+            var removedEntityIds = new HashSet<long>();
+            foreach (var (_, entityIds) in existedGPSs)
+            foreach (var entityId in entityIds)
+            {
+                if (!removedEntityIds.Contains(entityId))
+                {
+                    removedEntityIds.Add(entityId);
+
+                    var name = existedEntityNames.TryGetValue(entityId, out var n) ? $"\"{n}\"" : $"<{entityId}>";
+                    Log.Info($"Deleted GPS: {name}");
+                }
             }
 
             Log.Debug($"broadcasted {newGpss.Count()} laggy entities");

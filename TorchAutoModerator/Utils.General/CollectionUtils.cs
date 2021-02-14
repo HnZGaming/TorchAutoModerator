@@ -254,31 +254,9 @@ namespace Utils.General
             return result;
         }
 
-        public static IReadOnlyDictionary<K, V> ToDictionaryDescending<T, K, V>(this IEnumerable<T> self, Func<T, K> toKey, Func<T, V> toValue)
+        public static IEnumerable<KeyValuePair<K, V1>> SelectValue<K, V0, V1>(this IReadOnlyDictionary<K, V0> self, Func<V0, V1> f)
         {
-            var dictionary = new Dictionary<K, V>();
-            foreach (var t in self)
-            {
-                var key = toKey(t);
-                var value = toValue(t);
-                if (!dictionary.ContainsKey(key))
-                {
-                    dictionary[key] = value;
-                }
-            }
-
-            return dictionary;
-        }
-
-        public static IEnumerable<U> WhereCastable<T, U>(this IEnumerable<T> self) where U : T
-        {
-            foreach (var t in self)
-            {
-                if (t is U u)
-                {
-                    yield return u;
-                }
-            }
+            return self.Select(p => new KeyValuePair<K, V1>(p.Key, f(p.Value)));
         }
     }
 }

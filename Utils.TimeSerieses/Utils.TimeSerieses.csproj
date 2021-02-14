@@ -31,15 +31,25 @@
         <WarningLevel>4</WarningLevel>
     </PropertyGroup>
     <ItemGroup>
+        <Reference Include="MathNet.Numerics, Version=4.15.0.0, Culture=neutral, PublicKeyToken=null">
+          <HintPath>..\packages\MathNet.Numerics.4.15.0\lib\net461\MathNet.Numerics.dll</HintPath>
+          <Private>True</Private>
+        </Reference>
+    </ItemGroup>
+    <ItemGroup>
         <Reference Include="Newtonsoft.Json">
           <HintPath>..\TorchBinaries\Newtonsoft.Json.dll</HintPath>
         </Reference>
         <Reference Include="NLog">
           <HintPath>..\TorchBinaries\NLog.dll</HintPath>
         </Reference>
+    </ItemGroup>
+    <ItemGroup>
         <Reference Include="System" />
         <Reference Include="System.Core" />
         <Reference Include="System.Data" />
+        <Reference Include="System.Numerics" />
+        <Reference Include="System.Runtime.Serialization" />
         <Reference Include="System.Xml" />
     </ItemGroup>
     <ItemGroup>
@@ -47,7 +57,11 @@
         <Compile Include="Utils.TimeSerieses\ITimeSeries.cs" />
         <Compile Include="Utils.TimeSerieses\TaggedTimeSeries.cs" />
         <Compile Include="Utils.TimeSerieses\TimeSeries.cs" />
+        <Compile Include="Utils.TimeSerieses\TimeSeriesUtils.cs" />
         <Compile Include="Utils.TimeSerieses\Timestamped.cs" />
+    </ItemGroup>
+    <ItemGroup>
+      <None Include="packages.config" />
     </ItemGroup>
     <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
     <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

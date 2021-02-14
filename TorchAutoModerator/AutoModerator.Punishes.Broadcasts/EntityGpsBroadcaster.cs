@@ -45,11 +45,11 @@ namespace AutoModerator.Punishes.Broadcasts
             IEnumerable<long> receiverIdentityIds,
             CancellationToken canceller)
         {
-            var gpss = await CreateGps(gpsSources, canceller);
+            var gpss = await CreateGpss(gpsSources, canceller);
             _gpsCollection.SendReplaceAllTrackedGpss(gpss, receiverIdentityIds);
         }
 
-        async Task<IReadOnlyList<MyGps>> CreateGps(
+        async Task<IReadOnlyList<MyGps>> CreateGpss(
             IEnumerable<GridGpsSource> gpsSources,
             CancellationToken canceller)
         {

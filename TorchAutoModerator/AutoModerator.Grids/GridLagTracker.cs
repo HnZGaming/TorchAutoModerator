@@ -8,7 +8,7 @@ using Profiler.Basics;
 using Sandbox.Game.Entities;
 using Sandbox.Game.World;
 using Utils.General;
-using Utils.Torch;
+using Utils.TimeSerieses;
 
 namespace AutoModerator.Grids
 {
@@ -17,10 +17,10 @@ namespace AutoModerator.Grids
         public interface IConfig
         {
             double MaxGridMspf { get; }
-            double GridWarningTime { get; }
-            double GridPunishTime { get; }
-            int SafetyInterval { get; set; }
-            bool IsFactionExempt(string factionTag);
+            double TrackingTime { get; }
+            double PunishTime { get; }
+            double OutlierFenceNormal { get; }
+            bool IsFactionExempt(long factionId);
         }
 
         sealed class BridgeConfig : EntityLagTracker.IConfig
@@ -32,11 +32,11 @@ namespace AutoModerator.Grids
                 _masterConfig = masterConfig;
             }
 
-            public double LagThreshold => _masterConfig.MaxGridMspf;
-            public int SafetyInterval => _masterConfig.SafetyInterval;
-            public TimeSpan PinWindow => _masterConfig.GridWarningTime.Seconds();
-            public TimeSpan PinLifeSpan => _masterConfig.GridPunishTime.Seconds();
-            public bool IsFactionExempt(string factionTag) => _masterConfig.IsFactionExempt(factionTag);
+            public double PinLag => _masterConfig.MaxGridMspf;
+            public double OutlierFenceNormal=> _masterConfig.OutlierFenceNormal;
+            public TimeSpan TrackingSpan => _masterConfig.TrackingTime.Seconds();
+            public TimeSpan PinSpan => _masterConfig.PunishTime.Seconds();
+            public bool IsFactionExempt(long factionId) => _masterConfig.IsFactionExempt(factionId);
         }
 
         static readonly ILogger Log = LogManager.GetCurrentClassLogger();
@@ -94,20 +94,20 @@ namespace AutoModerator.Grids
         [MethodImpl(MethodImplOptions.Synchronized)]
         public void Update(BaseProfilerResult<MyCubeGrid> profileResult)
         {
-            Log.Debug("updating grid lags...");
+            Log.Trace("updating grid lags...");
 
-            var lags = new List<EntityLagSnapshot>();
+            var lags = new List<EntityLagSource>();
             var latestLaggiestGridToOwnerIds = new Dictionary<long, long>();
             var ownerIds = new HashSet<long>();
 
             foreach (var (grid, profileEntity) in profileResult.GetTopEntities(50))
             {
                 var mspf = profileEntity.MainThreadTime / profileResult.TotalFrameCount;
-                var factionTag = grid.BigOwners.TryGetFirst(out var ownerId)
-                    ? MySession.Static.Factions.GetPlayerFactionTag(ownerId)
-                    : null;
+                var factionId = grid.BigOwners.TryGetFirst(out var ownerId)
+                    ? MySession.Static.Factions.GetPlayerFaction(ownerId)?.FactionId ?? 0L
+                    : 0L;
 
-                var lag = new EntityLagSnapshot(grid.EntityId, grid.DisplayName, mspf, factionTag);
+                var lag = new EntityLagSource(grid.EntityId, grid.DisplayName, mspf, factionId);
                 lags.Add(lag);
 
                 if (!ownerIds.Contains(ownerId)) // pick the laggiest grid
@@ -115,14 +115,12 @@ namespace AutoModerator.Grids
                     ownerIds.Add(ownerId);
                     latestLaggiestGridToOwnerIds.Add(grid.EntityId, ownerId);
                 }
-
-                Log.Trace($"grid profiled: {grid.DisplayName} {mspf:0.00}ms/f");
             }
 
             _lagTracker.Update(lags);
 
             // update owner -> laggiest grid map w/ latest state
-            foreach (var trackedGrid in _lagTracker.GetTrackedEntities(0))
+            foreach (var trackedGrid in _lagTracker.GetTrackedEntities())
             {
                 if (latestLaggiestGridToOwnerIds.TryGetValue(trackedGrid.Id, out var ownerId))
                 {
@@ -140,7 +138,7 @@ namespace AutoModerator.Grids
                 }
             }
 
-            Log.Debug("updated grid lags");
+            Log.Trace("updated grid lags");
         }
 
         [MethodImpl(MethodImplOptions.Synchronized)]
@@ -154,6 +152,18 @@ namespace AutoModerator.Grids
         {
             _lagTracker.Clear();
             _ownerToLaggiestGrids.Clear();
+        }
+        
+        [MethodImpl(MethodImplOptions.Synchronized)]
+        public bool TryGetTimeSeries(long entityId, out ITimeSeries<double> timeSeries)
+        {
+            return _lagTracker.TryGetTimeSeries(entityId, out timeSeries);
+        }
+
+        [MethodImpl(MethodImplOptions.Synchronized)]
+        public IEnumerable<TrackedEntitySnapshot> GetTrackedEntities()
+        {
+            return _lagTracker.GetTrackedEntities();
         }
     }
 }

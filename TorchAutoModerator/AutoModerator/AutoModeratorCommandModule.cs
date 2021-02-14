@@ -3,13 +3,16 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using AutoModerator.Core;
 using NLog;
 using Profiler.Basics;
 using Profiler.Core;
 using Sandbox.Game.Entities;
+using Sandbox.Game.World;
 using Torch.Commands;
 using Torch.Commands.Permissions;
 using Utils.General;
+using Utils.TimeSerieses;
 using Utils.Torch;
 using VRage.Game.ModAPI;
 using VRageMath;
@@ -42,6 +45,7 @@ namespace AutoModerator
         public void Clear() => this.CatchAndReport(() =>
         {
             Plugin.ClearCache();
+            Context.Respond("cleared all internal state");
         });
 
         [Command("gpslist", "Show the list of custom GPS entities.")]
@@ -64,6 +68,232 @@ namespace AutoModerator
 
             Context.Respond($"Custom GPS entities: \n{msgBuilder}");
         });
+
+        [Command("inspect", "Show the time series of specified grid or player.")]
+        [Permission(MyPromoteLevel.None)]
+        public void Inspect() => this.CatchAndReport(() =>
+        {
+            var isNormalPlayer = (Context.Player?.PromoteLevel ?? MyPromoteLevel.Admin) == MyPromoteLevel.None;
+            var playerId = Context.Player?.IdentityId ?? 0L;
+            var faction = MySession.Static.Factions.GetPlayerFaction(playerId);
+            var memberIds = faction?.Members.Keys.ToSet() ?? new HashSet<long> {playerId};
+
+            var top = 5;
+            var showOutlierTests = false;
+            var specificGridIdOrNull = (long?) null;
+            foreach (var arg in Context.Args)
+            {
+                if (CommandOption.TryGetOption(arg, out var option))
+                {
+                    if (option.TryParseInt("top", out top)) continue;
+                    if (option.TryGetParameterlessBool("outlier", out showOutlierTests)) continue;
+
+                    if (option.TryGetParameterlessBool("this", out _))
+                    {
+                        if (playerId == 0L)
+                        {
+                            Context.Respond("Players only: `this`", Color.Red);
+                            return;
+                        }
+
+                        if (Context.Player.TryGetSelectedGrid(out var grid))
+                        {
+                            if (!grid.BigOwners.TryGetFirst(out var ownerId) || ownerId != playerId)
+                            {
+                                Context.Respond($"Not your grid: {grid.DisplayName}", Color.Red);
+                                return;
+                            }
+
+                            specificGridIdOrNull = grid.EntityId;
+                            continue;
+                        }
+
+                        Context.Respond("Grid not found", Color.Red);
+                        return;
+                    }
+
+                    Context.Respond($"Invalid option: {arg}", Color.Red);
+                    return;
+                }
+            }
+
+            // inspect specific entity
+            if (Context.Args.TryGetElementAt(0, out var entityIdStr) &&
+                long.TryParse(entityIdStr, out var entityId))
+            {
+                if (isNormalPlayer)
+                {
+                    if (!MyEntities.TryGetEntityById(entityId, out var entity))
+                    {
+                        Context.Respond("Entity not found", Color.Red);
+                        return;
+                    }
+
+                    if (entity is IMyCharacter && !memberIds.Contains(entityId))
+                    {
+                        Context.Respond("Not you or your faction member", Color.Red);
+                        return;
+                    }
+
+                    if (entity is MyCubeGrid grid)
+                    {
+                        if (!grid.BigOwners.TryGetFirst(out var ownerId))
+                        {
+                            Context.Respond("Not owned by anyone", Color.Red);
+                            return;
+                        }
+
+                        if (!memberIds.Contains(ownerId))
+                        {
+                            Context.Respond("Not yours or your faction member's grid", Color.Red);
+                            return;
+                        }
+                    }
+                }
+
+                InspectEntity(entityId, showOutlierTests);
+                return;
+            }
+
+            var msgBuilder = new StringBuilder();
+            msgBuilder.AppendLine();
+
+            if (!specificGridIdOrNull.HasValue)
+            {
+                msgBuilder.AppendLine("Players:");
+                var inspectableGrids = new List<TrackedEntitySnapshot>();
+                foreach (var s in OrderForInspection(Plugin.GetTrackedPlayers()))
+                {
+                    if (isNormalPlayer && !memberIds.Contains(s.Id)) continue;
+
+                    inspectableGrids.Add(s);
+                }
+
+                if (inspectableGrids.Any())
+                {
+                    foreach (var s in inspectableGrids.Take(top))
+                    {
+                        var line = MakeTrackedEntityLine(s);
+                        msgBuilder.AppendLine(line);
+                    }
+                }
+                else
+                {
+                    msgBuilder.AppendLine("No tracked players found");
+                }
+            }
+
+            msgBuilder.AppendLine("Grids:");
+
+            var inspectablePlayers = new List<TrackedEntitySnapshot>();
+            foreach (var s in OrderForInspection(Plugin.GetTrackedGrids()).Take(top))
+            {
+                if (specificGridIdOrNull is long sid && sid != s.Id) continue;
+
+                if (isNormalPlayer)
+                {
+                    if (!VRageUtils.TryGetCubeGridById(s.Id, out var grid)) continue;
+                    if (!grid.BigOwners.TryGetFirst(out var ownerId)) continue;
+                    if (!memberIds.Contains(ownerId)) continue;
+                }
+
+                inspectablePlayers.Add(s);
+            }
+
+            if (inspectablePlayers.Any())
+            {
+                foreach (var s in inspectablePlayers.Take(top))
+                {
+                    var line = MakeTrackedEntityLine(s);
+                    msgBuilder.AppendLine(line);
+                }
+            }
+            else
+            {
+                msgBuilder.AppendLine("No tracked grids found");
+            }
+
+            Context.Respond(msgBuilder.ToString());
+        });
+
+        string MakeTrackedEntityLine(TrackedEntitySnapshot s)
+        {
+            var lagGraph = MakeOnelinerGraph(30, 1, s.LongLagNormal);
+
+            var pinSecs = s.RemainingTime.TotalSeconds;
+            var pinSecsNormal = pinSecs / Plugin.Config.PunishTime;
+            var pinGraph = MakeOnelinerGraph(30, 1, pinSecsNormal, false);
+            pinGraph = s.IsPinned ? $"{pinGraph} {pinSecs:0} secs left" : "not pinned";
+
+            var name = MyEntities.TryGetEntityById(s.Id, out var e) ? $"\"{e.DisplayName}\"" : "<noname>";
+            return $"{lagGraph} {pinGraph} {name} ({s.Id})";
+        }
+
+        static IEnumerable<TrackedEntitySnapshot> OrderForInspection(IEnumerable<TrackedEntitySnapshot> snapshots)
+        {
+            var pinnedResults = new List<TrackedEntitySnapshot>();
+            var otherResults = new List<TrackedEntitySnapshot>();
+            foreach (var snapshot in snapshots)
+            {
+                if (snapshot.IsPinned)
+                {
+                    pinnedResults.Add(snapshot);
+                }
+                else
+                {
+                    otherResults.Add(snapshot);
+                }
+            }
+
+            pinnedResults.Sort(TrackedEntitySnapshot.Comparer.Instance);
+            otherResults.Sort(TrackedEntitySnapshot.Comparer.Instance);
+            return pinnedResults.Concat(otherResults);
+        }
+
+        void InspectEntity(long entityId, bool showOutlierTests)
+        {
+            ITimeSeries<double> timeSeries;
+
+            if (!Plugin.TryGetTimeSeries(entityId, out timeSeries))
+            {
+                Context.Respond("Time series not found", Color.Red);
+                return;
+            }
+
+            if (timeSeries.Count == 0)
+            {
+                Context.Respond("Time series found but empty", Color.Red);
+                return;
+            }
+
+            var outlierTests = timeSeries.TestOutlier();
+            var series = timeSeries.Zip(outlierTests, (a, b) => (a, b));
+
+            var msgBuilder = new StringBuilder();
+            msgBuilder.AppendLine();
+            foreach (var (((_, normal), outlierTest), index) in series.Indexed())
+            {
+                const int MaxWidth = 30;
+
+                var normalGraph = MakeOnelinerGraph(MaxWidth, 1, normal);
+                var outlierGraph = showOutlierTests ? MakeOnelinerGraph(MaxWidth, 3, outlierTest) : "";
+                msgBuilder.AppendLine($"{index} {normalGraph} {outlierGraph}");
+            }
+
+            Context.Respond(msgBuilder.ToString());
+        }
+
+        static string MakeOnelinerGraph(int maxWidth, double maxNormal, double normal, bool showLabel = true)
+        {
+            normal = normal.IsValid() ? normal / maxNormal : 0;
+            var clampNormal = Math.Min(1, Math.Max(0, normal));
+            var size = Math.Min(maxWidth, (int) (clampNormal * maxWidth));
+            var graph0 = Enumerable.Repeat('|', size);
+            var graph1 = Enumerable.Repeat('\'', maxWidth - size);
+            var graph = new string(graph0.Concat(graph1).ToArray());
+            var label = showLabel ? $" {normal * 100:000}%" : "";
+            return $"{graph}{label}";
+        }
 
         [Command("mute", "Mute broadcasting.")]
         [Permission(MyPromoteLevel.None)]
@@ -108,7 +338,7 @@ namespace AutoModerator
             Plugin.ClearQuestForUser(Context.Player.IdentityId);
         });
 
-        [Command("scan", "Self-profiler for players. `-this` or `-name=` to profile a specific grid.")]
+        [Command("profile", "Self-profiler for players. `-this` or `-name=` to profile a specific grid.")]
         [Permission(MyPromoteLevel.None)]
         public void ProfilePlayer() => this.CatchAndReport(async () =>
         {
@@ -127,8 +357,7 @@ namespace AutoModerator
                 {
                     if (Context.Player.TryGetSelectedGrid(out var grid))
                     {
-                        if (!grid.BigOwners.TryGetFirst(out var ownerId) ||
-                            ownerId != playerId)
+                        if (!grid.BigOwners.TryGetFirst(out var ownerId) || ownerId != playerId)
                         {
                             Context.Respond($"Not your grid: {grid.DisplayName}", Color.Red);
                             return;

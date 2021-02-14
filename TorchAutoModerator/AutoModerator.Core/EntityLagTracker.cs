@@ -12,139 +12,27 @@ namespace AutoModerator.Core
     {
         public interface IConfig
         {
-            double LagThreshold { get; }
-            int SafetyInterval { get; }
-            TimeSpan PinWindow { get; }
-            TimeSpan PinLifeSpan { get; }
-            bool IsFactionExempt(string factionTag);
+            double PinLag { get; }
+            double OutlierFenceNormal { get; }
+            TimeSpan TrackingSpan { get; }
+            TimeSpan PinSpan { get; }
+            bool IsFactionExempt(long factionId);
         }
 
         static readonly ILogger Log = LogManager.GetCurrentClassLogger();
         readonly IConfig _config;
         readonly TaggedTimeSeries<long, double> _lagTimeSeries;
         readonly ExpiryDictionary<long> _pinnedIds;
-        readonly Dictionary<long, string> _names; // for debugging only
+        readonly Dictionary<long, string> _lastEntityNames;
+        readonly Dictionary<long, TrackedEntitySnapshot> _lastSnapshots;
 
         public EntityLagTracker(IConfig config)
         {
             _config = config;
             _lagTimeSeries = new TaggedTimeSeries<long, double>();
             _pinnedIds = new ExpiryDictionary<long>();
-            _names = new Dictionary<long, string>();
-        }
-
-        [MethodImpl(MethodImplOptions.Synchronized)]
-        public void Update(IEnumerable<EntityLagSnapshot> entityLags)
-        {
-            // skip exempt factions
-            entityLags = entityLags.WhereNot(s =>
-                s.FactionTag is string factionTag &&
-                _config.IsFactionExempt(factionTag));
-
-            var now = DateTime.UtcNow;
-            foreach (var lag in entityLags)
-            {
-                var lagNormal = lag.LagMspf / _config.LagThreshold;
-                _lagTimeSeries.AddPoint(lag.EntityId, now, lagNormal);
-            }
-
-            // append zero to time series that didn't have new input
-            var profiledEntityIdSet = entityLags.Select(r => r.EntityId).ToSet();
-            foreach (var existingGridId in _lagTimeSeries.Tags)
-            {
-                if (!profiledEntityIdSet.Contains(existingGridId))
-                {
-                    _lagTimeSeries.AddPoint(existingGridId, now, 0);
-                }
-            }
-
-            // keep track of laggy grids & lifespan
-            var laggyGridIds = GetLongLagNormals(1d).Select(p => p.EntityId).ToArray();
-            _pinnedIds.AddOrUpdate(laggyGridIds, _config.PinLifeSpan);
-
-            // clean up old data
-            _pinnedIds.RemoveExpired();
-            _lagTimeSeries.RemovePointsOlderThan(DateTime.UtcNow - _config.PinWindow);
-
-            var quietGridIds = _lagTimeSeries
-                .GetAllTimeSeries()
-                .Where(p => p.TimeSeries.All(t => t.Element == 0d))
-                .Select(p => p.Key);
-
-            _lagTimeSeries.RemoveSeriesRange(quietGridIds);
-
-            // for debugging
-            foreach (var lag in entityLags)
-            {
-                _names[lag.EntityId] = lag.Name;
-            }
-
-            if (Log.IsTraceEnabled)
-            {
-                foreach (var grid in GetTrackedEntities(.5d))
-                {
-                    var name = _names.GetOrElse(grid.Id, $"{grid.Id}");
-                    Log.Trace($"entity lag: \"{name}\" -> {grid.LongLagNormal * 100:0}% {grid.RemainingTime.TotalSeconds:0}s");
-                }
-            }
-
-            Log.Debug($"{entityLags.Count(s => s.LagMspf >= 1f)} laggy entities");
-            Log.Debug($"{_pinnedIds.Count} pinned entities (new: {laggyGridIds.Length})");
-        }
-
-        [MethodImpl(MethodImplOptions.Synchronized)]
-        public bool TryGetTrackedEntity(long entityId, out TrackedEntitySnapshot entity)
-        {
-            var hasPoint = TryGetLongLagNormal(entityId, out var lag);
-            var hasPin = _pinnedIds.TryGetRemainingTime(entityId, out var remainingTime);
-            if (!hasPoint && !hasPin)
-            {
-                entity = default;
-                return false;
-            }
-
-            entity = new TrackedEntitySnapshot(entityId, lag, remainingTime);
-            return true;
-        }
-
-        [MethodImpl(MethodImplOptions.Synchronized)]
-        public IEnumerable<long> GetTrackedEntityIds()
-        {
-            var set = new HashSet<long>();
-            set.UnionWith(_lagTimeSeries.Tags);
-            set.UnionWith(_pinnedIds.Keys);
-            return set;
-        }
-
-        [MethodImpl(MethodImplOptions.Synchronized)]
-        public IEnumerable<TrackedEntitySnapshot> GetTrackedEntities(double minLongLagNormal)
-        {
-            var zip = GetLongLagNormals(minLongLagNormal)
-                .ToDictionary()
-                .Zip(_pinnedIds.ToDictionary());
-
-            var snapshots = new List<TrackedEntitySnapshot>();
-            foreach (var (entityId, (longLagNormal, remainingTime)) in zip)
-            {
-                var snapshot = new TrackedEntitySnapshot(entityId, longLagNormal, remainingTime);
-                snapshots.Add(snapshot);
-            }
-
-            return snapshots;
-        }
-
-        [MethodImpl(MethodImplOptions.Synchronized)]
-        public IEnumerable<TrackedEntitySnapshot> GetTopPins()
-        {
-            var snapshots = new List<TrackedEntitySnapshot>();
-            foreach (var (entityId, remainingTime) in _pinnedIds.GetRemainingTimes())
-            {
-                var longLagNormal = TryGetLongLagNormal(entityId, out var n) ? n : 0d;
-                var snapshot = new TrackedEntitySnapshot(entityId, longLagNormal, remainingTime);
-                snapshots.Add(snapshot);
-            }
-
-            return snapshots.OrderByDescending(s => s.LongLagNormal);
+            _lastEntityNames = new Dictionary<long, string>();
+            _lastSnapshots = new Dictionary<long, TrackedEntitySnapshot>();
         }
 
         [MethodImpl(MethodImplOptions.Synchronized)]
@@ -152,66 +40,179 @@ namespace AutoModerator.Core
         {
             _lagTimeSeries.Clear();
             _pinnedIds.Clear();
+            _lastEntityNames.Clear();
+            _lastSnapshots.Clear();
         }
 
-        IEnumerable<(long EntityId, double Normal)> GetLongLagNormals(double minNormal)
+        [MethodImpl(MethodImplOptions.Synchronized)]
+        public void Update(IEnumerable<EntityLagSource> sources)
         {
-            var normals = new List<(long, double)>();
-            foreach (var (entityId, timeSeries) in _lagTimeSeries.GetAllTimeSeries())
+            // clean up old data
+            var now = DateTime.UtcNow;
+            _lagTimeSeries.RemovePointsOlderThan(now - _config.TrackingSpan);
+            _pinnedIds.RemoveExpired();
+
+            // stop tracking non-existing (deleted) entities
+            _lagTimeSeries.RemoveWhere(s => s.All(p => p.Element == 0d));
+
+            // find valid entities
+            var validSources = new Dictionary<long, EntityLagSource>();
+            foreach (var src in sources)
             {
-                var longLagNormal = CalcLongLagNormal(timeSeries);
-                if (longLagNormal > minNormal)
+                // skip exempt faction's entities
+                if (_config.IsFactionExempt(src.FactionId))
                 {
-                    normals.Add((entityId, longLagNormal));
+                    Log.Trace($"exempt: {src}");
+                    continue;
+                }
+
+                if (!src.LagMspf.IsValid())
+                {
+                    Log.Warn($"invalid ms/f value: {src.Name}");
+                    continue;
+                }
+
+                validSources.Add(src.EntityId, src);
+                _lastEntityNames[src.EntityId] = src.Name;
+            }
+
+            // track entities
+            foreach (var src in validSources.Values)
+            {
+                var lagNormal = src.LagMspf / _config.PinLag;
+                _lagTimeSeries.AddPoint(src.EntityId, now, lagNormal);
+
+                Log.Trace($"input: {src} -> {lagNormal * 100:0}%");
+            }
+
+            // update all tracked entities' interval with zero value if didn't get a new input
+            foreach (var existingEntityId in _lagTimeSeries.Tags)
+            {
+                if (!validSources.ContainsKey(existingEntityId))
+                {
+                    _lagTimeSeries.AddPoint(existingEntityId, now, 0);
                 }
             }
 
-            return normals;
-        }
-
-        bool TryGetLongLagNormal(long entityId, out double longLagNormal)
-        {
-            if (_lagTimeSeries.TryGetTimeSeries(entityId, out var timeSeries))
+            // analyze long lags
+            var longLags = new Dictionary<long, double>();
+            foreach (var (entityId, timeSeries) in _lagTimeSeries.GetAllTimeSeries())
             {
-                longLagNormal = CalcLongLagNormal(timeSeries);
-                return true;
+                var longLag = CalcLongLagNormal(timeSeries);
+                longLags.Add(entityId, longLag);
+
+                // don't pin until sufficient data is available (even if long-laggy)
+                // but need to get players warned in case this entity just got spawned
+                var minTimestamp = DateTime.UtcNow - (_config.TrackingSpan - 5.Seconds());
+                var notEnoughData = timeSeries.IsAllYoungerThan(minTimestamp);
+
+                // pin long-laggy entities
+                if (longLag >= 1 && !notEnoughData)
+                {
+                    _pinnedIds.AddOrUpdate(entityId, _config.PinSpan);
+                }
             }
 
-            longLagNormal = 0d;
-            return false;
+            // take snapshots
+            _lastSnapshots.Clear();
+            foreach (var (entityId, (longLag, pin)) in longLags.Zip(_pinnedIds.ToDictionary()))
+            {
+                var snapshot = new TrackedEntitySnapshot(entityId, longLag, pin);
+                _lastSnapshots.Add(entityId, snapshot);
+            }
+
+            if (Log.IsDebugEnabled)
+            {
+                var allTrackedEntities = GetTrackedEntities().ToArray(); // including pins
+                if (allTrackedEntities.Any())
+                {
+                    foreach (var entity in allTrackedEntities)
+                    {
+                        var name = _lastEntityNames.GetOrElse(entity.Id, "<noname>");
+                        var currentMspf = validSources.TryGetValue(entity.Id, out var s) ? $"{s.LagMspf:0.00}ms/f" : "--ms/f";
+                        var tsCount = _lagTimeSeries.TryGetTimeSeries(entity.Id, out var ts) ? ts.Count : 0;
+                        var pinSecs = entity.RemainingTime.TotalSeconds;
+                        var pin = pinSecs > 0 ? $"pin: {pinSecs:0}secs" : "not pinned";
+                        Log.Debug($"tracking: \"{name}\" ({entity.Id}) -> {currentMspf} {entity.LongLagNormal * 100:0}% ({tsCount}) {pin}");
+                    }
+                }
+                else
+                {
+                    Log.Debug("tracking 0 entities");
+                }
+            }
         }
 
-        // returning 1.0 (or higher) will make the tracker pin the entity
+        [MethodImpl(MethodImplOptions.Synchronized)]
+        public bool TryGetTrackedEntity(long entityId, out TrackedEntitySnapshot entity)
+        {
+            return _lastSnapshots.TryGetValue(entityId, out entity);
+        }
+
+        [MethodImpl(MethodImplOptions.Synchronized)]
+        public IEnumerable<long> GetTrackedEntityIds()
+        {
+            return _lastSnapshots.Keys.ToArray();
+        }
+
+        [MethodImpl(MethodImplOptions.Synchronized)]
+        public IEnumerable<TrackedEntitySnapshot> GetTrackedEntities()
+        {
+            return _lastSnapshots.Values.ToArray();
+        }
+
+        [MethodImpl(MethodImplOptions.Synchronized)]
+        public IEnumerable<TrackedEntitySnapshot> GetTopPins()
+        {
+            return _lastSnapshots
+                .Values
+                .Where(s => s.IsPinned)
+                .OrderByDescending(s => s.LongLagNormal)
+                .ToArray();
+        }
+
+        [MethodImpl(MethodImplOptions.Synchronized)]
+        public bool TryGetTimeSeries(long entityId, out ITimeSeries<double> timeSeries)
+        {
+            return _lagTimeSeries.TryGetTimeSeries(entityId, out timeSeries);
+        }
+
+        // returned value of 1+ will (generally) pin given entity for punishment
         double CalcLongLagNormal(ITimeSeries<double> timeSeries)
         {
             if (timeSeries.Count == 0) return 0;
+            if (timeSeries.Count == 1) return timeSeries[0].Element; // for outlier test
 
-            // don't evaluate until sufficient data is available
-            var oldestTimestamp = timeSeries[0].Timestamp;
-            var minTimestamp = DateTime.UtcNow - _config.PinWindow;
-            if (oldestTimestamp > minTimestamp) return 0;
-
-            var sumNormal = 0d;
-            var sumCount = 0;
-            var consecutiveLaggyFrameCount = 0;
+            var totalNormal = 0d;
+            var outlierTests = timeSeries.TestOutlier();
             for (var i = 0; i < timeSeries.Count; i++)
             {
                 var (timestamp, normal) = timeSeries[i];
+                var outlierTest = outlierTests[i];
 
-                if (normal < 1)
+                // first interval is most always laggy due to spawning or server hiccup
+                // NOTE the element at index 0 is not necessarily the very first element
+                // because we constantly delete old elements every update
+                if (i == 0)
                 {
-                    consecutiveLaggyFrameCount = 0;
-                }
-                else if (consecutiveLaggyFrameCount++ < _config.SafetyInterval)
-                {
-                    normal = 1; // flatten to 1 if it's potentially a server hiccup
+                    totalNormal += Math.Min(1, normal);
+                    continue;
                 }
 
-                sumNormal += normal;
-                sumCount += 1;
+                if (_config.OutlierFenceNormal > 0) // switch
+                {
+                    // prevent catching server hiccups
+                    if (outlierTest > _config.OutlierFenceNormal)
+                    {
+                        totalNormal += Math.Min(1, normal);
+                        continue;
+                    }
+                }
+
+                totalNormal += normal;
             }
 
-            var avgNormal = sumNormal / sumCount;
+            var avgNormal = totalNormal / timeSeries.Count;
             return avgNormal;
         }
     }
