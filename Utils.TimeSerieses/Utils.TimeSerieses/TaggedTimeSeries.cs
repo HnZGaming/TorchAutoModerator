@@ -16,10 +16,18 @@ namespace Utils.TimeSerieses
         }
 
         public IEnumerable<T> Tags => _timeSeriesMap.Keys;
+        public int Count => _timeSeriesMap.Count;
 
         public IEnumerable<(T Key, ITimeSeries<E> TimeSeries)> GetAllTimeSeries()
         {
             return _timeSeriesMap.Select(m => (m.Key, (ITimeSeries<E>) m.Value)).ToArray();
+        }
+
+        public IReadOnlyDictionary<T, ITimeSeries<E>> ToDictionary()
+        {
+            return _timeSeriesMap
+                .Select(m => (m.Key, (ITimeSeries<E>)m.Value))
+                .ToDictionary(p => p.Key, p => p.Item2);
         }
 
         public bool TryGetTimeSeries(T tag, out ITimeSeries<E> timeSeries)

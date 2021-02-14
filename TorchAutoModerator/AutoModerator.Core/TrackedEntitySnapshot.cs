@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 
 namespace AutoModerator.Core
 {
@@ -15,5 +16,18 @@ namespace AutoModerator.Core
         public double LongLagNormal { get; }
         public TimeSpan RemainingTime { get; }
         public bool IsPinned => RemainingTime > TimeSpan.Zero;
+
+        // don't include temporary stuff like entity names and faction IDs
+        // because those things can change
+        
+        public readonly struct Comparer : IComparer<TrackedEntitySnapshot>
+        {
+            public static readonly Comparer Instance = new Comparer();
+
+            public int Compare(TrackedEntitySnapshot x, TrackedEntitySnapshot y)
+            {
+                return y.LongLagNormal.CompareTo(x.LongLagNormal); // descending
+            }
+        }
     }
 }

@@ -39,13 +39,11 @@ namespace AutoModerator
         bool _enableWarning = true;
         double _firstIdleTime = 180;
         bool _broadcastAdminsOnly = true;
-        int _maxLaggyGpsCountPerScan = 5;
-        double _gridWarningTime = 300d;
-        double _gridPunishTime = 600d;
+        int _maxLaggyGpsCountPerScan = 3;
+        double _trackingTime = 300d;
+        double _punishTime = 600d;
         double _maxGridMspf = 0.5f;
         double _maxPlayerMspf = 0.5f;
-        double _playerWarningTime = 300d;
-        double _playerPunishTime = 600d;
         double _sampleFrequency = 5;
         double _warningNormal = 0.7d;
         bool _exemptNpcFactions = true;
@@ -68,8 +66,9 @@ namespace AutoModerator
         string _warningCurrentLevelText = LagWarningDefaultTexts.CurrentLevel;
         double _minIntegrityNormal = 0.5d;
         bool _enablePunishChatFeed = true;
+        string _punishReportChatName = "Laggy Players";
         string _punishReportChatFormat = "[{faction}] {player} \"{grid}\" ({level})";
-        double _outlierFenceNormal = 1;
+        double _outlierFenceNormal = 2;
 
         [XmlElement(nameof(FirstIdleTime))]
         [Display(Order = 2, Name = "First idle seconds", GroupName = OpGroupName,
@@ -89,9 +88,27 @@ namespace AutoModerator
             set => SetValue(ref _sampleFrequency, Math.Max(value, 5));
         }
 
+        [XmlElement(nameof(TrackingTime))]
+        [Display(Order = 6, Name = "Tracking time (seconds)", GroupName = OpGroupName,
+            Description = "Gives players a chance of N seconds before the punishment of per-grid lag violation.")]
+        public double TrackingTime
+        {
+            get => _trackingTime;
+            set => SetValue(ref _trackingTime, value);
+        }
+
+        [XmlElement(nameof(PunishTime))]
+        [Display(Order = 7, Name = "Pinned time (seconds)", GroupName = OpGroupName,
+            Description = "Punishes players for N seconds for per-grid lag violation.")]
+        public double PunishTime
+        {
+            get => _punishTime;
+            set => SetValue(ref _punishTime, value);
+        }
+
         [XmlElement(nameof(OutlierFenceNormal))]
-        [Display(Order = 6, Name = "Outlier fence (0-1)", GroupName = OpGroupName,
-            Description = "Ignores lags N times larger than the standard deviation of given grid/player's timeline.")]
+        [Display(Order = 8, Name = "Outlier fence normal", GroupName = OpGroupName,
+            Description = "Ignores spontaneous lags (N times larger than the standard deviation) of given grid/player's timeline.")]
         public double OutlierFenceNormal
         {
             get => _outlierFenceNormal;
@@ -123,24 +140,6 @@ namespace AutoModerator
             set => SetValue(ref _maxGridMspf, Math.Max(value, 0.001f));
         }
 
-        [XmlElement(nameof(GridTrackingTime))]
-        [Display(Order = 6, Name = "Tracking time (seconds)", GroupName = OpGridGroupName,
-            Description = "Gives players a chance of N seconds before the punishment of per-grid lag violation.")]
-        public double GridTrackingTime
-        {
-            get => _gridWarningTime;
-            set => SetValue(ref _gridWarningTime, value);
-        }
-
-        [XmlElement(nameof(GridPunishTime))]
-        [Display(Order = 7, Name = "Pinned time (seconds)", GroupName = OpGridGroupName,
-            Description = "Punishes players for N seconds for per-grid lag violation.")]
-        public double GridPunishTime
-        {
-            get => _gridPunishTime;
-            set => SetValue(ref _gridPunishTime, value);
-        }
-
         [XmlElement(nameof(MaxPlayerMspf))]
         [Display(Order = 3, Name = "Max player ms/f", GroupName = OpPlayerGroupName,
             Description = "Allows N milliseconds per game loop for each player to consume.")]
@@ -148,24 +147,6 @@ namespace AutoModerator
         {
             get => _maxPlayerMspf;
             set => SetValue(ref _maxPlayerMspf, value);
-        }
-
-        [XmlElement(nameof(PlayerTrackingTime))]
-        [Display(Order = 6, Name = "Tracking time (seconds)", GroupName = OpPlayerGroupName,
-            Description = "Gives players a chance of N seconds before the punishment of per-player lag violation.")]
-        public double PlayerTrackingTime
-        {
-            get => _playerWarningTime;
-            set => SetValue(ref _playerWarningTime, value);
-        }
-
-        [XmlElement(nameof(PlayerPunishTime))]
-        [Display(Order = 7, Name = "Pinned time (seconds)", GroupName = OpPlayerGroupName,
-            Description = "Punishes players for N seconds for per-player lag violation.")]
-        public double PlayerPunishTime
-        {
-            get => _playerPunishTime;
-            set => SetValue(ref _playerPunishTime, value);
         }
 
         [XmlElement(nameof(EnableWarning))]
@@ -255,9 +236,17 @@ namespace AutoModerator
             set => SetValue(ref _enablePunishChatFeed, value);
         }
 
+        [XmlElement(nameof(PunishReportChatName))]
+        [Display(Order = 3, Name = "Chat name", GroupName = PunishGroupName)]
+        public string PunishReportChatName
+        {
+            get => _punishReportChatName;
+            set => SetValue(ref _punishReportChatName, value);
+        }
+
         [ConfigCommandIgnore]
         [XmlElement(nameof(PunishReportChatFormat))]
-        [Display(Order = 3, Name = "Chat format", GroupName = PunishGroupName)]
+        [Display(Order = 4, Name = "Chat format", GroupName = PunishGroupName)]
         public string PunishReportChatFormat
         {
             get => _punishReportChatFormat;
@@ -274,7 +263,7 @@ namespace AutoModerator
         }
 
         [XmlElement(nameof(MinIntegrityNormal))]
-        [Display(Order = 2, Name = "Lowest integrity normal (0-1)", GroupName = DamageGroupName,
+        [Display(Order = 2, Name = "Lowest integrity (0-1)", GroupName = DamageGroupName,
             Description = "Applies damage to subject blocks until reaching N times integrity.")]
         public double MinIntegrityNormal
         {
@@ -396,11 +385,14 @@ namespace AutoModerator
             OnPropertyChanged(nameof(GpsMutedPlayerIds));
         }
 
-        public bool IsFactionExempt(string factionTag)
+        public bool IsFactionExempt(long factionId)
         {
-            var exemptByNpc = MySession.Static.Factions.IsNpcFaction(factionTag) && IgnoreNpcFactions;
-            var exemptByTag = ExemptFactionTags.Contains(factionTag.ToLower());
-            return exemptByNpc || exemptByTag;
+            if (IgnoreNpcFactions && MySession.Static.Factions.IsNpcFaction(factionId)) return true;
+
+            var factionTag = MySession.Static.Factions.TryGetFactionById(factionId)?.Tag;
+            if (factionTag == null) return false;
+
+            return ExemptFactionTags.Contains(factionTag.ToLower());
         }
     }
 }
