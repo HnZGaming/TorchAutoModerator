@@ -121,14 +121,14 @@ namespace AutoModerator
             if (Context.Args.TryGetElementAt(0, out var entityIdStr) &&
                 long.TryParse(entityIdStr, out var entityId))
             {
-                if (!MyEntities.TryGetEntityById(entityId, out var entity))
-                {
-                    Context.Respond("Entity not found", Color.Red);
-                    return;
-                }
-                
                 if (isNormalPlayer)
                 {
+                    if (!MyEntities.TryGetEntityById(entityId, out var entity))
+                    {
+                        Context.Respond("Entity not found", Color.Red);
+                        return;
+                    }
+
                     if (entity is IMyCharacter && !memberIds.Contains(entityId))
                     {
                         Context.Respond("Not you or your faction member", Color.Red);
@@ -161,16 +161,31 @@ namespace AutoModerator
             if (!specificGridIdOrNull.HasValue)
             {
                 msgBuilder.AppendLine("Players:");
-                foreach (var s in OrderForInspection(Plugin.GetTrackedPlayers()).Take(top))
+                var inspectableGrids = new List<TrackedEntitySnapshot>();
+                foreach (var s in OrderForInspection(Plugin.GetTrackedPlayers()))
                 {
                     if (isNormalPlayer && !memberIds.Contains(s.Id)) continue;
 
-                    var line = MakeTrackedEntityLine(s);
-                    msgBuilder.AppendLine(line);
+                    inspectableGrids.Add(s);
+                }
+
+                if (inspectableGrids.Any())
+                {
+                    foreach (var s in inspectableGrids.Take(top))
+                    {
+                        var line = MakeTrackedEntityLine(s);
+                        msgBuilder.AppendLine(line);
+                    }
+                }
+                else
+                {
+                    msgBuilder.AppendLine("No tracked players found");
                 }
             }
 
             msgBuilder.AppendLine("Grids:");
+
+            var inspectablePlayers = new List<TrackedEntitySnapshot>();
             foreach (var s in OrderForInspection(Plugin.GetTrackedGrids()).Take(top))
             {
                 if (specificGridIdOrNull is long sid && sid != s.Id) continue;
@@ -182,8 +197,20 @@ namespace AutoModerator
                     if (!memberIds.Contains(ownerId)) continue;
                 }
 
-                var line = MakeTrackedEntityLine(s);
-                msgBuilder.AppendLine(line);
+                inspectablePlayers.Add(s);
+            }
+
+            if (inspectablePlayers.Any())
+            {
+                foreach (var s in inspectablePlayers.Take(top))
+                {
+                    var line = MakeTrackedEntityLine(s);
+                    msgBuilder.AppendLine(line);
+                }
+            }
+            else
+            {
+                msgBuilder.AppendLine("No tracked grids found");
             }
 
             Context.Respond(msgBuilder.ToString());

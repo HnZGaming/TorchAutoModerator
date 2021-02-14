@@ -30,5 +30,17 @@ namespace TorchEntityGpsBroadcaster.Core
         {
             return self.TryGetValue(key, out var vs) && vs.Contains(value);
         }
+
+        public static void Remove<K, V, C>(this IDictionary<K, C> self, K key, V value) where C : ICollection<V>
+        {
+            if (self.TryGetValue(key, out var values))
+            {
+                values.Remove(value);
+                if (values.Count == 0)
+                {
+                    self.Remove(key);
+                }
+            }
+        }
     }
 }

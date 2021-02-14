@@ -49,7 +49,7 @@ namespace AutoModerator.Players
         [MethodImpl(MethodImplOptions.Synchronized)]
         public void Update(BaseProfilerResult<MyIdentity> profileResult)
         {
-            Log.Debug("updating player lags...");
+            Log.Trace("updating player lags...");
 
             var results = new List<EntityLagSource>();
             foreach (var (player, profilerEntry) in profileResult.GetTopEntities(50))
@@ -61,7 +61,7 @@ namespace AutoModerator.Players
             }
 
             _lagTracker.Update(results);
-            Log.Debug("updated player lags");
+            Log.Trace("updated player lags");
         }
 
         [MethodImpl(MethodImplOptions.Synchronized)]

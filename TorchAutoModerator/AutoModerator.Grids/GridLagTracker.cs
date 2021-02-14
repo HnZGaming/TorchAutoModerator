@@ -94,7 +94,7 @@ namespace AutoModerator.Grids
         [MethodImpl(MethodImplOptions.Synchronized)]
         public void Update(BaseProfilerResult<MyCubeGrid> profileResult)
         {
-            Log.Debug("updating grid lags...");
+            Log.Trace("updating grid lags...");
 
             var lags = new List<EntityLagSource>();
             var latestLaggiestGridToOwnerIds = new Dictionary<long, long>();
@@ -138,7 +138,7 @@ namespace AutoModerator.Grids
                 }
             }
 
-            Log.Debug("updated grid lags");
+            Log.Trace("updated grid lags");
         }
 
         [MethodImpl(MethodImplOptions.Synchronized)]

@@ -96,7 +96,7 @@ namespace AutoModerator.Warnings
                     _quests[playerId] = newPlayerState;
                     UpdateQuestLog(newPlayerState.Quest, playerId);
 
-                    Log.Trace($"warning (new): \"{laggyPlayer.PlayerName}\" {lag * 100:0}%");
+                    Log.Info($"warning issued: \"{laggyPlayer.PlayerName}\" {lag * 100:0}%");
                     continue;
                 }
 
@@ -127,7 +127,7 @@ namespace AutoModerator.Warnings
                 var message = $"{_config.WarningCurrentLevelText}: {lag * 100:0}%";
                 if (laggyPlayer.IsPinned)
                 {
-                    message += $" ({laggyPlayer.Pin.TotalSeconds:0} seconds left)";
+                    message += $" (punished for {laggyPlayer.Pin.TotalSeconds:0} seconds more)";
                 }
 
                 _hudNotifications.Show(playerId, message);
@@ -147,12 +147,13 @@ namespace AutoModerator.Warnings
                     state.Quest = QuestState.Ended;
                     UpdateQuestLog(state.Quest, existingPlayerId);
                     _hudNotifications.Remove(existingPlayerId);
+                    Log.Info($"warning withdrawn: {state.Latest.PlayerName}");
                 }
             }
 
             foreach (var (_, state) in _quests)
             {
-                Log.Trace($"warning: {state.Latest} {state.Quest}");
+                Log.Debug($"warning ongoing: {state.Latest} {state.Quest}");
             }
         }
 
@@ -175,7 +176,7 @@ namespace AutoModerator.Warnings
         void UpdateQuestLog(QuestState quest, long playerId)
         {
             var playerName = MySession.Static.Players.GetPlayerNameOrElse(playerId, $"{playerId}");
-            Log.Trace($"updating quest log: {playerName}: {quest}");
+            Log.Debug($"updating quest log: {playerName}: {quest}");
 
             switch (quest)
             {

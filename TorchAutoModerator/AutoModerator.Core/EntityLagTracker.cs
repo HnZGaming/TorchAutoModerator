@@ -129,10 +129,11 @@ namespace AutoModerator.Core
                     foreach (var entity in allTrackedEntities)
                     {
                         var name = _lastEntityNames.GetOrElse(entity.Id, "<noname>");
+                        var currentMspf = validSources.TryGetValue(entity.Id, out var s) ? $"{s.LagMspf:0.00}ms/f" : "--ms/f";
                         var tsCount = _lagTimeSeries.TryGetTimeSeries(entity.Id, out var ts) ? ts.Count : 0;
                         var pinSecs = entity.RemainingTime.TotalSeconds;
                         var pin = pinSecs > 0 ? $"pin: {pinSecs:0}secs" : "not pinned";
-                        Log.Debug($"tracking: \"{name}\" ({entity.Id}) -> {entity.LongLagNormal * 100:0}% ({tsCount}) {pin}");
+                        Log.Debug($"tracking: \"{name}\" ({entity.Id}) -> {currentMspf} {entity.LongLagNormal * 100:0}% ({tsCount}) {pin}");
                     }
                 }
                 else
@@ -180,7 +181,7 @@ namespace AutoModerator.Core
         double CalcLongLagNormal(ITimeSeries<double> timeSeries)
         {
             if (timeSeries.Count == 0) return 0;
-            if (timeSeries.Count == 1) return 0; // for outlier test
+            if (timeSeries.Count == 1) return timeSeries[0].Element; // for outlier test
 
             var totalNormal = 0d;
             var outlierTests = timeSeries.TestOutlier();
@@ -189,8 +190,9 @@ namespace AutoModerator.Core
                 var (timestamp, normal) = timeSeries[i];
                 var outlierTest = outlierTests[i];
 
-                // first interval is most always laggy
-                // due to spawning or server hiccup
+                // first interval is most always laggy due to spawning or server hiccup
+                // NOTE the element at index 0 is not necessarily the very first element
+                // because we constantly delete old elements every update
                 if (i == 0)
                 {
                     totalNormal += Math.Min(1, normal);

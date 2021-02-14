@@ -26,14 +26,17 @@ namespace AutoModerator.Punishes
 
         static readonly ILogger Log = LogManager.GetCurrentClassLogger();
         readonly IConfig _config;
+        readonly HashSet<long> _punishedIds;
 
         public LagPunishExecutor(IConfig config)
         {
             _config = config;
+            _punishedIds = new HashSet<long>();
         }
 
         public void Clear()
         {
+            _punishedIds.Clear();
         }
 
         public async Task Update(IReadOnlyDictionary<long, LagPunishSource> lags)
@@ -51,6 +54,12 @@ namespace AutoModerator.Punishes
                     continue;
                 }
 
+                if (!_punishedIds.Contains(gridId))
+                {
+                    _punishedIds.Add(gridId);
+                    Log.Info($"Started punishment: \"{grid.DisplayName}\" type: {_config.PunishType}");
+                }
+
                 await PunishGrid(grid);
 
                 // move to the next frame so we won't lag the server
@@ -58,6 +67,17 @@ namespace AutoModerator.Punishes
 
                 Log.Trace($"finished \"{grid.DisplayName}\" {_config.PunishType}");
             }
+
+            foreach (var existingId in _punishedIds)
+            {
+                if (!lags.ContainsKey(existingId))
+                {
+                    var name = VRageUtils.TryGetCubeGridById(existingId, out var g) ? $"\"{g.DisplayName}\"" : $"<{existingId}>";
+                    Log.Info($"Done punishment: {name}");
+                }
+            }
+            
+            _punishedIds.ExceptWith(lags.Keys);
 
             // back to some worker thread
             await TaskUtils.MoveToThreadPool();

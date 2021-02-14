@@ -20,7 +20,7 @@ namespace AutoModerator.Core
         public override string ToString()
         {
             var factionTag = MySession.Static.Factions.TryGetFactionById(FactionId)?.Tag;
-            return $"\"{Name}\" [{factionTag ?? "<single>"}] {LagMspf:0.00}ms/f";
+            return $"[{factionTag ?? "<single>"}] \"{Name}\" {LagMspf:0.00}ms/f";
         }
     }
 }

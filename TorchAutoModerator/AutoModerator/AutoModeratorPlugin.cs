@@ -136,18 +136,19 @@ namespace AutoModerator
 
                 if (Config.EnableWarning)
                 {
+                    var usePins = Config.PunishType != LagPunishType.None;
+                    Log.Debug($"punishment type: {Config.PunishType}, warning for punishment: {usePins}");
+
+                    var sources = new List<LagWarningSource>();
                     var players = _laggyPlayers.GetTrackedEntities(Config.WarningLagNormal).ToDictionary(p => p.Id);
                     var grids = _laggyGrids.GetPlayerLaggiestGrids(Config.WarningLagNormal).ToDictionary();
-                    var sources = new List<LagWarningSource>();
                     foreach (var (playerId, (player, grid)) in players.Zip(grids))
                     {
                         if (playerId == 0) continue; // grid not owned
 
-                        var playerName = MySession.Static.Players.GetPlayerNameOrElse(playerId, $"<{playerId}>");
-                        var usePins = Config.PunishType != LagPunishType.None;
-
                         var src = new LagWarningSource(
-                            playerId, playerName,
+                            playerId,
+                            MySession.Static.Players.GetPlayerNameOrElse(playerId, $"<{playerId}>"),
                             player.LongLagNormal,
                             usePins ? player.RemainingTime : TimeSpan.Zero,
                             grid.LongLagNormal,
