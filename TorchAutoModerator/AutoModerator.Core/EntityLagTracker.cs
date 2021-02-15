@@ -23,7 +23,7 @@ namespace AutoModerator.Core
         readonly IConfig _config;
         readonly TaggedTimeSeries<long, double> _lagTimeSeries;
         readonly ExpiryDictionary<long> _pinnedIds;
-        readonly Dictionary<long, string> _lastEntityNames;
+        readonly Dictionary<long, EntityLagSource> _lastSources;
         readonly Dictionary<long, TrackedEntitySnapshot> _lastSnapshots;
 
         public EntityLagTracker(IConfig config)
@@ -31,8 +31,42 @@ namespace AutoModerator.Core
             _config = config;
             _lagTimeSeries = new TaggedTimeSeries<long, double>();
             _pinnedIds = new ExpiryDictionary<long>();
-            _lastEntityNames = new Dictionary<long, string>();
+            _lastSources = new Dictionary<long, EntityLagSource>();
             _lastSnapshots = new Dictionary<long, TrackedEntitySnapshot>();
+        }
+
+        [MethodImpl(MethodImplOptions.Synchronized)]
+        public bool TryGetTrackedEntity(long entityId, out TrackedEntitySnapshot entity)
+        {
+            return _lastSnapshots.TryGetValue(entityId, out entity);
+        }
+
+        [MethodImpl(MethodImplOptions.Synchronized)]
+        public IEnumerable<long> GetTrackedEntityIds()
+        {
+            return _lastSnapshots.Keys.ToArray();
+        }
+
+        [MethodImpl(MethodImplOptions.Synchronized)]
+        public IEnumerable<TrackedEntitySnapshot> GetTrackedEntities()
+        {
+            return _lastSnapshots.Values.ToArray();
+        }
+
+        [MethodImpl(MethodImplOptions.Synchronized)]
+        public IEnumerable<TrackedEntitySnapshot> GetTopPins()
+        {
+            return _lastSnapshots
+                .Values
+                .Where(s => s.IsPinned)
+                .OrderByDescending(s => s.LongLagNormal)
+                .ToArray();
+        }
+
+        [MethodImpl(MethodImplOptions.Synchronized)]
+        public bool TryGetTimeSeries(long entityId, out ITimeSeries<double> timeSeries)
+        {
+            return _lagTimeSeries.TryGetTimeSeries(entityId, out timeSeries);
         }
 
         [MethodImpl(MethodImplOptions.Synchronized)]
@@ -40,8 +74,17 @@ namespace AutoModerator.Core
         {
             _lagTimeSeries.Clear();
             _pinnedIds.Clear();
-            _lastEntityNames.Clear();
+            _lastSources.Clear();
             _lastSnapshots.Clear();
+        }
+
+        [MethodImpl(MethodImplOptions.Synchronized)]
+        public void StopTracking(long entityId)
+        {
+            _lagTimeSeries.RemoveSeries(entityId);
+            _pinnedIds.Remove(entityId);
+            _lastSources.Remove(entityId);
+            _lastSnapshots.Remove(entityId);
         }
 
         [MethodImpl(MethodImplOptions.Synchronized)]
@@ -57,6 +100,7 @@ namespace AutoModerator.Core
 
             // find valid entities
             var validSources = new Dictionary<long, EntityLagSource>();
+            var foundInvalidValues = false;
             foreach (var src in sources)
             {
                 // skip exempt faction's entities
@@ -68,12 +112,17 @@ namespace AutoModerator.Core
 
                 if (!src.LagMspf.IsValid())
                 {
-                    Log.Warn($"invalid ms/f value: {src.Name}");
+                    foundInvalidValues = true;
                     continue;
                 }
 
                 validSources.Add(src.EntityId, src);
-                _lastEntityNames[src.EntityId] = src.Name;
+                _lastSources[src.EntityId] = src;
+            }
+
+            if (foundInvalidValues)
+            {
+                Log.Warn("invalid ms/f value(s) found; maybe: server freezing");
             }
 
             // track entities
@@ -117,7 +166,11 @@ namespace AutoModerator.Core
             _lastSnapshots.Clear();
             foreach (var (entityId, (longLag, pin)) in longLags.Zip(_pinnedIds.ToDictionary()))
             {
-                var snapshot = new TrackedEntitySnapshot(entityId, longLag, pin);
+                var lastSource = _lastSources.GetValueOrDefault(entityId);
+                var name = lastSource.Name ?? $"<{entityId}>";
+                var ownerId = lastSource.OwnerId;
+                var ownerName = lastSource.OwnerName ?? $"<{ownerId}>";
+                var snapshot = new TrackedEntitySnapshot(entityId, name, ownerId, ownerName, longLag, pin);
                 _lastSnapshots.Add(entityId, snapshot);
             }
 
@@ -128,7 +181,7 @@ namespace AutoModerator.Core
                 {
                     foreach (var entity in allTrackedEntities)
                     {
-                        var name = _lastEntityNames.GetOrElse(entity.Id, "<noname>");
+                        var name = _lastSources.GetValueOrDefault(entity.Id).Name ?? $"<{entity.Id}>";
                         var currentMspf = validSources.TryGetValue(entity.Id, out var s) ? $"{s.LagMspf:0.00}ms/f" : "--ms/f";
                         var tsCount = _lagTimeSeries.TryGetTimeSeries(entity.Id, out var ts) ? ts.Count : 0;
                         var pinSecs = entity.RemainingTime.TotalSeconds;
@@ -141,40 +194,6 @@ namespace AutoModerator.Core
                     Log.Debug("tracking 0 entities");
                 }
             }
-        }
-
-        [MethodImpl(MethodImplOptions.Synchronized)]
-        public bool TryGetTrackedEntity(long entityId, out TrackedEntitySnapshot entity)
-        {
-            return _lastSnapshots.TryGetValue(entityId, out entity);
-        }
-
-        [MethodImpl(MethodImplOptions.Synchronized)]
-        public IEnumerable<long> GetTrackedEntityIds()
-        {
-            return _lastSnapshots.Keys.ToArray();
-        }
-
-        [MethodImpl(MethodImplOptions.Synchronized)]
-        public IEnumerable<TrackedEntitySnapshot> GetTrackedEntities()
-        {
-            return _lastSnapshots.Values.ToArray();
-        }
-
-        [MethodImpl(MethodImplOptions.Synchronized)]
-        public IEnumerable<TrackedEntitySnapshot> GetTopPins()
-        {
-            return _lastSnapshots
-                .Values
-                .Where(s => s.IsPinned)
-                .OrderByDescending(s => s.LongLagNormal)
-                .ToArray();
-        }
-
-        [MethodImpl(MethodImplOptions.Synchronized)]
-        public bool TryGetTimeSeries(long entityId, out ITimeSeries<double> timeSeries)
-        {
-            return _lagTimeSeries.TryGetTimeSeries(entityId, out timeSeries);
         }
 
         // returned value of 1+ will (generally) pin given entity for punishment

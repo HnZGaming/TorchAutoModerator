@@ -10,9 +10,9 @@
             IsPinned = isPinned;
         }
 
-        public long PlayerId { get; }
-        public long LaggiestGridId { get; }
-        public double LongLagNormal { get; }
-        public bool IsPinned { get; }
+        public readonly long PlayerId;
+        public readonly long LaggiestGridId;
+        public readonly double LongLagNormal;
+        public readonly bool IsPinned;
     }
 }

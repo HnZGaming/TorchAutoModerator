@@ -8,37 +8,33 @@ This plugin will,
 2. provide a means for them to know their impact on the server and how to fix it;
 3. if they ignored the warning, punish their ass (in a variety of ways).
 
-This plugin is primarily designed to address the issue that some server admins are
-constantly checking the server status (via [TorchMonitor](https://github.com/HnZGaming/TorchMonitor))
+This plugin is primarily designed to address the issue that some server admins 
+using [TorchMonitor](https://github.com/HnZGaming/TorchMonitor) are constantly checking the server status
 and reaching out every single laggy player in game.
 This plugin should automate the whole process and further take necessary actions 
-to keep the server healthy without the admin presence. 
+to keep the server healthy without the admin presence.
 
 Note that this plugin will only work on `MySector` part of the game.
-`MyPhysics` and anything else cannot be traced up to specific grids/players;
-you will need to active BlockLimiter and/or other plugins to remove/limit certain blocks
-that tend to add up elsewhere.
+`MyPhysics` and anything else that we can't trace up to specific grids/players.
 
 ## General
 
 This plugin's main loop follows this cycle:
 1. Profile top 50 grids and players in game (using Profiler plugin);
-2. Keep track of them in a simple time series database in RAM;
-3. Pin any grids and players that exceed their punishment threshold for a long enough time;
-4. Punish all players in possession of those pinned grids (or pinned players themselves);
-5. Keep it as a warning if given grid or player exceeds their warning threshold but below punishment.
+1. Keep track of them in a simple time series database (TSDB) in RAM;
+1. Pin grids/players that exceed their punishment threshold for a long enough time;
+1. Send out warnings to nearly-pinned players;
+1. Punish pinned players and players in possession of pinned grids.
 
-The TSDB will hold onto profiled entities' computation time (ms/f) for a set length of time and
-it's used by warnings and punishments to take action (in combination with their set thresholds to figure out the border).
-You can run `!lag inspect <entity_id>` to inspect each entity's current tracking state if you ever needed to
-(or simply `!lag inspect` to see all entities):
-
+The TSDB will hold onto the series of computation time (ms/f) of all profiled grids/players for a set length of time.
+The system will look up this TSDB to perform warnings and punishments (according to their respective thresholds).
+You can run `!lag inspect <entity_id>` to inspect each entity's current tracking state (or `!lag inspect` to see all entities):
 
 ![Inspect TSDB](README.media/inspect.png)
 
-Pins (=source of punishment) will stay for a set length of time in the system regardless its entity's current state in TSDB.
-A pin will count down for a set length of time and release itself.
-Though if the corresponding entity continues to stay above the punishment threshold the pin will never release and the punishment will never stop.
+Pins (=source of punishment) will stay in the system for a set length of time and release itself,
+though if the corresponding entity's ms/f continues to stay above the punishment threshold 
+the pin will never release (and the punishment will never stop).
 
 ![Lag Warning](README.media/config.general.png)
 
@@ -125,13 +121,15 @@ Tick on `Suppress Console Output` and read the log file for safety.
 
 ## Instructions
 
-You should start with zero punishment first and watch the DEBUG log to work out the numbers.
-TorchMonitor would serve a long-term set of samples to figure out good numbers to use.
+You should start with zero punishment first and watch the DEBUG log to figure out the numbers.
+[TorchMonitor](https://github.com/HnZGaming/TorchMonitor) would help you find a long-term set of samples for the reference.
 
 * `FirstIdleSeconds` -- should be larger than 120 to be sure.
 * `TrackingTime` -- should generally be larger than you think. 5 minutes (300) to 10 minutes (600) is a good start.
-* `PunishTime` -- should be about 10 minutes (600) in general. In case of Broadcast punishment, set to like half an hour for other players to go after the grid.
+* `PunishTime` -- should be about 10 minutes (600) in general, or half an hour (1800) for Broadcast punishment.
 * `WarningLagNormal` -- generally `0.7` - `0.8` is a good start.
+
+
 
 ## Dependencies
 

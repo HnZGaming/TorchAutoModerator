@@ -17,14 +17,14 @@ namespace AutoModerator.Warnings
             GridPin = gridPin;
         }
 
-        public long PlayerId { get; }
-        public string PlayerName { get; }
+        public readonly long PlayerId;
+        public readonly string PlayerName;
 
-        public double PlayerLagNormal { get; }
-        public TimeSpan PlayerPin { get; }
+        public readonly double PlayerLagNormal;
+        public readonly TimeSpan PlayerPin;
 
-        public double GridLongLagNormal { get; }
-        public TimeSpan GridPin { get; }
+        public readonly double GridLongLagNormal;
+        public readonly TimeSpan GridPin;
 
         public double LongLagNormal => Math.Max(PlayerLagNormal, GridLongLagNormal);
         public TimeSpan Pin => PlayerPin > GridPin ? PlayerPin : GridPin;

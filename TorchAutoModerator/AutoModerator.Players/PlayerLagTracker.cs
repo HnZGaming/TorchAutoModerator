@@ -56,7 +56,7 @@ namespace AutoModerator.Players
             {
                 var mspf = profilerEntry.MainThreadTime / profileResult.TotalFrameCount;
                 var factionId = MySession.Static.Factions.TryGetPlayerFaction(player.IdentityId)?.FactionId ?? 0L;
-                var result = new EntityLagSource(player.IdentityId, player.DisplayName, mspf, factionId);
+                var result = new EntityLagSource(player.IdentityId, player.DisplayName, player.IdentityId, player.DisplayName, mspf, factionId);
                 results.Add(result);
             }
 

@@ -66,7 +66,7 @@ namespace AutoModerator
         string _warningCurrentLevelText = LagWarningDefaultTexts.CurrentLevel;
         double _minIntegrityNormal = 0.5d;
         bool _enablePunishChatFeed = true;
-        string _punishReportChatName = "Laggy Players";
+        string _punishReportChatName = "Auto Moderator";
         string _punishReportChatFormat = "[{faction}] {player} \"{grid}\" ({level})";
         double _outlierFenceNormal = 2;
 

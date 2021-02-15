@@ -3,26 +3,36 @@ using System.Collections.Generic;
 
 namespace AutoModerator.Core
 {
+    /// <summary>
+    /// Snapshot of a tracked entity.
+    /// </summary>
+    /// <remarks>
+    /// "Snapshot" means the state at one moment in the past and
+    /// it's potentially changed by the time it's consumed.
+    /// </remarks>
     public readonly struct TrackedEntitySnapshot
     {
-        public TrackedEntitySnapshot(long id, double longLagNormal, TimeSpan remainingTime)
+        public TrackedEntitySnapshot(long id, string name, long ownerId, string ownerName, double longLagNormal, TimeSpan remainingTime)
         {
             Id = id;
+            Name = name;
+            OwnerId = ownerId;
+            OwnerName = ownerName;
             LongLagNormal = longLagNormal;
             RemainingTime = remainingTime;
         }
 
-        public long Id { get; }
-        public double LongLagNormal { get; }
-        public TimeSpan RemainingTime { get; }
+        public readonly long Id;
+        public readonly string Name;
+        public readonly long OwnerId;
+        public readonly string OwnerName;
+        public readonly double LongLagNormal;
+        public readonly TimeSpan RemainingTime;
         public bool IsPinned => RemainingTime > TimeSpan.Zero;
 
-        // don't include temporary stuff like entity names and faction IDs
-        // because those things can change
-        
-        public readonly struct Comparer : IComparer<TrackedEntitySnapshot>
+        public readonly struct LongLagComparer : IComparer<TrackedEntitySnapshot>
         {
-            public static readonly Comparer Instance = new Comparer();
+            public static readonly LongLagComparer Instance = new LongLagComparer();
 
             public int Compare(TrackedEntitySnapshot x, TrackedEntitySnapshot y)
             {
