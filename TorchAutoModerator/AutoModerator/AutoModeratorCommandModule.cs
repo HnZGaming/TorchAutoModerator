@@ -288,7 +288,7 @@ namespace AutoModerator
             normal = normal.IsValid() ? normal / maxNormal : 0;
             var clampNormal = Math.Min(1, Math.Max(0, normal));
             var size = Math.Min(maxWidth, (int) (clampNormal * maxWidth));
-            var graph0 = Enumerable.Repeat('|', size);
+            var graph0 = Enumerable.Repeat('¦', size);
             var graph1 = Enumerable.Repeat('\'', maxWidth - size);
             var graph = new string(graph0.Concat(graph1).ToArray());
             var label = showLabel ? $" {normal * 100:000}%" : "";
