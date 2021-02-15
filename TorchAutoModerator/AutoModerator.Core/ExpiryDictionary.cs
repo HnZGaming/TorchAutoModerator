@@ -79,5 +79,10 @@ namespace AutoModerator.Core
         {
             _self.Clear();
         }
+
+        public void Remove(K key)
+        {
+            _self.Remove(key);
+        }
     }
 }

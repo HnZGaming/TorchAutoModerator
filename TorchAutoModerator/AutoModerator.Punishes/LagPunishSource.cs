@@ -8,7 +8,7 @@
             IsPinned = isPinned;
         }
 
-        public long GridId { get; }
-        public bool IsPinned { get; }
+        public readonly long GridId;
+        public readonly bool IsPinned;
     }
 }

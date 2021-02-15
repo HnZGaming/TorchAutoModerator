@@ -9,6 +9,7 @@ using Sandbox.Game.Entities;
 using Sandbox.Game.World;
 using Utils.General;
 using Utils.TimeSerieses;
+using Utils.Torch;
 
 namespace AutoModerator.Grids
 {
@@ -33,7 +34,7 @@ namespace AutoModerator.Grids
             }
 
             public double PinLag => _masterConfig.MaxGridMspf;
-            public double OutlierFenceNormal=> _masterConfig.OutlierFenceNormal;
+            public double OutlierFenceNormal => _masterConfig.OutlierFenceNormal;
             public TimeSpan TrackingSpan => _masterConfig.TrackingTime.Seconds();
             public TimeSpan PinSpan => _masterConfig.PunishTime.Seconds();
             public bool IsFactionExempt(long factionId) => _masterConfig.IsFactionExempt(factionId);
@@ -68,7 +69,7 @@ namespace AutoModerator.Grids
                     continue;
                 }
 
-                if (grid.LongLagNormal < maxLongLagNormal) continue;
+                if (grid.LongLagNormal <= maxLongLagNormal) continue;
 
                 yield return (ownerId, grid);
             }
@@ -107,7 +108,8 @@ namespace AutoModerator.Grids
                     ? MySession.Static.Factions.GetPlayerFaction(ownerId)?.FactionId ?? 0L
                     : 0L;
 
-                var lag = new EntityLagSource(grid.EntityId, grid.DisplayName, mspf, factionId);
+                var ownerName = MySession.Static.Players.TryGetPlayerById(ownerId, out var p) ? p.DisplayName : $"<{ownerId}>";
+                var lag = new EntityLagSource(grid.EntityId, grid.DisplayName, ownerId, ownerName, mspf, factionId);
                 lags.Add(lag);
 
                 if (!ownerIds.Contains(ownerId)) // pick the laggiest grid
@@ -153,7 +155,13 @@ namespace AutoModerator.Grids
             _lagTracker.Clear();
             _ownerToLaggiestGrids.Clear();
         }
-        
+
+        [MethodImpl(MethodImplOptions.Synchronized)]
+        public void StopTracking(long gridId)
+        {
+            _lagTracker.StopTracking(gridId);
+        }
+
         [MethodImpl(MethodImplOptions.Synchronized)]
         public bool TryGetTimeSeries(long entityId, out ITimeSeries<double> timeSeries)
         {

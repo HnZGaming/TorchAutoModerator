@@ -161,17 +161,17 @@ namespace AutoModerator
             if (!specificGridIdOrNull.HasValue)
             {
                 msgBuilder.AppendLine("Players:");
-                var inspectableGrids = new List<TrackedEntitySnapshot>();
+                var inspectablePlayers = new List<TrackedEntitySnapshot>();
                 foreach (var s in OrderForInspection(Plugin.GetTrackedPlayers()))
                 {
                     if (isNormalPlayer && !memberIds.Contains(s.Id)) continue;
 
-                    inspectableGrids.Add(s);
+                    inspectablePlayers.Add(s);
                 }
 
-                if (inspectableGrids.Any())
+                if (inspectablePlayers.Any())
                 {
-                    foreach (var s in inspectableGrids.Take(top))
+                    foreach (var s in inspectablePlayers.Take(top))
                     {
                         var line = MakeTrackedEntityLine(s);
                         msgBuilder.AppendLine(line);
@@ -185,7 +185,7 @@ namespace AutoModerator
 
             msgBuilder.AppendLine("Grids:");
 
-            var inspectablePlayers = new List<TrackedEntitySnapshot>();
+            var inspectableGrids = new List<TrackedEntitySnapshot>();
             foreach (var s in OrderForInspection(Plugin.GetTrackedGrids()).Take(top))
             {
                 if (specificGridIdOrNull is long sid && sid != s.Id) continue;
@@ -197,12 +197,12 @@ namespace AutoModerator
                     if (!memberIds.Contains(ownerId)) continue;
                 }
 
-                inspectablePlayers.Add(s);
+                inspectableGrids.Add(s);
             }
 
-            if (inspectablePlayers.Any())
+            if (inspectableGrids.Any())
             {
-                foreach (var s in inspectablePlayers.Take(top))
+                foreach (var s in inspectableGrids.Take(top))
                 {
                     var line = MakeTrackedEntityLine(s);
                     msgBuilder.AppendLine(line);
@@ -225,8 +225,7 @@ namespace AutoModerator
             var pinGraph = MakeOnelinerGraph(30, 1, pinSecsNormal, false);
             pinGraph = s.IsPinned ? $"{pinGraph} {pinSecs:0} secs left" : "not pinned";
 
-            var name = MyEntities.TryGetEntityById(s.Id, out var e) ? $"\"{e.DisplayName}\"" : "<noname>";
-            return $"{lagGraph} {pinGraph} {name} ({s.Id})";
+            return $"{lagGraph} {pinGraph} {s.Name} ({s.Id})";
         }
 
         static IEnumerable<TrackedEntitySnapshot> OrderForInspection(IEnumerable<TrackedEntitySnapshot> snapshots)
@@ -245,8 +244,8 @@ namespace AutoModerator
                 }
             }
 
-            pinnedResults.Sort(TrackedEntitySnapshot.Comparer.Instance);
-            otherResults.Sort(TrackedEntitySnapshot.Comparer.Instance);
+            pinnedResults.Sort(TrackedEntitySnapshot.LongLagComparer.Instance);
+            otherResults.Sort(TrackedEntitySnapshot.LongLagComparer.Instance);
             return pinnedResults.Concat(otherResults);
         }
 

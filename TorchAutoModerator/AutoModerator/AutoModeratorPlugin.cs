@@ -14,6 +14,7 @@ using AutoModerator.Warnings;
 using NLog;
 using Profiler.Basics;
 using Profiler.Core;
+using Sandbox.Game.Entities;
 using Sandbox.Game.Screens.Helpers;
 using Sandbox.Game.World;
 using Torch;
@@ -42,6 +43,7 @@ namespace AutoModerator
         LagWarningCollection _warningQuests;
         LagPunishExecutor _punishExecutor;
         LagPunishChatFeed _punishChatFeed;
+        IChatManagerServer _chatManager;
 
         UserControl IWpfPlugin.GetControl() => _config.GetOrCreateUserControl(ref _userControl);
         public AutoModeratorConfig Config => _config.Data;
@@ -77,9 +79,10 @@ namespace AutoModerator
 
         void OnGameLoaded()
         {
-            var chatManager = Torch.CurrentSession.Managers.GetManager<IChatManagerServer>();
-            chatManager.ThrowIfNull("chat manager not found");
-            _punishChatFeed = new LagPunishChatFeed(Config, chatManager);
+            _chatManager = Torch.CurrentSession.Managers.GetManager<IChatManagerServer>();
+            _chatManager.ThrowIfNull("chat manager not found");
+
+            _punishChatFeed = new LagPunishChatFeed(Config, _chatManager);
 
             TaskUtils.RunUntilCancelledAsync(Main, _canceller.Token).Forget(Log);
         }
@@ -193,12 +196,7 @@ namespace AutoModerator
                     foreach (var pinnedPlayer in _laggyPlayers.GetPinnedPlayers())
                     {
                         var playerId = pinnedPlayer.Id;
-                        if (!_laggyGrids.TryGetLaggiestGridOwnedBy(playerId, out var laggiestGrid))
-                        {
-                            var playerName = MySession.Static.Players.GetPlayerNameOrElse(playerId, $"<{playerId}>");
-                            Log.Warn($"laggy grid deleted by {playerName}");
-                            continue;
-                        }
+                        if (!_laggyGrids.TryGetLaggiestGridOwnedBy(playerId, out var laggiestGrid)) continue;
 
                         var src = new LagPunishSource(laggiestGrid.Id, laggiestGrid.IsPinned);
                         punishSources[src.GridId] = src;
@@ -226,12 +224,7 @@ namespace AutoModerator
                     foreach (var (player, rank) in _laggyPlayers.GetPinnedPlayers().Indexed())
                     {
                         var playerId = player.Id;
-                        if (!_laggyGrids.TryGetLaggiestGridOwnedBy(playerId, out var laggiestGrid))
-                        {
-                            var playerName = MySession.Static.Players.GetPlayerNameOrElse(playerId, $"<{playerId}>");
-                            Log.Warn($"laggy grid deleted by {playerName}");
-                            continue;
-                        }
+                        if (!_laggyGrids.TryGetLaggiestGridOwnedBy(playerId, out var laggiestGrid)) continue;
 
                         var gpsSource = new GridGpsSource(laggiestGrid.Id, player.LongLagNormal, player.RemainingTime, rank);
                         allGpsSources[gpsSource.GridId] = gpsSource;
@@ -252,6 +245,42 @@ namespace AutoModerator
                 }
 
                 Log.Trace("broadcast done");
+
+                // stop tracking deleted grids & report cheating
+                // we're doing this right here to get the max chance of grabbing the owner name
+                var lostGrids = new List<TrackedEntitySnapshot>();
+                var trackedGrids = _laggyGrids.GetTrackedEntities();
+
+                await GameLoopObserver.MoveToGameLoop(canceller);
+
+                foreach (var trackedGrid in trackedGrids)
+                {
+                    if (!MyEntities.TryGetEntityById(trackedGrid.Id, out _))
+                    {
+                        lostGrids.Add(trackedGrid);
+                    }
+                }
+
+                await TaskUtils.MoveToThreadPool(canceller);
+
+                foreach (var lostGrid in lostGrids)
+                {
+                    _laggyGrids.StopTracking(lostGrid.Id);
+
+                    if (lostGrid.LongLagNormal > Config.WarningLagNormal || lostGrid.IsPinned)
+                    {
+                        var gridName = lostGrid.Name;
+                        var ownerName = lostGrid.OwnerName;
+                        Log.Warn($"Laggy grid deleted by player: {gridName}: {ownerName}");
+
+                        if (Config.EnablePunishChatFeed)
+                        {
+                            _chatManager.SendMessage(Config.PunishReportChatName, 0, $"Laggy grid deleted by player: {gridName}: {ownerName}");
+                        }
+                    }
+                }
+
+                Log.Trace("absent entity cleaning done");
                 Log.Debug("interval done");
             }
         }

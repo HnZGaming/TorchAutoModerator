@@ -4,18 +4,22 @@ namespace AutoModerator.Core
 {
     public readonly struct EntityLagSource
     {
-        public EntityLagSource(long entityId, string name, double lagMspf, long factionId)
+        public EntityLagSource(long entityId, string name, long ownerId, string ownerName, double lagMspf, long factionId)
         {
             EntityId = entityId;
             Name = name;
+            OwnerId = ownerId;
+            OwnerName = ownerName;
             LagMspf = lagMspf;
             FactionId = factionId;
         }
 
-        public long EntityId { get; }
-        public string Name { get; }
-        public double LagMspf { get; }
-        public long FactionId { get; } // for filtering
+        public readonly long EntityId;
+        public readonly string Name;
+        public readonly long OwnerId;
+        public readonly string OwnerName;
+        public readonly double LagMspf;
+        public readonly long FactionId; // for filtering
 
         public override string ToString()
         {

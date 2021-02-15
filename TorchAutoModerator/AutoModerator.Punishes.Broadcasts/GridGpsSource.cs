@@ -12,9 +12,9 @@ namespace AutoModerator.Punishes.Broadcasts
             Rank = rank;
         }
 
-        public long GridId { get; }
-        public double LongLagNormal { get; }
-        public TimeSpan RemainingTime { get; }
-        public int Rank { get; }
+        public readonly long GridId;
+        public readonly double LongLagNormal;
+        public readonly TimeSpan RemainingTime;
+        public readonly int Rank;
     }
 }
