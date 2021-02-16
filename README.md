@@ -129,7 +129,10 @@ You should start with zero punishment first and watch the DEBUG log to figure ou
 * `PunishTime` -- should be about 10 minutes (600) in general, or half an hour (1800) for Broadcast punishment.
 * `WarningLagNormal` -- generally `0.7` - `0.8` is a good start.
 
+Use [SEDB](https://torchapi.net/plugins/item/3cd3ba7f-c47c-4efe-8cf1-bd3f618f5b9c) plugin to 
+monitor the server
 
+![Discord](README.media/discord.png)
 
 ## Dependencies
 

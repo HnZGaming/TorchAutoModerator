@@ -223,7 +223,7 @@ namespace AutoModerator
             var pinSecs = s.RemainingTime.TotalSeconds;
             var pinSecsNormal = pinSecs / Plugin.Config.PunishTime;
             var pinGraph = MakeOnelinerGraph(30, 1, pinSecsNormal, false);
-            pinGraph = s.IsPinned ? $"{pinGraph} {pinSecs:0} secs left" : "not pinned";
+            pinGraph = s.IsPinned ? $"{pinGraph} pin {pinSecs:0} secs" : "no pin";
 
             return $"{lagGraph} {pinGraph} {s.Name} ({s.Id})";
         }
