@@ -17,6 +17,8 @@ to keep the server healthy without the admin presence.
 Note that this plugin will only work on `MySector` for now.
 You need other means to moderate `MyPhysics` and anything else that can't be traced up to specific grids/players.
 
+[Download the latest version from Torch Plugin Repository.](https://torchapi.net/plugins/item/8333d8a5-c545-42d9-a606-8dae9db3c678)
+
 ## General
 
 This plugin's main loop follows this cycle:
