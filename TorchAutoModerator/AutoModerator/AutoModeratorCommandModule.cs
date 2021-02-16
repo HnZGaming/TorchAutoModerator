@@ -284,9 +284,9 @@ namespace AutoModerator
 
         static string MakeOnelinerGraph(int maxWidth, double maxNormal, double normal, bool showLabel = true)
         {
-            normal = normal.IsValid() ? normal / maxNormal : 0;
-            var clampNormal = Math.Min(1, Math.Max(0, normal));
-            var size = Math.Min(maxWidth, (int) (clampNormal * maxWidth));
+            normal = normal.IsValid() ? normal : 0;
+            var graphNormal = Math.Min(1, Math.Max(0, normal / maxNormal));
+            var size = Math.Min(maxWidth, (int) (graphNormal * maxWidth));
             var graph0 = Enumerable.Repeat('¦', size);
             var graph1 = Enumerable.Repeat('\'', maxWidth - size);
             var graph = new string(graph0.Concat(graph1).ToArray());

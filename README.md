@@ -5,7 +5,7 @@ Auto Moderator is a Torch plugin to let players moderate the server lag themselv
 This plugin will,
 
 1. send out visible warnings to server-necking players;
-2. provide a means for them to know their impact on the server and how to fix it;
+2. let them profile themselves and let them know how to fix it;
 3. if they ignored the warning, punish their ass (in a variety of ways).
 
 This plugin is primarily designed to address the issue that some server admins 
@@ -14,21 +14,21 @@ and reaching out every single laggy player in game.
 This plugin should automate the whole process and further take necessary actions 
 to keep the server healthy without the admin presence.
 
-Note that this plugin will only work on `MySector` part of the game.
-`MyPhysics` and anything else that we can't trace up to specific grids/players.
+Note that this plugin will only work on `MySector` for now.
+You need other means to moderate `MyPhysics` and anything else that can't be traced up to specific grids/players.
 
 ## General
 
 This plugin's main loop follows this cycle:
 1. Profile top 50 grids and players in game (using Profiler plugin);
-1. Keep track of them in a simple time series database (TSDB) in RAM;
+1. Keep track of them in a time series;
 1. Pin grids/players that exceed their punishment threshold for a long enough time;
 1. Send out warnings to nearly-pinned players;
 1. Punish pinned players and players in possession of pinned grids.
 
-The TSDB will hold onto the series of computation time (ms/f) of all profiled grids/players for a set length of time.
-The system will look up this TSDB to perform warnings and punishments (according to their respective thresholds).
-You can run `!lag inspect <entity_id>` to inspect each entity's current tracking state (or `!lag inspect` to see all entities):
+The time series holds onto the series of computation time (ms/f) of all profiled grids/players for a set length of time.
+The system will look up this time series to perform warnings and punishments (according to their respective thresholds).
+You can run `!lag inspect <entity_id>` to inspect each player or grid's time series (or `!lag inspect` to see all entities):
 
 ![Inspect TSDB](README.media/inspect.png)
 
@@ -130,9 +130,15 @@ You should start with zero punishment first and watch the DEBUG log to figure ou
 * `WarningLagNormal` -- generally `0.7` - `0.8` is a good start.
 
 Use [SEDB](https://torchapi.net/plugins/item/3cd3ba7f-c47c-4efe-8cf1-bd3f618f5b9c) plugin to 
-monitor the server
+monitor the current state of the server:
 
 ![Discord](README.media/discord.png)
+![Discord](README.media/discord.2.png)
+
+For more comprehensive/long-term monitoring consider [TorchMonitor](https://github.com/HnZGaming/TorchMonitor)
+(but with Auto Moderator you probably won't need it as much):
+
+![Discord](README.media/torchmonitor.png)
 
 ## Dependencies
 
