@@ -12,7 +12,7 @@ namespace AutoModerator.Punishes.Broadcasts
         public interface IConfig
         {
             IEnumerable<ulong> GpsMutedPlayers { get; }
-            bool GpsAdminsOnly { get; }
+            MyPromoteLevel GpsVisiblePromoteLevel { get; }
         }
 
         static readonly ILogger Log = LogManager.GetCurrentClassLogger();
@@ -30,7 +30,7 @@ namespace AutoModerator.Punishes.Broadcasts
             UpdateCollection();
             foreach (var onlinePlayer in MySession.Static.Players.GetOnlinePlayers())
             {
-                if (CheckReceiveInternal(onlinePlayer))
+                if (CheckReceive(onlinePlayer))
                 {
                     yield return onlinePlayer;
                 }
@@ -60,10 +60,10 @@ namespace AutoModerator.Punishes.Broadcasts
             _mutedPlayerIds.UnionWith(_config.GpsMutedPlayers);
         }
 
-        bool CheckReceiveInternal(MyPlayer player)
+        bool CheckReceive(MyPlayer player)
         {
             if (_mutedPlayerIds.Contains(player.SteamId())) return false;
-            if (_config.GpsAdminsOnly && !player.IsAdmin()) return false;
+            if (((IMyPlayer) player).PromoteLevel < _config.GpsVisiblePromoteLevel) return false;
             return true;
         }
     }

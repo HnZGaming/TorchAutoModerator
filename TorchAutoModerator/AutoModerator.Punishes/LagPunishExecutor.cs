@@ -10,6 +10,7 @@ using SpaceEngineers.Game.Entities.Blocks;
 using Utils.General;
 using Utils.Torch;
 using VRage.Game;
+using VRage.Game.ModAPI.Ingame;
 
 namespace AutoModerator.Punishes
 {
@@ -76,7 +77,7 @@ namespace AutoModerator.Punishes
                     Log.Info($"Done punishment: {name}");
                 }
             }
-            
+
             _punishedIds.ExceptWith(lags.Keys);
 
             // back to some worker thread
@@ -117,6 +118,8 @@ namespace AutoModerator.Punishes
         {
             Thread.CurrentThread.ThrowIfNotSessionThread();
 
+            if (IsExemptBlock(block)) return;
+
             var slimBlock = block.SlimBlock;
             var maxIntegrity = slimBlock.BlockDefinition.MaxIntegrity;
             if (slimBlock.Integrity / maxIntegrity > _config.MinIntegrityNormal)
@@ -130,14 +133,21 @@ namespace AutoModerator.Punishes
         {
             Thread.CurrentThread.ThrowIfNotSessionThread();
 
+            if (IsExemptBlock(block)) return;
+
             if (block is IMyFunctionalBlock functionalBlock)
             {
-                if (block is MyParachute) return;
-                if (block is MyButtonPanel) return;
-                if (block is IMyPowerProducer) return;
-
                 functionalBlock.Enabled = false;
             }
+        }
+
+        bool IsExemptBlock(IMyEntity block)
+        {
+            if (block is MyParachute) return true;
+            if (block is MyButtonPanel) return true;
+            if (block is IMyPowerProducer) return true;
+
+            return false;
         }
     }
 }

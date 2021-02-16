@@ -210,7 +210,9 @@
         <Compile Include="Utils.General\ThreadSafeThrottle.cs" />
         <Compile Include="Utils.Torch\CommandModuleUtils.cs" />
         <Compile Include="Utils.Torch\CommandOption.cs" />
-        <Compile Include="Utils.Torch\ConfigCommandIgnoreAttribute.cs" />
+        <Compile Include="Utils.Torch\ConfigPropertyAttribute.cs" />
+        <Compile Include="Utils.Torch\ConfigPropertyIgnoreAttribute.cs" />
+        <Compile Include="Utils.Torch\ConfigPropertyType.cs" />
         <Compile Include="Utils.Torch\GameLoopObserver.cs" />
         <Compile Include="Utils.Torch\GameLoopObserverManager.cs" />
         <Compile Include="Utils.Torch\ReportGenerator.cs" />

@@ -28,9 +28,7 @@ This plugin's main loop follows this cycle:
 
 The time series holds onto the series of computation time (ms/f) of all profiled grids/players for a set length of time.
 The system will look up this time series to perform warnings and punishments (according to their respective thresholds).
-You can run `!lag inspect <entity_id>` to inspect each player or grid's time series (or `!lag inspect` to see all entities):
-
-![Inspect TSDB](README.media/inspect.png)
+You can run `!lag inspect <entity_id>` to inspect each player or grid's time series or `!lag inspect` to see all entities.
 
 Pins (=source of punishment) will stay in the system for a set length of time and release itself,
 though if the corresponding entity's ms/f continues to stay above the punishment threshold 
@@ -58,48 +56,58 @@ The warning takes the form of Questlog and notification in players' HUD.
 ![Lag Warning](README.media/warning.png)
 
 You can configure when the warning should kick in for players based on their impact on the server health.
-You can generally control the length of this "grace period" by the combination of the warning threshold and the tracking time length,
-that said, it varies depending on given entity's ms/f over the tracked period.
+You can generally control the length of this "grace period" by the combination of the warning threshold and the tracking time length.
 
 ![Lag Warning](README.media/config.warning.png)
 
-## Profiler Command
-Players can type a command in game chat as `!lag profile` to show the laggiest grids and block types
-so that they can quickly figure out which grids and blocks need a fixing.
-`!lag profile -this` will exclusively profile a grid that the player is sitting on or looking at.
+## Player's Profiler Command
+Players can type `!lag profile` to profile their grids so that they can figure out which grids (and blocks) need a fixing themselves.
+`!lag profile -this` will profile the grid that the player is sitting on or looking at.
 You should make sure to give players this instruction in the warning text.
 
 ![Lag Warning](README.media/profile.png)
 
 ## Punishments
 
-Following is the list of punishments:
+Following is the list of punishments that you can choose from:
 
 ### Chat
 
-Sends out the names of laggy players to the whole server.
+Sends out names of laggy players to the whole server.
 This punishment can be invoked along with other types of punishment.
 This is useful for admins to back-track all punishments that have taken place via SEDB plugin.
-You can configure to enable/disable this feature, message sender name and text format.
+You can enable/disable this feature, change sender name and text format.
+
+### None
+
+No punishment (unless the chat message is active).
 
 ### Shutdown
 
-Completely shuts down laggy grids, rendering it unusable.
+Completely shuts down laggy grids.
 Players cannot reactivate the grid until the punishment is over.
+This is the least destructive punishment and easily reversible for players.
+Some types of blocks will stay active to make sure that 
+they won't be deleted by whatever cleanup system running in the server.
 
 ### Damage
 
 Applies progressive damage to laggy grids.
 You can configure the damage per interval and the minimum integrity.
+This punishment can leave severe damage to subject grids and 
+is not recommended until you configure the system thoroughly.
 
 ### Broadcast
 
 Sends out GPS coordinates of laggy grids to the whole server until the punishment is over.
-Players can see these GPSs (unless configured as admin-only).
+These GPSs are visible to a set of players according to the plugin configuration.
+Players can mute these GPSs by `!logs gpsmute`.
 
 ![GPS](README.media/broadcast.png)
 
-## Configs & Debugs
+## Instruction for Admins
+
+### Configs
 
 You can list up most of available config properties via `!lag configs`:
 
@@ -113,21 +121,32 @@ To set a new value to a config property,
 
 as in `!lag configs 0 120` or `!lag configs FirstIdleTime 120`.
 
+### Commands
+
 To list up all available commands, `!lag commands`.
+
+### Logging & Debugging
 
 To view DEBUG or TRACE logs navigate to `Logging` section of the config and tick on appropriate checkboxes.
 Note TRACE will freeze the console if your server has 100+ grids.
-Tick on `Suppress Console Output` and read the log file for safety.
+Tick on `Suppress Console Output` and read the log file.
 
-## Instructions
+### Initial Configuration
 
-You should start with zero punishment first and watch the DEBUG log to figure out the numbers.
-[TorchMonitor](https://github.com/HnZGaming/TorchMonitor) would help you find a long-term set of samples for the reference.
+Start with zero punishment first and watch the DEBUG log to figure out the numbers.
+[TorchMonitor](https://github.com/HnZGaming/TorchMonitor) would help you find a long-term set of samples.
 
 * `FirstIdleSeconds` -- should be larger than 120 to be sure.
 * `TrackingTime` -- should generally be larger than you think. 5 minutes (300) to 10 minutes (600) is a good start.
 * `PunishTime` -- should be about 10 minutes (600) in general, or half an hour (1800) for Broadcast punishment.
 * `WarningLagNormal` -- generally `0.7` - `0.8` is a good start.
+
+Punishment type should be None to start with, and run it for at least a week.
+If you intend to use Broadcast punishment you should start with "visible to admin only" configuration.
+
+### Working with Other Plugins
+
+Consider deleting "unowned" grids using some other plugin so that the warning and punishment get through everyone responsible.
 
 Use [SEDB](https://torchapi.net/plugins/item/3cd3ba7f-c47c-4efe-8cf1-bd3f618f5b9c) plugin to 
 monitor the current state of the server:
@@ -135,10 +154,16 @@ monitor the current state of the server:
 ![Discord](README.media/discord.png)
 ![Discord](README.media/discord.2.png)
 
-For more comprehensive/long-term monitoring consider [TorchMonitor](https://github.com/HnZGaming/TorchMonitor)
-(but with Auto Moderator you probably won't need it as much):
+For more comprehensive/long-term monitoring consider [TorchMonitor](https://github.com/HnZGaming/TorchMonitor):
 
 ![Discord](README.media/torchmonitor.png)
+
+## Instruction for Players
+
+* `!lag profile` to profile your stuff; anything above `100%` is subject to punishment.
+* `!lag inspect` and `!lag inspect <entity_id>` to see the details.
+* `!lag configs` and `!lag configs all` to see all accessible server configs, including the punishment type.
+* `!lag commands` to see all accessible chat commands.
 
 ## Dependencies
 
@@ -147,3 +172,7 @@ For more comprehensive/long-term monitoring consider [TorchMonitor](https://gith
 ## Fork & Extend
 
 Feel free to fork and develop your own logic on top of this plugin under MIT license.
+
+## Bugfix & Feature Requests
+
+Submit an issue in GitHub or start a discussion in [TorchMonitor Discord](https://discord.gg/AaqdbWa3AP).

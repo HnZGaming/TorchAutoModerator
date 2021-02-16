@@ -48,7 +48,7 @@ namespace AutoModerator
             Context.Respond("cleared all internal state");
         });
 
-        [Command("gpslist", "Show the list of custom GPS entities.")]
+        [Command("gpslist", "Show the list of GPS entities.")]
         [Permission(MyPromoteLevel.Admin)]
         public void ShowGpss() => this.CatchAndReport(() =>
         {
@@ -294,7 +294,7 @@ namespace AutoModerator
             return $"{graph}{label}";
         }
 
-        [Command("mute", "Mute broadcasting.")]
+        [Command("gpsmute", "Mute broadcasting.")]
         [Permission(MyPromoteLevel.None)]
         public void MuteBroadcastsToPlayer() => this.CatchAndReport(() =>
         {
@@ -308,7 +308,7 @@ namespace AutoModerator
             Context.Respond("Muted broadcasting. It may take some time to take effect.");
         });
 
-        [Command("unmute", "Unmute broadcasting.")]
+        [Command("gpsunmute", "Unmute broadcasting.")]
         [Permission(MyPromoteLevel.None)]
         public void UnmuteBroadcastsToPlayer() => this.CatchAndReport(() =>
         {
@@ -322,7 +322,7 @@ namespace AutoModerator
             Context.Respond("Unmuted broadcasting. It may take some time to take effect.");
         });
 
-        [Command("unmuteall", "Force every player to unmute broadcasting.")]
+        [Command("gpsunmuteall", "Force every player to unmute broadcasting.")]
         [Permission(MyPromoteLevel.Admin)]
         public void UnmuteBroadcastsToAll() => this.CatchAndReport(() =>
         {
