@@ -36,8 +36,12 @@
         <Reference Include="System" />
         <Reference Include="System.Core" />
         <Reference Include="System.Data" />
+        <Reference Include="System.Numerics" />
+        <Reference Include="System.Runtime.Serialization" />
         <Reference Include="System.Xml" />
         <Reference Include="WindowsBase" />
+    </ItemGroup>
+    <ItemGroup>
     </ItemGroup>
     <ItemGroup>
         <Reference Include="Newtonsoft.Json">
@@ -46,31 +50,31 @@
         <Reference Include="NLog">
             <HintPath>..\TorchBinaries\NLog.dll</HintPath>
         </Reference>
-        <Reference Include="Sandbox.Common, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null">
+        <Reference Include="Sandbox.Common">
             <HintPath>..\TorchBinaries\DedicatedServer64\Sandbox.Common.dll</HintPath>
         </Reference>
-        <Reference Include="Sandbox.Game, Version=0.1.1.0, Culture=neutral, PublicKeyToken=null">
+        <Reference Include="Sandbox.Game">
             <HintPath>..\TorchBinaries\DedicatedServer64\Sandbox.Game.dll</HintPath>
         </Reference>
-        <Reference Include="Sandbox.Game.XmlSerializers, Version=0.1.1.0, Culture=neutral, PublicKeyToken=null">
+        <Reference Include="Sandbox.Game.XmlSerializers">
             <HintPath>..\TorchBinaries\DedicatedServer64\Sandbox.Game.XmlSerializers.dll</HintPath>
         </Reference>
-        <Reference Include="Sandbox.Graphics, Version=0.1.1.0, Culture=neutral, PublicKeyToken=null">
+        <Reference Include="Sandbox.Graphics">
             <HintPath>..\TorchBinaries\DedicatedServer64\Sandbox.Graphics.dll</HintPath>
         </Reference>
-        <Reference Include="Sandbox.RenderDirect, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null">
+        <Reference Include="Sandbox.RenderDirect">
             <HintPath>..\TorchBinaries\DedicatedServer64\Sandbox.RenderDirect.dll</HintPath>
         </Reference>
-        <Reference Include="SpaceEngineers.Game, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null">
+        <Reference Include="SpaceEngineers.Game">
             <HintPath>..\TorchBinaries\DedicatedServer64\SpaceEngineers.Game.dll</HintPath>
         </Reference>
-        <Reference Include="SpaceEngineers.ObjectBuilders, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null">
+        <Reference Include="SpaceEngineers.ObjectBuilders">
             <HintPath>..\TorchBinaries\DedicatedServer64\SpaceEngineers.ObjectBuilders.dll</HintPath>
         </Reference>
-        <Reference Include="SpaceEngineers.ObjectBuilders.XmlSerializers, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null">
+        <Reference Include="SpaceEngineers.ObjectBuilders.XmlSerializers">
             <HintPath>..\TorchBinaries\DedicatedServer64\SpaceEngineers.ObjectBuilders.XmlSerializers.dll</HintPath>
         </Reference>
-        <Reference Include="SpaceEngineersDedicated, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null">
+        <Reference Include="SpaceEngineersDedicated">
             <HintPath>..\TorchBinaries\DedicatedServer64\SpaceEngineersDedicated.exe</HintPath>
         </Reference>
         <Reference Include="Torch">
@@ -82,74 +86,77 @@
         <Reference Include="Torch.Server">
             <HintPath>..\TorchBinaries\Torch.Server.exe</HintPath>
         </Reference>
-        <Reference Include="VRage, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null">
+        <Reference Include="VRage">
             <HintPath>..\TorchBinaries\DedicatedServer64\VRage.dll</HintPath>
         </Reference>
-        <Reference Include="VRage.Ansel, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null">
+        <Reference Include="VRage.Ansel">
             <HintPath>..\TorchBinaries\DedicatedServer64\VRage.Ansel.dll</HintPath>
         </Reference>
-        <Reference Include="VRage.Audio, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null">
+        <Reference Include="VRage.Audio">
             <HintPath>..\TorchBinaries\DedicatedServer64\VRage.Audio.dll</HintPath>
         </Reference>
-        <Reference Include="VRage.Dedicated, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null">
+        <Reference Include="VRage.Dedicated">
             <HintPath>..\TorchBinaries\DedicatedServer64\VRage.Dedicated.dll</HintPath>
         </Reference>
-        <Reference Include="VRage.EOS, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null">
+        <Reference Include="VRage.EOS">
             <HintPath>..\TorchBinaries\DedicatedServer64\VRage.EOS.dll</HintPath>
         </Reference>
-        <Reference Include="VRage.EOS.XmlSerializers, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null">
+        <Reference Include="VRage.EOS.XmlSerializers">
             <HintPath>..\TorchBinaries\DedicatedServer64\VRage.EOS.XmlSerializers.dll</HintPath>
         </Reference>
-        <Reference Include="VRage.Game, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null">
+        <Reference Include="VRage.Game">
             <HintPath>..\TorchBinaries\DedicatedServer64\VRage.Game.dll</HintPath>
         </Reference>
-        <Reference Include="VRage.Game.XmlSerializers, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null">
+        <Reference Include="VRage.Game.XmlSerializers">
             <HintPath>..\TorchBinaries\DedicatedServer64\VRage.Game.XmlSerializers.dll</HintPath>
         </Reference>
-        <Reference Include="VRage.Input, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null">
+        <Reference Include="VRage.Input">
             <HintPath>..\TorchBinaries\DedicatedServer64\VRage.Input.dll</HintPath>
         </Reference>
-        <Reference Include="VRage.Library, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null">
+        <Reference Include="VRage.Library">
             <HintPath>..\TorchBinaries\DedicatedServer64\VRage.Library.dll</HintPath>
         </Reference>
-        <Reference Include="VRage.Math, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null">
+        <Reference Include="VRage.Math">
             <HintPath>..\TorchBinaries\DedicatedServer64\VRage.Math.dll</HintPath>
         </Reference>
-        <Reference Include="VRage.Math.XmlSerializers, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null">
+        <Reference Include="VRage.Math.XmlSerializers">
             <HintPath>..\TorchBinaries\DedicatedServer64\VRage.Math.XmlSerializers.dll</HintPath>
         </Reference>
-        <Reference Include="VRage.Mod.Io, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null">
+        <Reference Include="VRage.Mod.Io">
             <HintPath>..\TorchBinaries\DedicatedServer64\VRage.Mod.Io.dll</HintPath>
         </Reference>
-        <Reference Include="VRage.NativeWrapper, Version=0.1.1.0, Culture=neutral, PublicKeyToken=null">
+        <Reference Include="VRage.NativeWrapper">
             <HintPath>..\TorchBinaries\DedicatedServer64\VRage.NativeWrapper.dll</HintPath>
         </Reference>
-        <Reference Include="VRage.Network, Version=1.0.53.0, Culture=neutral, PublicKeyToken=null">
+        <Reference Include="VRage.Network">
             <HintPath>..\TorchBinaries\DedicatedServer64\VRage.Network.dll</HintPath>
         </Reference>
-        <Reference Include="VRage.Platform.Windows, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null">
+        <Reference Include="VRage.Platform.Windows">
             <HintPath>..\TorchBinaries\DedicatedServer64\VRage.Platform.Windows.dll</HintPath>
         </Reference>
-        <Reference Include="VRage.RemoteClient.Core, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null">
+        <Reference Include="VRage.RemoteClient.Core">
             <HintPath>..\TorchBinaries\DedicatedServer64\VRage.RemoteClient.Core.dll</HintPath>
         </Reference>
-        <Reference Include="VRage.Render, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null">
+        <Reference Include="VRage.Render">
             <HintPath>..\TorchBinaries\DedicatedServer64\VRage.Render.dll</HintPath>
         </Reference>
-        <Reference Include="VRage.Render11, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null">
+        <Reference Include="VRage.Render11">
             <HintPath>..\TorchBinaries\DedicatedServer64\VRage.Render11.dll</HintPath>
         </Reference>
-        <Reference Include="VRage.Scripting, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null">
+        <Reference Include="VRage.Scripting">
             <HintPath>..\TorchBinaries\DedicatedServer64\VRage.Scripting.dll</HintPath>
         </Reference>
-        <Reference Include="VRage.Steam, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null">
+        <Reference Include="VRage.Steam">
             <HintPath>..\TorchBinaries\DedicatedServer64\VRage.Steam.dll</HintPath>
         </Reference>
-        <Reference Include="VRage.UserInterface, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null">
+        <Reference Include="VRage.UserInterfacel">
             <HintPath>..\TorchBinaries\DedicatedServer64\VRage.UserInterface.dll</HintPath>
         </Reference>
-        <Reference Include="VRage.XmlSerializers, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null">
+        <Reference Include="VRage.XmlSerializers">
             <HintPath>..\TorchBinaries\DedicatedServer64\VRage.XmlSerializers.dll</HintPath>
+        </Reference>
+        <Reference Include="HavokWrapper">
+            <HintPath>..\GameBinaries\HavokWrapper.dll</HintPath>
         </Reference>
     </ItemGroup>
     <ItemGroup>
@@ -158,23 +165,26 @@
         </Reference>
     </ItemGroup>
     <ItemGroup>
+        <Compile Include="AutoModerator.Punishes.Broadcasts\GridGpsSource.cs" />
+        <Compile Include="AutoModerator.Core\TrackedEntitySnapshot.cs" />
+        <Compile Include="AutoModerator.Grids\GridLagTracker.cs" />
+        <Compile Include="AutoModerator.Players\PlayerLagTracker.cs" />
+        <Compile Include="AutoModerator.Punishes.Broadcasts\BroadcastListenerCollection.cs" />
+        <Compile Include="AutoModerator.Punishes\LagPunishChatFeed.cs" />
+        <Compile Include="AutoModerator.Punishes\LagPunishChatSource.cs" />
+        <Compile Include="AutoModerator.Punishes\LagPunishExecutor.cs" />
+        <Compile Include="AutoModerator.Punishes\LagPunishSource.cs" />
+        <Compile Include="AutoModerator.Punishes\LagPunishType.cs" />
+        <Compile Include="AutoModerator.Warnings\HudNotificationCollection.cs" />
+        <Compile Include="AutoModerator.Warnings\LagWarningCollection.cs" />
+        <Compile Include="AutoModerator.Punishes.Broadcasts\GpsUtils.cs" />
+        <Compile Include="AutoModerator.Punishes.Broadcasts\EntityGpsBroadcaster.cs" />
+        <Compile Include="AutoModerator.Core\EntityLagTracker.cs" />
+        <Compile Include="AutoModerator.Core\EntityLagSource.cs" />
+        <Compile Include="AutoModerator.Core\ExpiryDictionary.cs" />
+        <Compile Include="AutoModerator.Warnings\LagWarningSource.cs" />
+        <Compile Include="AutoModerator.Warnings\LagWarningDefaultTexts.cs" />
         <Compile Include="Properties\AssemblyInfo.cs" />
-        <Compile Include="AutoModerator.Core.Scanners\FactionScanner.cs" />
-        <Compile Include="AutoModerator.Core.Scanners\ILagScanner.cs" />
-        <Compile Include="AutoModerator.Core.Scanners\ILagScannerConfig.cs" />
-        <Compile Include="AutoModerator.Core.Scanners\SinglePlayerScanner.cs" />
-        <Compile Include="AutoModerator.Core.Scanners\UnownedGridScanner.cs" />
-        <Compile Include="AutoModerator.Core\EntityIdGpsCollection.cs" />
-        <Compile Include="AutoModerator.Core\FactionMemberProfiler.cs" />
-        <Compile Include="AutoModerator.Core\PersistentGpsHashStore.cs" />
-        <Compile Include="AutoModerator.Core\LaggyGridGpsBroadcaster.cs" />
-        <Compile Include="AutoModerator.Core\LaggyGridGpsMaker.cs" />
-        <Compile Include="AutoModerator.Core\LaggyGridGpsDescriptionMaker.cs" />
-        <Compile Include="AutoModerator.Core\LaggyGridReportBuffer.cs" />
-        <Compile Include="AutoModerator.Core\LaggyGridFinder.cs" />
-        <Compile Include="AutoModerator.Core\LaggyGridReport.cs" />
-        <Compile Include="AutoModerator.Core\ServerLagObserver.cs" />
-        <Compile Include="AutoModerator.Reflections\MyGpsCollection_PlayerGpss.cs" />
         <Compile Include="AutoModerator\AutoModeratorCommandModule.cs" />
         <Compile Include="AutoModerator\AutoModeratorConfig.cs" />
         <Compile Include="AutoModerator\AutoModeratorPlugin.cs" />
@@ -182,26 +192,30 @@
         <Compile Include="Utils.General\ActionDisposable.cs" />
         <Compile Include="Utils.General\ActionQueue.cs" />
         <Compile Include="Utils.General\CollectionUtils.cs" />
+        <Compile Include="Utils.General\CsvDb.cs" />
         <Compile Include="Utils.General\DebugUtils.cs" />
-        <Compile Include="Utils.General\DeprecationObserver.cs" />
+        <Compile Include="Utils.General\ExpirationObserver.cs" />
         <Compile Include="Utils.General\DisposableCollection.cs" />
         <Compile Include="Utils.General\DisposableUtils.cs" />
+        <Compile Include="Utils.General\FileLoggingConfigurator.cs" />
+        <Compile Include="Utils.General\HttpUrlBuilder.cs" />
         <Compile Include="Utils.General\LangUtils.cs" />
+        <Compile Include="Utils.General\LoggerUtils.cs" />
         <Compile Include="Utils.General\MathUtils.cs" />
         <Compile Include="Utils.General\ObjectPool.cs" />
-        <Compile Include="Utils.General\PersistencyObserver.cs" />
         <Compile Include="Utils.General\ReflectionUtils.cs" />
         <Compile Include="Utils.General\StringFloatConverter.cs" />
         <Compile Include="Utils.General\StupidDb.cs" />
         <Compile Include="Utils.General\TaskUtils.cs" />
         <Compile Include="Utils.General\ThreadSafeThrottle.cs" />
-        <Compile Include="Utils.Torch\CommandErrorResponseGenerator.cs" />
+        <Compile Include="Utils.Torch\CommandModuleUtils.cs" />
         <Compile Include="Utils.Torch\CommandOption.cs" />
+        <Compile Include="Utils.Torch\ConfigCommandIgnoreAttribute.cs" />
         <Compile Include="Utils.Torch\GameLoopObserver.cs" />
         <Compile Include="Utils.Torch\GameLoopObserverManager.cs" />
+        <Compile Include="Utils.Torch\ReportGenerator.cs" />
         <Compile Include="Utils.Torch\TorchPluginUtils.cs" />
         <Compile Include="Utils.Torch\TorchUtils.cs" />
-        <Compile Include="Utils.Torch\ViewUtils.cs" />
         <Compile Include="Utils.Torch\VRageUtils.cs" />
         <Compile Include="Utils.Torch\XmlUtils.cs" />
     </ItemGroup>
@@ -209,6 +223,16 @@
         <Content Include="manifest.xml" />
         <Content Include="postbuild.bat" />
         <Content Include="symutil.bat" />
+    </ItemGroup>
+    <ItemGroup>
+        <ProjectReference Include="..\Utils.EntityGps\Utils.EntityGps.csproj">
+            <Project>{d3f66ad3-9265-4ca7-b865-dedd0b20a8e7}</Project>
+            <Name>Utils.EntityGps</Name>
+        </ProjectReference>
+        <ProjectReference Include="..\Utils.TimeSerieses\Utils.TimeSerieses.csproj">
+            <Project>{7f42b008-0b81-4dcc-82e6-18125ac9524e}</Project>
+            <Name>Utils.TimeSerieses</Name>
+        </ProjectReference>
     </ItemGroup>
     <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
     <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

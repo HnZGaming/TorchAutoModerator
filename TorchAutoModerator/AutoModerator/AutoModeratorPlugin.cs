@@ -1,63 +1,52 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Controls;
 using AutoModerator.Core;
-using AutoModerator.Core.Scanners;
+using AutoModerator.Grids;
+using AutoModerator.Players;
+using AutoModerator.Punishes;
+using AutoModerator.Punishes.Broadcasts;
+using AutoModerator.Warnings;
 using NLog;
+using Profiler.Basics;
+using Profiler.Core;
+using Sandbox.Game.Entities;
 using Sandbox.Game.Screens.Helpers;
+using Sandbox.Game.World;
 using Torch;
 using Torch.API;
+using Torch.API.Managers;
 using Torch.API.Plugins;
 using Utils.General;
+using Utils.TimeSerieses;
 using Utils.Torch;
-using VRage.Game.ModAPI;
 
 namespace AutoModerator
 {
-    public class AutoModeratorPlugin : TorchPluginBase, IWpfPlugin
+    public sealed class AutoModeratorPlugin : TorchPluginBase, IWpfPlugin
     {
         static readonly ILogger Log = LogManager.GetCurrentClassLogger();
+
         Persistent<AutoModeratorConfig> _config;
         UserControl _userControl;
         CancellationTokenSource _canceller;
-        LaggyGridGpsBroadcaster _gpsBroadcaster;
-        LaggyGridFinder _gridFinder;
-        LaggyGridReportBuffer _gridReportBuffer;
-        LaggyGridGpsMaker _gridMaker;
-        FactionScanner _factionScanner;
-        ServerLagObserver _serverLagObserver;
-        FactionMemberProfiler _factionMemberProfiler;
-        LaggyGridGpsDescriptionMaker _descriptionMaker;
-        PersistentGpsHashStore _gpsHashStore;
+        FileLoggingConfigurator _fileLoggingConfigurator;
 
-        AutoModeratorConfig Config => _config.Data;
+        GridLagTracker _laggyGrids;
+        PlayerLagTracker _laggyPlayers;
+        EntityGpsBroadcaster _entityGpsBroadcaster;
+        BroadcastListenerCollection _gpsReceivers;
+        LagWarningCollection _warningQuests;
+        LagPunishExecutor _punishExecutor;
+        LagPunishChatFeed _punishChatFeed;
+        IChatManagerServer _chatManager;
 
-        public bool Enabled
-        {
-            private get => Config.EnableBroadcasting;
-            set => Config.EnableBroadcasting = value;
-        }
-
-        public double MspfThreshold
-        {
-            get => Config.MspfPerOnlineGroupMember;
-            set => Config.MspfPerOnlineGroupMember = value;
-        }
-
-        public double SimSpeedThreshold
-        {
-            get => Config.SimSpeedThreshold;
-            set => Config.SimSpeedThreshold = value;
-        }
-
-        public bool AdminsOnly
-        {
-            get => Config.AdminsOnly;
-            set => Config.AdminsOnly = value;
-        }
+        UserControl IWpfPlugin.GetControl() => _config.GetOrCreateUserControl(ref _userControl);
+        public AutoModeratorConfig Config => _config.Data;
 
         public override void Init(ITorchBase torch)
         {
@@ -69,166 +58,268 @@ namespace AutoModerator
 
             var configFilePath = this.MakeConfigFilePath();
             _config = Persistent<AutoModeratorConfig>.Load(configFilePath);
+            Config.PropertyChanged += OnConfigChanged;
+
+            _fileLoggingConfigurator = new FileLoggingConfigurator(
+                "AutoModerator",
+                new[] {"AutoModerator.*", "Utils.EntityGps.*", "Utils.TimeSerieses.*"},
+                AutoModeratorConfig.DefaultLogFilePath);
+
+            _fileLoggingConfigurator.Initialize();
+            _fileLoggingConfigurator.Configure(Config);
 
             _canceller = new CancellationTokenSource();
-
-            _factionMemberProfiler = new FactionMemberProfiler();
-            _factionScanner = new FactionScanner(Config, _factionMemberProfiler);
-
-            _gridFinder = new LaggyGridFinder(Config, new ILagScanner[]
-            {
-                _factionScanner,
-                new SinglePlayerScanner(Config),
-                new UnownedGridScanner(Config),
-            });
-
-            var gpsHashFilePath = this.MakeFilePath("gpsHashes.txt");
-            _gpsHashStore = new PersistentGpsHashStore(gpsHashFilePath);
-
-            _gridReportBuffer = new LaggyGridReportBuffer(Config);
-            _descriptionMaker = new LaggyGridGpsDescriptionMaker(Config);
-            _gridMaker = new LaggyGridGpsMaker(_descriptionMaker);
-            _gpsBroadcaster = new LaggyGridGpsBroadcaster(Config, _gpsHashStore);
-
-            _serverLagObserver = new ServerLagObserver(Config, 5);
-        }
-
-        UserControl IWpfPlugin.GetControl()
-        {
-            return _config.GetOrCreateUserControl(ref _userControl);
+            _laggyGrids = new GridLagTracker(Config);
+            _laggyPlayers = new PlayerLagTracker(Config);
+            _gpsReceivers = new BroadcastListenerCollection(Config);
+            _entityGpsBroadcaster = new EntityGpsBroadcaster(Config);
+            _warningQuests = new LagWarningCollection(Config);
+            _punishExecutor = new LagPunishExecutor(Config);
         }
 
         void OnGameLoaded()
         {
-            _gpsHashStore.DeleteAllTrackedGpssFromGame();
+            _chatManager = Torch.CurrentSession.Managers.GetManager<IChatManagerServer>();
+            _chatManager.ThrowIfNull("chat manager not found");
 
-            var canceller = _canceller.Token;
-            TaskUtils.RunUntilCancelledAsync(LoopCollecting, canceller).Forget(Log);
-            TaskUtils.RunUntilCancelledAsync(_factionScanner.LoopProfilingFactions, canceller).Forget(Log);
-            TaskUtils.RunUntilCancelledAsync(_gpsBroadcaster.LoopCleaning, canceller).Forget(Log);
-            TaskUtils.RunUntilCancelledAsync(_serverLagObserver.LoopObserving, canceller).Forget(Log);
-        }
+            _punishChatFeed = new LagPunishChatFeed(Config, _chatManager);
 
-        async Task LoopCollecting(CancellationToken canceller)
-        {
-            Log.Info("Started collector loop");
-
-            // Idle for some time during the session startup
-            await Task.Delay(Config.FirstIdleSeconds.Seconds(), canceller);
-
-            while (!canceller.IsCancellationRequested)
-            {
-                try
-                {
-                    if (!Enabled || !_serverLagObserver.IsLaggy)
-                    {
-                        // clear past reports 
-                        _gridReportBuffer.Clear();
-
-                        await Task.Delay(1.Seconds(), canceller);
-                        continue;
-                    }
-
-                    await RunOneInterval(canceller);
-                }
-                catch (OperationCanceledException)
-                {
-                    return;
-                }
-                catch (Exception e)
-                {
-                    Log.Error(e);
-
-                    // wait a bit otherwise the logs will flood the UI
-                    await Task.Delay(5.Seconds(), canceller);
-                }
-            }
-        }
-
-        async Task RunOneInterval(CancellationToken canceller)
-        {
-            var gridReports = await FindLaggyGrids(10.Seconds(), true, canceller);
-            await BroadcastLaggyGrids(gridReports, canceller);
+            TaskUtils.RunUntilCancelledAsync(Main, _canceller.Token).Forget(Log);
         }
 
         void OnGameUnloading()
         {
+            Config.PropertyChanged -= OnConfigChanged;
             _config?.Dispose();
             _canceller?.Cancel();
             _canceller?.Dispose();
+            _entityGpsBroadcaster.ClearGpss();
+            _warningQuests.Clear();
         }
 
-        public async Task<IEnumerable<LaggyGridReport>> FindLaggyGrids(TimeSpan profileTime, bool buffered, CancellationToken canceller = default)
+        void OnConfigChanged(object _, PropertyChangedEventArgs args)
         {
-            // profile laggy grids
-            var gridReports = await _gridFinder.ScanLaggyGrids(profileTime, canceller);
-
-            // put them in the buffer
-            _gridReportBuffer.AddInterval(gridReports);
-
-            if (buffered)
-            {
-                // find "persistently laggy grids" over multiple intervals
-                var gridIds = _gridReportBuffer.GetPersistentlyLaggyGridIds();
-
-                // retrieve laggy grids by grid IDs
-                var reportIdMapping = gridReports.ToDictionary(r => r.GridId);
-                gridReports = gridIds.Select(i => reportIdMapping[i]).OrderByDescending(r => r.Mspf);
-            }
-
-            return gridReports;
+            _fileLoggingConfigurator.Configure(Config);
+            Log.Info("config changed");
         }
 
-        public async Task BroadcastLaggyGrids(IEnumerable<LaggyGridReport> gridReports, CancellationToken canceller = default)
+        async Task Main(CancellationToken canceller)
         {
-            // MyGps can be created in the game loop only (idk why)
-            await GameLoopObserver.MoveToGameLoop(canceller);
+            Log.Info("started main");
 
-            // create GPS entities of laggy grids
-            var gpsCollection = new List<MyGps>();
-            foreach (var (gridReport, i) in gridReports.Select((r, i) => (r, i)))
+            _entityGpsBroadcaster.ClearGpss();
+            _warningQuests.Clear();
+
+            // Wait for some time during the session startup
+            await Task.Delay(Config.FirstIdleTime.Seconds(), canceller);
+
+            Log.Info("started collector loop");
+
+            // MAIN LOOP
+            while (!canceller.IsCancellationRequested)
             {
-                var lagRank = i + 1;
-                if (_gridMaker.TryMakeGps(gridReport, lagRank, out var gps))
+                // auto profile
+                var mask = new GameEntityMask(null, null, null);
+                using (var gridProfiler = new GridProfiler(mask))
+                using (var playerProfiler = new PlayerProfiler(mask))
+                using (ProfilerResultQueue.Profile(gridProfiler))
+                using (ProfilerResultQueue.Profile(playerProfiler))
                 {
-                    gpsCollection.Add(gps);
+                    Log.Trace("auto-profile started");
+                    gridProfiler.MarkStart();
+                    playerProfiler.MarkStart();
+                    await Task.Delay(Config.IntervalFrequency.Seconds(), canceller);
+                    Log.Trace("auto-profile done");
+
+                    _laggyGrids.Update(gridProfiler.GetResult());
+                    _laggyPlayers.Update(playerProfiler.GetResult());
                 }
+
+                Log.Trace("profile done");
+
+                if (Config.EnableWarning)
+                {
+                    var usePins = Config.PunishType != LagPunishType.None;
+                    Log.Debug($"punishment type: {Config.PunishType}, warning for punishment: {usePins}");
+
+                    var sources = new List<LagWarningSource>();
+                    var players = _laggyPlayers.GetTrackedEntities(Config.WarningLagNormal).ToDictionary(p => p.Id);
+                    var grids = _laggyGrids.GetPlayerLaggiestGrids(Config.WarningLagNormal).ToDictionary();
+                    foreach (var (playerId, (player, grid)) in players.Zip(grids))
+                    {
+                        if (playerId == 0) continue; // grid not owned
+
+                        var src = new LagWarningSource(
+                            playerId,
+                            MySession.Static.Players.GetPlayerNameOrElse(playerId, $"<{playerId}>"),
+                            player.LongLagNormal,
+                            usePins ? player.RemainingTime : TimeSpan.Zero,
+                            grid.LongLagNormal,
+                            usePins ? grid.RemainingTime : TimeSpan.Zero);
+
+                        sources.Add(src);
+                    }
+
+                    _warningQuests.Update(sources);
+                }
+                else
+                {
+                    _warningQuests.Clear();
+                }
+
+                Log.Trace("warnings done");
+
+                if (Config.EnablePunishChatFeed)
+                {
+                    var sources = new List<LagPunishChatSource>();
+                    var grids = _laggyGrids.GetPlayerPinnedGrids().ToDictionary();
+                    var players = _laggyPlayers.GetPinnedPlayers().ToDictionary(p => p.Id);
+                    foreach (var (playerId, (laggiestGrid, player)) in grids.Zip(players))
+                    {
+                        var lagNormal = Math.Max(laggiestGrid.LongLagNormal, player.LongLagNormal);
+                        var isPinned = laggiestGrid.IsPinned || player.IsPinned;
+                        var source = new LagPunishChatSource(playerId, laggiestGrid.Id, lagNormal, isPinned);
+                        sources.Add(source);
+                    }
+
+                    await _punishChatFeed.Update(sources);
+                }
+                else
+                {
+                    _punishChatFeed.Clear();
+                }
+
+                if (Config.PunishType == LagPunishType.Damage ||
+                    Config.PunishType == LagPunishType.Shutdown)
+                {
+                    var punishSources = new Dictionary<long, LagPunishSource>();
+                    foreach (var pinnedPlayer in _laggyPlayers.GetPinnedPlayers())
+                    {
+                        var playerId = pinnedPlayer.Id;
+                        if (!_laggyGrids.TryGetLaggiestGridOwnedBy(playerId, out var laggiestGrid)) continue;
+
+                        var src = new LagPunishSource(laggiestGrid.Id, laggiestGrid.IsPinned);
+                        punishSources[src.GridId] = src;
+                    }
+
+                    foreach (var grid in _laggyGrids.GetPinnedGrids())
+                    {
+                        var gpsSource = new LagPunishSource(grid.Id, grid.IsPinned);
+                        punishSources[gpsSource.GridId] = gpsSource;
+                    }
+
+                    await _punishExecutor.Update(punishSources);
+                }
+                else
+                {
+                    _punishExecutor.Clear();
+                }
+
+                Log.Trace("punishment done");
+
+                if (Config.PunishType == LagPunishType.Broadcast)
+                {
+                    var allGpsSources = new Dictionary<long, GridGpsSource>();
+
+                    foreach (var (player, rank) in _laggyPlayers.GetPinnedPlayers().Indexed())
+                    {
+                        var playerId = player.Id;
+                        if (!_laggyGrids.TryGetLaggiestGridOwnedBy(playerId, out var laggiestGrid)) continue;
+
+                        var gpsSource = new GridGpsSource(laggiestGrid.Id, player.LongLagNormal, player.RemainingTime, rank);
+                        allGpsSources[gpsSource.GridId] = gpsSource;
+                    }
+
+                    foreach (var (grid, rank) in _laggyGrids.GetPinnedGrids().Indexed())
+                    {
+                        var gpsSource = new GridGpsSource(grid.Id, grid.LongLagNormal, grid.RemainingTime, rank);
+                        allGpsSources[gpsSource.GridId] = gpsSource;
+                    }
+
+                    var targetIdentityIds = _gpsReceivers.GetReceiverIdentityIds();
+                    await _entityGpsBroadcaster.ReplaceGpss(allGpsSources.Values, targetIdentityIds, canceller);
+                }
+                else
+                {
+                    _entityGpsBroadcaster.ClearGpss();
+                }
+
+                Log.Trace("broadcast done");
+
+                // stop tracking deleted grids & report cheating
+                // we're doing this right here to get the max chance of grabbing the owner name
+                var lostGrids = new List<TrackedEntitySnapshot>();
+                var trackedGrids = _laggyGrids.GetTrackedEntities();
+
+                await GameLoopObserver.MoveToGameLoop(canceller);
+
+                foreach (var trackedGrid in trackedGrids)
+                {
+                    if (!MyEntities.TryGetEntityById(trackedGrid.Id, out _))
+                    {
+                        lostGrids.Add(trackedGrid);
+                    }
+                }
+
+                await TaskUtils.MoveToThreadPool(canceller);
+
+                foreach (var lostGrid in lostGrids)
+                {
+                    _laggyGrids.StopTracking(lostGrid.Id);
+
+                    if (lostGrid.LongLagNormal > Config.WarningLagNormal || lostGrid.IsPinned)
+                    {
+                        var gridName = lostGrid.Name;
+                        var ownerName = lostGrid.OwnerName;
+                        Log.Warn($"Laggy grid deleted by player: {gridName}: {ownerName}");
+
+                        if (Config.EnablePunishChatFeed)
+                        {
+                            _chatManager.SendMessage(Config.PunishReportChatName, 0, $"Laggy grid deleted by player: {gridName}: {ownerName}");
+                        }
+                    }
+                }
+
+                Log.Trace("absent entity cleaning done");
+                Log.Debug("interval done");
             }
-
-            await TaskUtils.MoveToThreadPool(canceller);
-
-            // broadcast to players
-            _gpsBroadcaster.BroadcastToOnlinePlayers(gpsCollection);
         }
 
-        public void CleanAllCustomGps()
+        public IEnumerable<MyGps> GetAllGpss()
         {
-            _gpsBroadcaster.DeleteAllCustomGpss();
+            return _entityGpsBroadcaster.GetGpss();
         }
 
-        public IEnumerable<MyGps> GetAllCustomGpsEntities()
+        public void OnSelfProfiled(long playerId)
         {
-            return _gpsBroadcaster.GetAllCustomGpsEntities();
+            _warningQuests.OnSelfProfiled(playerId);
         }
 
-        public void MutePlayer(ulong playerSteamId)
+        public void ClearCache()
         {
-            Config.AddMutedPlayer(playerSteamId);
+            _laggyGrids.Clear();
+            _laggyPlayers.Clear();
         }
 
-        public void UnmutePlayer(ulong playerSteamId)
+        public void ClearQuestForUser(long playerId)
         {
-            Config.RemoveMutedPlayer(playerSteamId);
+            _warningQuests.Clear(playerId);
         }
 
-        public void UnmuteAll()
+        public bool TryGetTimeSeries(long entityId, out ITimeSeries<double> timeSeries)
         {
-            Config.RemoveAllMutedPlayers();
+            return _laggyGrids.TryGetTimeSeries(entityId, out timeSeries) ||
+                   _laggyPlayers.TryGetTimeSeries(entityId, out timeSeries);
         }
 
-        public Task<IEnumerable<(IMyFaction Faction, int Count, double Mspf)>> ProfileFactionMembers(TimeSpan profileTime)
+        public IEnumerable<TrackedEntitySnapshot> GetTrackedGrids()
         {
-            return _factionMemberProfiler.Profile(profileTime);
+            return _laggyGrids.GetTrackedEntities();
+        }
+
+        public IEnumerable<TrackedEntitySnapshot> GetTrackedPlayers()
+        {
+            return _laggyPlayers.GetTrackedEntities();
         }
     }
 }

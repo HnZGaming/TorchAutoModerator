@@ -1,83 +1,149 @@
 # TorchAutoModerator
 
-Auto moderation with a shit ton of configs.
+Auto Moderator is a Torch plugin to let players moderate the server lag themselves.
 
-Broadcasts GPS of top grids based on configurable factors.
-Useful for invoking self policing by players in the server.
+This plugin will,
+
+1. send out visible warnings to server-necking players;
+2. let them profile themselves and let them know how to fix it;
+3. if they ignored the warning, punish their ass (in a variety of ways).
+
+This plugin is primarily designed to address the issue that some server admins 
+using [TorchMonitor](https://github.com/HnZGaming/TorchMonitor) are constantly checking the server status
+and reaching out every single laggy player in game.
+This plugin should automate the whole process and further take necessary actions 
+to keep the server healthy without the admin presence.
+
+Note that this plugin will only work on `MySector` for now.
+You need other means to moderate `MyPhysics` and anything else that can't be traced up to specific grids/players.
+
+## General
+
+This plugin's main loop follows this cycle:
+1. Profile top 50 grids and players in game (using Profiler plugin);
+1. Keep track of them in a time series;
+1. Pin grids/players that exceed their punishment threshold for a long enough time;
+1. Send out warnings to nearly-pinned players;
+1. Punish pinned players and players in possession of pinned grids.
+
+The time series holds onto the series of computation time (ms/f) of all profiled grids/players for a set length of time.
+The system will look up this time series to perform warnings and punishments (according to their respective thresholds).
+You can run `!lag inspect <entity_id>` to inspect each player or grid's time series (or `!lag inspect` to see all entities):
+
+![Inspect TSDB](README.media/inspect.png)
+
+Pins (=source of punishment) will stay in the system for a set length of time and release itself,
+though if the corresponding entity's ms/f continues to stay above the punishment threshold 
+the pin will never release (and the punishment will never stop).
+
+![Lag Warning](README.media/config.general.png)
+
+You can filter out factions from the punishment by registering their faction tags in the config.
+Convenient for public/admin assets such as a trading post or community hub.
+
+## Grids and Players
+
+You can set a different threshold (ms/f) for grids and players as they're managed in separate TSDB instances. 
+This enables to combat the case where the server houses a sheer number of grids owned by a small number of players of all others.
+
+![Lag Warning](README.media/config.gridplayer.png)
+
+To disable one measurement or another, crank it up to like 1000000 so that nobody can reach the threshold.
+
+## Lag Warning
+
+Players will receive a warning when they're considered lagging the server.
+The warning takes the form of Questlog and notification in players' HUD.
+
+![Lag Warning](README.media/warning.png)
+
+You can configure when the warning should kick in for players based on their impact on the server health.
+You can generally control the length of this "grace period" by the combination of the warning threshold and the tracking time length,
+that said, it varies depending on given entity's ms/f over the tracked period.
+
+![Lag Warning](README.media/config.warning.png)
+
+## Profiler Command
+Players can type a command in game chat as `!lag profile` to show the laggiest grids and block types
+so that they can quickly figure out which grids and blocks need a fixing.
+`!lag profile -this` will exclusively profile a grid that the player is sitting on or looking at.
+You should make sure to give players this instruction in the warning text.
+
+![Lag Warning](README.media/profile.png)
+
+## Punishments
+
+Following is the list of punishments:
+
+### Chat
+
+Sends out the names of laggy players to the whole server.
+This punishment can be invoked along with other types of punishment.
+This is useful for admins to back-track all punishments that have taken place via SEDB plugin.
+You can configure to enable/disable this feature, message sender name and text format.
+
+### Shutdown
+
+Completely shuts down laggy grids, rendering it unusable.
+Players cannot reactivate the grid until the punishment is over.
+
+### Damage
+
+Applies progressive damage to laggy grids.
+You can configure the damage per interval and the minimum integrity.
+
+### Broadcast
+
+Sends out GPS coordinates of laggy grids to the whole server until the punishment is over.
+Players can see these GPSs (unless configured as admin-only).
+
+![GPS](README.media/broadcast.png)
+
+## Configs & Debugs
+
+You can list up most of available config properties via `!lag configs`:
+
+![Lag Warning](README.media/command.configs.png)
+
+See most of current config property values by `!lag configs all`.
+
+To set a new value to a config property, 
+* `!lag configs <property_index> <new_value>`
+* `!lag configs <property_name> <new_value>`
+
+as in `!lag configs 0 120` or `!lag configs FirstIdleTime 120`.
+
+To list up all available commands, `!lag commands`.
+
+To view DEBUG or TRACE logs navigate to `Logging` section of the config and tick on appropriate checkboxes.
+Note TRACE will freeze the console if your server has 100+ grids.
+Tick on `Suppress Console Output` and read the log file for safety.
+
+## Instructions
+
+You should start with zero punishment first and watch the DEBUG log to figure out the numbers.
+[TorchMonitor](https://github.com/HnZGaming/TorchMonitor) would help you find a long-term set of samples for the reference.
+
+* `FirstIdleSeconds` -- should be larger than 120 to be sure.
+* `TrackingTime` -- should generally be larger than you think. 5 minutes (300) to 10 minutes (600) is a good start.
+* `PunishTime` -- should be about 10 minutes (600) in general, or half an hour (1800) for Broadcast punishment.
+* `WarningLagNormal` -- generally `0.7` - `0.8` is a good start.
+
+Use [SEDB](https://torchapi.net/plugins/item/3cd3ba7f-c47c-4efe-8cf1-bd3f618f5b9c) plugin to 
+monitor the current state of the server:
+
+![Discord](README.media/discord.png)
+![Discord](README.media/discord.2.png)
+
+For more comprehensive/long-term monitoring consider [TorchMonitor](https://github.com/HnZGaming/TorchMonitor)
+(but with Auto Moderator you probably won't need it as much):
+
+![Discord](README.media/torchmonitor.png)
 
 ## Dependencies
 
-* [Profiler plugin](https://torchapi.net/plugins/item/da82de0f-9d2f-4571-af1c-88c7921bc063)
-
-## Configs (Torch UI)
-
-* `Enable broadcasting` -- Enables GPS broadcasting of top grids.
-* `Broadcast to Admins only` -- Broadcasts GPS to Moderators and above only.
-* `First idle seconds` -- First N seconds of the session (warm-up period) to not scan grids.
-* `Threshold ms/f per online member` -- Threshold "lagginess" to start broadcasting top grids (see below).
-* `Threshold sim speed` -- Maximum sim speed to enable GPS broadcasting.
-* `MAX GPS count` -- Maximum number of GPS entities to show up at once on players' HUD.
-* `Window time (seconds)` -- N seconds to wait until top grids get broadcasted.
-* `GPS lifespan (seconds)` -- N seconds to keep showing GPS entities after the faction is no longer laggy.
-* `Exempt NPC factions` -- Ignore NPC factions even if they may be laggy.
-* `Exempt faction tags` -- Name tags of factions whose grids will not be broadcasted.
-* `Muted players` -- Steam ID of players who have opted out using the `!lg mute` command.
-
-## Commands
-
-* `!lg on` -- Tick on `Enable broadcasting`.
-* `!lg off` -- Tick off `Enable broadcasting`.
-* `!lg mspf` -- Get or set `Threshold ms/f per online member`.
-* `!lg ss` -- Get or set `Threshold sim speed`.
-* `!lg admins-only` -- Get or set `Broadcast to Admins only`.
-* `!lg clear` -- Clear all GPS entities populated by this plugin from all players' HUD.
-* `!lg show` -- Show the list of GPS entities populated by this plugin.
-* `!lg scan -time=5 -buffered -broadcast` -- Manually invoke scanning with options.
-* `!lg profile -time=5 -top=10` -- Profile factions and their per-online-player ms/f.
-* `!lg mute` -- (For players) Unsubscribe from GPS broadcasting.
-* `!lg unmute` -- (For players) Subscribe to GPS broadcasting.
-* `!lg unmute_all` -- Force every player to subscribe to GPS broadcasting.
-
-## "ms/f Per Online Member" And Top Grids
-
-`ms/f` stands for `milliseconds per frame`; a unit that represents how "laggy" given game entity is.
-This plugin generally tries to measure ms/f of each player in a "fair" way, that is, divide a faction's total ms/f by its current online member count.
-
-Corer cases: for "single" players, we consider them as a one-man faction (divide the sum of all his/her grids by 1).
-For "unowned" grids, we consider them as of one "token" player's one-man faction (divide the sum of all unowned grids by 1).
-For any "completely offline" factions, divide by 1.
-
-Each ms/f of online members will be sorted and the first N factions will enter into the broadcast queue (where N is set by `MAX GPS count`).
-A broadcasted grid ("top grid") is the first laggiest grid that's possessed by each laggy faction.
-
-## Guideline
-
-1. Tick on `Broadcast to Admins only` first to work on your configuration safely. This option is ticked on by default.
-1. Set `Exempt NPC factions` to your need. Should be ticked on for most cases.
-1. Register admin factions to `Exempt faction tags`.
-1. Measure how long your server takes to "warm up". Every grid appears laggy to the profiler when the server is starting up (for several reasons). Set `First idle seconds` to `180` (3 minutes) to be sure.
-1. Try to begin with a generous configuration. Set `Threshold ms/f per online member` to `3.0` and slowly lower it down. Set `Threshold sim speed` less than `0.7` so that broadcasting will only kick in when the server is under a considerable pressure.
-1. Set `MAX GPS count` lower than `5` otherwise they can clutter up the HUD of all players.
-1. Run `!lg scan` to manually scan top grids. Set `-buffered` to simulate the production result. Set `-broadcast` to broadcast resulting GPS entities (you should set `Broadcast to Admins only`).
-1. Run `!lg profile` to profile ms/f of factions per their online member count.
-1. Read debug logs by adding NLog rule `name=TorchShittyShitShitter.*` with `minlevel=Debug`.
-
-## Window Time And GPS Lifespan
-
-`Window time` option defines how long the plugin should wait until a top grid is broadcasted.
-If the top grid's faction "stops being laggy" before the window time, the grid will not be broadcasted.
-A longer window time makes it more generous to laggy factions. A shorter window time can cause broadcasting too often.
-Note that concealment usually takes 30 seconds to 1 minute to kick in.
-Start with `300` (5 minutes) and lower it down.
-
-`GPS lifespan` option defines how long each GPS will remain in everyone's HUD,
-even if the subject faction stopped being laggy. 
-In other words, a GPS is guaranteed to stay in the HUD for that length of time.
-Should be long enough for "moderators" to arrive on the scene.
-Start with `600` (10 minutes) and tweak it according to your world size.
+* [Profiler plugin](https://torchapi.net/plugins/item/da82de0f-9d2f-4571-af1c-88c7921bc063).
 
 ## Fork & Extend
 
-Core logic of "scanning" (interpreting profiler result) is defined in classes under `TorchShittyShitShitter.Core.Scanners.*` namespace. 
-To add new "scanners", implement an interface `ILagScanner` and register the instance to a list of scanners defined in `ShittyShitShitterPlugin.Init()`.
-To remove a scanner, comment it out of the list.
+Feel free to fork and develop your own logic on top of this plugin under MIT license.
