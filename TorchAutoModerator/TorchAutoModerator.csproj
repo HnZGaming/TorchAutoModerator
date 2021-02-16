@@ -17,7 +17,7 @@
         <DebugType>full</DebugType>
         <Optimize>false</Optimize>
         <OutputPath>bin\Debug\</OutputPath>
-        <DefineConstants>DEBUG;TRACE</DefineConstants>
+        <DefineConstants>DEBUG;TRACE;TORCH</DefineConstants>
         <ErrorReport>prompt</ErrorReport>
         <WarningLevel>4</WarningLevel>
     </PropertyGroup>
@@ -26,7 +26,7 @@
         <DebugType>pdbonly</DebugType>
         <Optimize>true</Optimize>
         <OutputPath>bin\Release\</OutputPath>
-        <DefineConstants>TRACE</DefineConstants>
+        <DefineConstants>TRACE;TORCH</DefineConstants>
         <ErrorReport>prompt</ErrorReport>
         <WarningLevel>4</WarningLevel>
     </PropertyGroup>
@@ -194,10 +194,9 @@
         <Compile Include="Utils.General\CollectionUtils.cs" />
         <Compile Include="Utils.General\CsvDb.cs" />
         <Compile Include="Utils.General\DebugUtils.cs" />
-        <Compile Include="Utils.General\ExpirationObserver.cs" />
         <Compile Include="Utils.General\DisposableCollection.cs" />
         <Compile Include="Utils.General\DisposableUtils.cs" />
-        <Compile Include="Utils.General\FileLoggingConfigurator.cs" />
+        <Compile Include="Utils.General\ExpirationObserver.cs" />
         <Compile Include="Utils.General\HttpUrlBuilder.cs" />
         <Compile Include="Utils.General\LangUtils.cs" />
         <Compile Include="Utils.General\LoggerUtils.cs" />
@@ -213,6 +212,7 @@
         <Compile Include="Utils.Torch\ConfigPropertyAttribute.cs" />
         <Compile Include="Utils.Torch\ConfigPropertyIgnoreAttribute.cs" />
         <Compile Include="Utils.Torch\ConfigPropertyType.cs" />
+        <Compile Include="Utils.Torch\FileLoggingConfigurator.cs" />
         <Compile Include="Utils.Torch\GameLoopObserver.cs" />
         <Compile Include="Utils.Torch\GameLoopObserverManager.cs" />
         <Compile Include="Utils.Torch\ReportGenerator.cs" />

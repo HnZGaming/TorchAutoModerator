@@ -2,7 +2,7 @@
 
 namespace Utils.General
 {
-    public static class LoggerUtils
+    internal static class LoggerUtils
     {
         public static ILogger GetFullNameLogger(this object self)
         {

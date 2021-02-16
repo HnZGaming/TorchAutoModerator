@@ -1,9 +1,8 @@
 ﻿using NLog;
 using NLog.Config;
 using NLog.Targets;
-using Utils.Torch;
 
-namespace Utils.General
+namespace Utils.Torch
 {
     internal class FileLoggingConfigurator
     {

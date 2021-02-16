@@ -232,6 +232,15 @@ namespace Utils.General
             return self.TryGetValue(key, out var v) ? v : defaultValue;
         }
 
+#if !TORCH
+        // ReSharper disable once UseDeconstructionOnParameter
+        public static void Deconstruct<K, V>(this KeyValuePair<K, V> self, out K key, out V value)
+        {
+            key = self.Key;
+            value = self.Value;
+        }
+#endif
+
         public static IReadOnlyDictionary<K, (V0 Value0, V1 Value1)> Zip<K, V0, V1>(
             this IReadOnlyDictionary<K, V0> self,
             IReadOnlyDictionary<K, V1> other,
