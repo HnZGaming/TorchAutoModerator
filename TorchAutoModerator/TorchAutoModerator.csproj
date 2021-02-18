@@ -42,8 +42,6 @@
         <Reference Include="WindowsBase" />
     </ItemGroup>
     <ItemGroup>
-    </ItemGroup>
-    <ItemGroup>
         <Reference Include="Newtonsoft.Json">
             <HintPath>..\TorchBinaries\Newtonsoft.Json.dll</HintPath>
         </Reference>
