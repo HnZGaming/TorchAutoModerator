@@ -104,5 +104,10 @@ namespace AutoModerator.Players
         {
             return _lagTracker.TryGetTrackedEntity(entityId, out entity);
         }
+
+        public bool TryTraverseTrackedEntityByName(string name, out TrackedEntitySnapshot entity)
+        {
+            return _lagTracker.TryTraverseTrackedEntityByName(name, out entity);
+        }
     }
 }

@@ -26,6 +26,7 @@ namespace AutoModerator.Warnings
         public readonly double GridLongLagNormal;
         public readonly TimeSpan GridPin;
 
+        //TODO convert to fields so this struct wont copy on every access
         public double LongLagNormal => Math.Max(PlayerLagNormal, GridLongLagNormal);
         public TimeSpan Pin => PlayerPin > GridPin ? PlayerPin : GridPin;
         public bool IsPinned => Pin > TimeSpan.Zero;

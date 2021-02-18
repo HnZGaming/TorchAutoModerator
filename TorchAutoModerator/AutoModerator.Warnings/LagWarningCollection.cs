@@ -24,9 +24,9 @@ namespace AutoModerator.Warnings
             string WarningCurrentLevelText { get; }
         }
 
-        enum QuestState
+        public enum LagQuestState
         {
-            Invalid,
+            None,
             MustProfileSelf,
             MustDelagSelf,
             MustWaitUnpinned,
@@ -34,10 +34,18 @@ namespace AutoModerator.Warnings
             Cleared, // remove the hud
         }
 
-        sealed class PlayerState
+        public sealed class PlayerState
         {
-            public QuestState Quest { get; set; }
+            public LagQuestState Quest { get; set; }
             public LagWarningSource Latest { get; set; }
+            public double LastWarningLagNormal { get; set; }
+
+            public PlayerState Snapshot() => new PlayerState
+            {
+                Quest = Quest,
+                Latest = Latest,
+                LastWarningLagNormal = LastWarningLagNormal,
+            };
         }
 
         static readonly ILogger Log = LogManager.GetCurrentClassLogger();
@@ -57,7 +65,7 @@ namespace AutoModerator.Warnings
         {
             foreach (var (playerId, _) in _quests)
             {
-                UpdateQuestLog(QuestState.Cleared, playerId);
+                UpdateQuestLog(LagQuestState.Cleared, playerId);
             }
 
             _quests.Clear();
@@ -65,10 +73,10 @@ namespace AutoModerator.Warnings
         }
 
         [MethodImpl(MethodImplOptions.Synchronized)]
-        public void Clear(long playerId)
+        public void Remove(long playerId)
         {
             _quests.Remove(playerId);
-            UpdateQuestLog(QuestState.Cleared, playerId);
+            UpdateQuestLog(LagQuestState.Cleared, playerId);
             _hudNotifications.Remove(playerId);
         }
 
@@ -89,8 +97,9 @@ namespace AutoModerator.Warnings
                 {
                     var newPlayerState = new PlayerState
                     {
-                        Quest = QuestState.MustProfileSelf,
+                        Quest = LagQuestState.MustProfileSelf,
                         Latest = laggyPlayer,
+                        LastWarningLagNormal = laggyPlayer.LongLagNormal / _config.WarningLagNormal,
                     };
 
                     _quests[playerId] = newPlayerState;
@@ -98,28 +107,30 @@ namespace AutoModerator.Warnings
 
                     Log.Info($"new warning issued: \"{laggyPlayer.PlayerName}\" {lag * 100:0}%");
                 }
-                else if (laggyPlayer.IsPinned && playerState.Quest < QuestState.MustWaitUnpinned)
+                else if (laggyPlayer.IsPinned && playerState.Quest < LagQuestState.MustWaitUnpinned)
                 {
-                    playerState.Quest = QuestState.MustWaitUnpinned;
+                    playerState.Quest = LagQuestState.MustWaitUnpinned;
                     UpdateQuestLog(playerState.Quest, playerId);
                 }
-                else if (!(lag > _config.WarningLagNormal) && playerState.Quest <= QuestState.MustDelagSelf)
+                else if (!(lag > _config.WarningLagNormal) && playerState.Quest <= LagQuestState.MustDelagSelf)
                 {
-                    playerState.Quest = QuestState.Ended;
+                    playerState.Quest = LagQuestState.Ended;
                     UpdateQuestLog(playerState.Quest, playerId);
                 }
-                else if (lag > _config.WarningLagNormal && playerState.Quest >= QuestState.Ended)
+                else if (lag > _config.WarningLagNormal && playerState.Quest >= LagQuestState.Ended)
                 {
-                    playerState.Quest = QuestState.MustProfileSelf;
+                    playerState.Quest = LagQuestState.MustProfileSelf;
                     UpdateQuestLog(playerState.Quest, playerId);
                 }
-                else if (!laggyPlayer.IsPinned && playerState.Quest == QuestState.MustWaitUnpinned)
+                else if (!laggyPlayer.IsPinned && playerState.Quest == LagQuestState.MustWaitUnpinned)
                 {
-                    playerState.Quest = lag > _config.WarningLagNormal ? QuestState.MustDelagSelf : QuestState.Ended;
+                    playerState.Quest = lag > _config.WarningLagNormal ? LagQuestState.MustDelagSelf : LagQuestState.Ended;
                     UpdateQuestLog(playerState.Quest, playerId);
                 }
 
-                _quests[playerId].Latest = laggyPlayer;
+                var playerQuestState = _quests[playerId];
+                playerQuestState.Latest = laggyPlayer;
+                playerQuestState.LastWarningLagNormal = laggyPlayer.LongLagNormal / _config.WarningLagNormal;
 
                 var message = $"{_config.WarningCurrentLevelText}: {lag * 100:0}%";
                 if (laggyPlayer.IsPinned)
@@ -130,18 +141,21 @@ namespace AutoModerator.Warnings
                 _hudNotifications.Show(playerId, message);
             }
 
-            // removed
-            var latestLaggyPlayerIdSet = laggyPlayers.Select(s => s.PlayerId).ToSet();
+            var latestLaggyPlayerIds = laggyPlayers.Select(s => s.PlayerId).ToSet();
             foreach (var (existingPlayerId, state) in _quests.ToArray())
             {
-                if (state.Quest >= QuestState.Ended)
+                // remove quests ended during the last interval
+                if (state.Quest >= LagQuestState.Ended)
                 {
                     _quests.Remove(existingPlayerId);
-                    UpdateQuestLog(QuestState.Cleared, existingPlayerId);
+                    UpdateQuestLog(LagQuestState.Cleared, existingPlayerId);
+                    continue;
                 }
-                else if (!latestLaggyPlayerIdSet.Contains(existingPlayerId)) // removed now
+
+                // end quests of players that aren't laggy anymore
+                if (!latestLaggyPlayerIds.Contains(existingPlayerId))
                 {
-                    state.Quest = QuestState.Ended;
+                    state.Quest = LagQuestState.Ended;
                     UpdateQuestLog(state.Quest, existingPlayerId);
                     _hudNotifications.Remove(existingPlayerId);
                     Log.Info($"warning withdrawn: {state.Latest.PlayerName}");
@@ -160,49 +174,59 @@ namespace AutoModerator.Warnings
             if (_quests.TryGetValue(playerId, out var state))
             {
                 var lagNormal = state.Latest.LongLagNormal;
-                if (state.Quest <= QuestState.MustProfileSelf)
+                if (state.Quest <= LagQuestState.MustProfileSelf)
                 {
-                    state.Quest = lagNormal >= _config.WarningLagNormal
-                        ? QuestState.MustDelagSelf
-                        : QuestState.MustWaitUnpinned;
+                    var warningLagNormal = lagNormal / _config.WarningLagNormal;
+                    state.LastWarningLagNormal = warningLagNormal;
+                    state.Quest = warningLagNormal >= 1
+                        ? LagQuestState.MustDelagSelf
+                        : LagQuestState.MustWaitUnpinned;
                     UpdateQuestLog(state.Quest, playerId);
                 }
             }
         }
 
-        void UpdateQuestLog(QuestState quest, long playerId)
+        [MethodImpl(MethodImplOptions.Synchronized)]
+        public IReadOnlyDictionary<long, PlayerState> GetInternalSnapshot()
+        {
+            return _quests
+                .Select(q => (q.Key, q.Value.Snapshot()))
+                .ToDictionary();
+        }
+
+        void UpdateQuestLog(LagQuestState quest, long playerId)
         {
             var playerName = MySession.Static.Players.GetPlayerNameOrElse(playerId, $"{playerId}");
             Log.Debug($"updating quest log: {playerName}: {quest}");
 
             switch (quest)
             {
-                case QuestState.MustProfileSelf:
+                case LagQuestState.MustProfileSelf:
                 {
                     MyVisualScriptLogicProvider.SetQuestlog(true, _config.WarningTitle, playerId);
                     MyVisualScriptLogicProvider.RemoveQuestlogDetails(playerId);
                     MyVisualScriptLogicProvider.AddQuestlogDetail(_config.WarningDetailMustProfileSelfText, true, true, playerId);
                     return;
                 }
-                case QuestState.MustDelagSelf:
+                case LagQuestState.MustDelagSelf:
                 {
                     MyVisualScriptLogicProvider.RemoveQuestlogDetails(playerId);
                     MyVisualScriptLogicProvider.AddQuestlogDetail(_config.WarningDetailMustDelagSelfText, true, true, playerId);
                     return;
                 }
-                case QuestState.MustWaitUnpinned:
+                case LagQuestState.MustWaitUnpinned:
                 {
                     MyVisualScriptLogicProvider.RemoveQuestlogDetails(playerId);
                     MyVisualScriptLogicProvider.AddQuestlogDetail(_config.WarningDetailMustWaitUnpinnedText, true, true, playerId);
                     return;
                 }
-                case QuestState.Ended:
+                case LagQuestState.Ended:
                 {
                     MyVisualScriptLogicProvider.RemoveQuestlogDetails(playerId);
                     MyVisualScriptLogicProvider.AddQuestlogDetail(_config.WarningDetailEndedText, true, true, playerId);
                     return;
                 }
-                case QuestState.Cleared:
+                case LagQuestState.Cleared:
                 {
                     MyVisualScriptLogicProvider.SetQuestlog(false, "", playerId);
                     return;

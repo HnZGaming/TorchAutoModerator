@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using AutoModerator.Core;
+using AutoModerator.Warnings;
 using NLog;
 using Profiler.Basics;
 using Profiler.Core;
@@ -133,14 +134,13 @@ namespace AutoModerator
             {
                 if (!long.TryParse(entityStr, out var entityId))
                 {
-                    var player = MySession.Static.Players.GetPlayerByName(entityStr);
-                    if (player == null)
+                    if (!Plugin.TryTraverseEntityByName(entityStr, out var entity))
                     {
-                        Context.Respond($"Online player not found by name: {entityStr}");
+                        Context.Respond($"Entity not found by name: {entityStr}", Color.Red);
                         return;
                     }
 
-                    entityId = player.PlayerId();
+                    entityId = entity.Id;
                 }
 
                 if (asNormalPlayer)
@@ -180,6 +180,7 @@ namespace AutoModerator
             var msgBuilder = new StringBuilder();
             msgBuilder.AppendLine();
 
+
             if (!specificGridIdOrNull.HasValue)
             {
                 msgBuilder.AppendLine("Players:");
@@ -191,11 +192,13 @@ namespace AutoModerator
                     inspectablePlayers.Add(s);
                 }
 
+                var warningStates = Plugin.GetWarningState();
                 if (inspectablePlayers.Any())
                 {
                     foreach (var s in inspectablePlayers.Take(top))
                     {
-                        var line = MakeTrackedEntityLine(s);
+                        var warning = warningStates.GetOrElse(s.Id, null);
+                        var line = MakeTrackedEntityLine(s, warning);
                         msgBuilder.AppendLine(line);
                     }
                 }
@@ -238,7 +241,7 @@ namespace AutoModerator
             Context.Respond(msgBuilder.ToString());
         });
 
-        string MakeTrackedEntityLine(TrackedEntitySnapshot s)
+        string MakeTrackedEntityLine(TrackedEntitySnapshot s, LagWarningCollection.PlayerState w = null)
         {
             var lagGraph = MakeOnelinerGraph(30, 1, s.LongLagNormal);
 
@@ -246,8 +249,9 @@ namespace AutoModerator
             var pinSecsNormal = pinSecs / Plugin.Config.PunishTime;
             var pinGraph = MakeOnelinerGraph(30, 1, pinSecsNormal, false);
             pinGraph = s.IsPinned ? $"{pinGraph} pin {pinSecs:0} secs" : "no pin";
+            var warning = w?.Quest > LagWarningCollection.LagQuestState.None ? $"warning: {w.Quest} ({w.LastWarningLagNormal * 100:0}%)" : "";
 
-            return $"{lagGraph} {pinGraph} {s.Name} ({s.Id})";
+            return $"{lagGraph} {pinGraph} {s.Name} ({s.Id}) {warning}";
         }
 
         static IEnumerable<TrackedEntitySnapshot> OrderForInspection(IEnumerable<TrackedEntitySnapshot> snapshots)
@@ -299,11 +303,18 @@ namespace AutoModerator
 
             msgBuilder.AppendLine($"{entity.Name} ({entity.Id})");
             msgBuilder.AppendLine($"Owner: {entity.OwnerName} ({entity.OwnerId})");
-            msgBuilder.AppendLine($"Lag (evaluated): {entity.LongLagNormal * 100:0}%");
-            msgBuilder.AppendLine(entity.IsPinned ? $"Pinned for next {entity.RemainingTime.TotalSeconds} seconds" : "Not pinned");
+
             if (entity.IsBlessed)
             {
                 msgBuilder.AppendLine("Blessed (just spawned)");
+            }
+
+            msgBuilder.AppendLine($"Lag (evaluated): {entity.LongLagNormal * 100:0}%");
+            msgBuilder.AppendLine(entity.IsPinned ? $"Pinned for next {entity.RemainingTime.TotalSeconds} seconds" : "Not pinned");
+
+            if (Plugin.GetWarningState().TryGetValue(entityId, out var w))
+            {
+                msgBuilder.AppendLine($"Warning: {w.Quest}, {w.LastWarningLagNormal * 100:0}%");
             }
 
             foreach (var (((_, normal), outlierTest), index) in series.Indexed())

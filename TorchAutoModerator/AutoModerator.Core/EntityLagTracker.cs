@@ -257,5 +257,19 @@ namespace AutoModerator.Core
             var avgNormal = totalNormal / timeSeries.Count;
             return avgNormal;
         }
+
+        public bool TryTraverseTrackedEntityByName(string name, out TrackedEntitySnapshot entity)
+        {
+            foreach (var (entityId, src) in _lastSources)
+            {
+                if (src.Name == name)
+                {
+                    return TryGetTrackedEntity(entityId, out entity);
+                }
+            }
+
+            entity = default;
+            return false;
+        }
     }
 }
