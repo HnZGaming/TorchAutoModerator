@@ -175,5 +175,11 @@ namespace AutoModerator.Grids
         {
             return _lagTracker.GetTrackedEntities();
         }
+
+        [MethodImpl(MethodImplOptions.Synchronized)]
+        public bool TryGetTrackedEntity(long entityId, out TrackedEntitySnapshot entity)
+        {
+            return _lagTracker.TryGetTrackedEntity(entityId, out entity);
+        }
     }
 }

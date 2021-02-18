@@ -73,7 +73,7 @@ namespace AutoModerator
         [Permission(MyPromoteLevel.None)]
         public void Inspect() => this.CatchAndReport(() =>
         {
-            var isNormalPlayer = (Context.Player?.PromoteLevel ?? MyPromoteLevel.Admin) == MyPromoteLevel.None;
+            var asNormalPlayer = (Context.Player?.PromoteLevel ?? MyPromoteLevel.Admin) == MyPromoteLevel.None;
             var playerId = Context.Player?.IdentityId ?? 0L;
             var faction = MySession.Static.Factions.GetPlayerFaction(playerId);
             var memberIds = faction?.Members.Keys.ToSet() ?? new HashSet<long> {playerId};
@@ -112,6 +112,17 @@ namespace AutoModerator
                         return;
                     }
 
+                    if (option.TryGetParameterlessBool("mine", out asNormalPlayer))
+                    {
+                        if (Context.Player?.PromoteLevel != MyPromoteLevel.Admin)
+                        {
+                            Context.Respond("Option allowed for admins only: all");
+                            return;
+                        }
+
+                        continue;
+                    }
+
                     Context.Respond($"Invalid option: {arg}", Color.Red);
                     return;
                 }
@@ -121,7 +132,7 @@ namespace AutoModerator
             if (Context.Args.TryGetElementAt(0, out var entityIdStr) &&
                 long.TryParse(entityIdStr, out var entityId))
             {
-                if (isNormalPlayer)
+                if (asNormalPlayer)
                 {
                     if (!MyEntities.TryGetEntityById(entityId, out var entity))
                     {
@@ -164,7 +175,7 @@ namespace AutoModerator
                 var inspectablePlayers = new List<TrackedEntitySnapshot>();
                 foreach (var s in OrderForInspection(Plugin.GetTrackedPlayers()))
                 {
-                    if (isNormalPlayer && !memberIds.Contains(s.Id)) continue;
+                    if (asNormalPlayer && !memberIds.Contains(s.Id)) continue;
 
                     inspectablePlayers.Add(s);
                 }
@@ -190,7 +201,7 @@ namespace AutoModerator
             {
                 if (specificGridIdOrNull is long sid && sid != s.Id) continue;
 
-                if (isNormalPlayer)
+                if (asNormalPlayer)
                 {
                     if (!VRageUtils.TryGetCubeGridById(s.Id, out var grid)) continue;
                     if (!grid.BigOwners.TryGetFirst(out var ownerId)) continue;
@@ -251,11 +262,15 @@ namespace AutoModerator
 
         void InspectEntity(long entityId, bool showOutlierTests)
         {
-            ITimeSeries<double> timeSeries;
-
-            if (!Plugin.TryGetTimeSeries(entityId, out timeSeries))
+            if (!Plugin.TryGetTimeSeries(entityId, out var timeSeries))
             {
                 Context.Respond("Time series not found", Color.Red);
+                return;
+            }
+
+            if (!Plugin.TryGetTrackedEntity(entityId, out var entity))
+            {
+                Context.Respond("Tracked entity not found", Color.Red);
                 return;
             }
 
@@ -266,10 +281,16 @@ namespace AutoModerator
             }
 
             var outlierTests = timeSeries.TestOutlier();
-            var series = timeSeries.Zip(outlierTests, (a, b) => (a, b));
+            var series = timeSeries.Zip(outlierTests);
 
             var msgBuilder = new StringBuilder();
             msgBuilder.AppendLine();
+
+            msgBuilder.AppendLine($"{entity.Name} ({entity.Id})");
+            msgBuilder.AppendLine($"Owner: {entity.OwnerName} ({entity.OwnerId})");
+            msgBuilder.AppendLine($"Lag (evaluated): {entity.LongLagNormal * 100:0}%");
+            msgBuilder.AppendLine(entity.IsPinned ? $"Pinned for next {entity.RemainingTime.TotalSeconds} seconds" : "Not pinned");
+
             foreach (var (((_, normal), outlierTest), index) in series.Indexed())
             {
                 const int MaxWidth = 30;

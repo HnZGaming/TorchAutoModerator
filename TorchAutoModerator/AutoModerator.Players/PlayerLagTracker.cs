@@ -98,5 +98,11 @@ namespace AutoModerator.Players
         {
             return _lagTracker.TryGetTimeSeries(entityId, out timeSeries);
         }
+
+        [MethodImpl(MethodImplOptions.Synchronized)]
+        public bool TryGetTrackedEntity(long entityId, out TrackedEntitySnapshot entity)
+        {
+            return _lagTracker.TryGetTrackedEntity(entityId, out entity);
+        }
     }
 }

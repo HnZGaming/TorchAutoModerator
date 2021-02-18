@@ -312,6 +312,12 @@ namespace AutoModerator
                    _laggyPlayers.TryGetTimeSeries(entityId, out timeSeries);
         }
 
+        public bool TryGetTrackedEntity(long entityId, out TrackedEntitySnapshot entity)
+        {
+            return _laggyGrids.TryGetTrackedEntity(entityId, out entity) ||
+                   _laggyPlayers.TryGetTrackedEntity(entityId, out entity);
+        }
+
         public IEnumerable<TrackedEntitySnapshot> GetTrackedGrids()
         {
             return _laggyGrids.GetTrackedEntities();
