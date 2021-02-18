@@ -157,7 +157,7 @@ namespace AutoModerator.Core
             }
 
             // analyze long lags
-            var longLags = new Dictionary<long, double?>();
+            var longLags = new Dictionary<long, (double LongLag, bool Blessed)>();
             foreach (var (entityId, timeSeries) in _lagTimeSeries.GetAllTimeSeries())
             {
                 // ignore first N seconds into existence of an entity (grace period)
@@ -167,28 +167,28 @@ namespace AutoModerator.Core
                 var startTimestamp = _firstTrackedTimestamps[entityId] + _config.GracePeriodSpan;
                 if (startTimestamp > DateTime.UtcNow) // grace period!
                 {
-                    longLags.Add(entityId, null);
+                    longLags.Add(entityId, (0, true));
                     continue;
                 }
 
                 // remove grace-period points from calculation
                 var scopedTimeSeries = timeSeries.GetScoped(startTimestamp);
+                var longLag = CalcLongLagNormal(scopedTimeSeries);
 
-                // don't evaluate until sufficient data is in hand
+                // don't evaluate until sufficient data is in hand (but warning can be issued)
                 if (scopedTimeSeries.GetTimeLength() < _config.TrackingSpan - 5.Seconds())
                 {
-                    longLags.Add(entityId, null);
+                    longLags.Add(entityId, (longLag, true));
                     continue;
                 }
 
-                var longLag = CalcLongLagNormal(scopedTimeSeries);
-                longLags.Add(entityId, longLag);
+                longLags.Add(entityId, (longLag, false));
             }
 
             // pin long-laggy entities
-            foreach (var (entityId, longLag) in longLags)
+            foreach (var (entityId, (longLag, blessed)) in longLags)
             {
-                if (longLag >= 1)
+                if (longLag >= 1 && !blessed)
                 {
                     _pinnedIds.AddOrUpdate(entityId, _config.PinSpan);
                 }
@@ -196,14 +196,12 @@ namespace AutoModerator.Core
 
             // take snapshots
             _lastSnapshots.Clear();
-            foreach (var (entityId, (longLagOrNull, pin)) in longLags.Zip(_pinnedIds.ToDictionary()))
+            foreach (var (entityId, ((longLag, blessed), pin)) in longLags.Zip(_pinnedIds.ToDictionary()))
             {
                 var lastSource = _lastSources.GetValueOrDefault(entityId);
                 var name = lastSource.Name ?? $"<{entityId}>";
                 var ownerId = lastSource.OwnerId;
                 var ownerName = lastSource.OwnerName ?? $"<{ownerId}>";
-                var longLag = longLagOrNull ?? 0;
-                var blessed = !longLagOrNull.HasValue;
                 var snapshot = new TrackedEntitySnapshot(entityId, name, ownerId, ownerName, longLag, pin, blessed);
                 _lastSnapshots.Add(entityId, snapshot);
             }
