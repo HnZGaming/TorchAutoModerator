@@ -129,9 +129,20 @@ namespace AutoModerator
             }
 
             // inspect specific entity
-            if (Context.Args.TryGetElementAt(0, out var entityIdStr) &&
-                long.TryParse(entityIdStr, out var entityId))
+            if (Context.Args.TryGetElementAt(0, out var entityStr))
             {
+                if (!long.TryParse(entityStr, out var entityId))
+                {
+                    var player = MySession.Static.Players.GetPlayerByName(entityStr);
+                    if (player == null)
+                    {
+                        Context.Respond($"Online player not found by name: {entityStr}");
+                        return;
+                    }
+
+                    entityId = player.PlayerId();
+                }
+
                 if (asNormalPlayer)
                 {
                     if (!MyEntities.TryGetEntityById(entityId, out var entity))
