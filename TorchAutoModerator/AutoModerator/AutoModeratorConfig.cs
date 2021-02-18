@@ -70,6 +70,7 @@ namespace AutoModerator
         string _punishReportChatName = "Auto Moderator";
         string _punishReportChatFormat = "[{faction}] {player} \"{grid}\" ({level})";
         double _outlierFenceNormal = 2;
+        double _gracePeriodTime = 20;
 
         [XmlElement(nameof(FirstIdleTime))]
         [Display(Order = 2, Name = "First idle seconds", GroupName = OpGroupName,
@@ -108,9 +109,19 @@ namespace AutoModerator
             get => _punishTime;
             set => SetValue(ref _punishTime, value);
         }
+        
+        [ConfigProperty(ConfigPropertyType.VisibleToPlayers)]
+        [XmlElement(nameof(GracePeriodTime))]
+        [Display(Order = 10, Name = "Grace period (seconds)", GroupName = OpGroupName,
+            Description = "Grids younger than N seconds will not be warned/punished.")]
+        public double GracePeriodTime
+        {
+            get => _gracePeriodTime;
+            set => SetValue(ref _gracePeriodTime, value);
+        }
 
         [XmlElement(nameof(OutlierFenceNormal))]
-        [Display(Order = 8, Name = "Outlier fence normal", GroupName = OpGroupName,
+        [Display(Order = 20, Name = "Outlier fence normal", GroupName = OpGroupName,
             Description = "Ignores spontaneous lags (N times larger than the standard deviation) of given grid/player's timeline.")]
         public double OutlierFenceNormal
         {
@@ -119,7 +130,7 @@ namespace AutoModerator
         }
 
         [XmlElement(nameof(IgnoreNpcFactions))]
-        [Display(Order = 10, Name = "Ignore NPC factions", GroupName = OpGroupName)]
+        [Display(Order = 22, Name = "Ignore NPC factions", GroupName = OpGroupName)]
         public bool IgnoreNpcFactions
         {
             get => _exemptNpcFactions;
@@ -127,7 +138,7 @@ namespace AutoModerator
         }
 
         [XmlElement(nameof(ExemptFactionTags))]
-        [Display(Order = 11, Name = "Exempt faction tags", GroupName = OpGroupName)]
+        [Display(Order = 24, Name = "Exempt faction tags", GroupName = OpGroupName)]
         public List<string> ExemptFactionTags
         {
             get => _exemptFactionTags;

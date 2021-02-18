@@ -18,6 +18,7 @@ namespace AutoModerator.Players
             double MaxPlayerMspf { get; }
             double TrackingTime { get; }
             double PunishTime { get; }
+            double GracePeriodTime { get; }
             double OutlierFenceNormal { get; }
             bool IsFactionExempt(long factionId);
         }
@@ -35,6 +36,7 @@ namespace AutoModerator.Players
             public double OutlierFenceNormal => _masterConfig.OutlierFenceNormal;
             public TimeSpan TrackingSpan => _masterConfig.TrackingTime.Seconds();
             public TimeSpan PinSpan => _masterConfig.PunishTime.Seconds();
+            public TimeSpan GracePeriodSpan => _masterConfig.GracePeriodTime.Seconds();
             public bool IsFactionExempt(long factionId) => _masterConfig.IsFactionExempt(factionId);
         }
 

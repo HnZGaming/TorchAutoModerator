@@ -16,6 +16,7 @@ namespace AutoModerator.Core
             double OutlierFenceNormal { get; }
             TimeSpan TrackingSpan { get; }
             TimeSpan PinSpan { get; }
+            TimeSpan GracePeriodSpan { get; }
             bool IsFactionExempt(long factionId);
         }
 
@@ -25,6 +26,7 @@ namespace AutoModerator.Core
         readonly ExpiryDictionary<long> _pinnedIds;
         readonly Dictionary<long, EntityLagSource> _lastSources;
         readonly Dictionary<long, TrackedEntitySnapshot> _lastSnapshots;
+        readonly Dictionary<long, DateTime> _firstTrackedTimestamps;
 
         public EntityLagTracker(IConfig config)
         {
@@ -33,6 +35,7 @@ namespace AutoModerator.Core
             _pinnedIds = new ExpiryDictionary<long>();
             _lastSources = new Dictionary<long, EntityLagSource>();
             _lastSnapshots = new Dictionary<long, TrackedEntitySnapshot>();
+            _firstTrackedTimestamps = new Dictionary<long, DateTime>();
         }
 
         [MethodImpl(MethodImplOptions.Synchronized)]
@@ -76,6 +79,7 @@ namespace AutoModerator.Core
             _pinnedIds.Clear();
             _lastSources.Clear();
             _lastSnapshots.Clear();
+            _firstTrackedTimestamps.Clear();
         }
 
         [MethodImpl(MethodImplOptions.Synchronized)]
@@ -85,6 +89,7 @@ namespace AutoModerator.Core
             _pinnedIds.Remove(entityId);
             _lastSources.Remove(entityId);
             _lastSnapshots.Remove(entityId);
+            _firstTrackedTimestamps.Remove(entityId);
         }
 
         [MethodImpl(MethodImplOptions.Synchronized)]
@@ -97,6 +102,9 @@ namespace AutoModerator.Core
 
             // stop tracking non-existing (deleted) entities
             _lagTimeSeries.RemoveWhere(s => s.All(p => p.Element == 0d));
+
+            // keep fresh "first timestamps"
+            _firstTrackedTimestamps.RemoveRangeExceptWith(_lastSnapshots.Keys);
 
             // find valid entities
             var validSources = new Dictionary<long, EntityLagSource>();
@@ -125,9 +133,14 @@ namespace AutoModerator.Core
                 Log.Warn("invalid ms/f value(s) found; maybe: server freezing");
             }
 
-            // track entities
+            // track entities into the time series
             foreach (var src in validSources.Values)
             {
+                if (!_lagTimeSeries.ContainsKey(src.EntityId))
+                {
+                    _firstTrackedTimestamps[src.EntityId] = DateTime.UtcNow;
+                }
+
                 var lagNormal = src.LagMspf / _config.PinLag;
                 _lagTimeSeries.AddPoint(src.EntityId, now, lagNormal);
 
@@ -147,16 +160,26 @@ namespace AutoModerator.Core
             var longLags = new Dictionary<long, double>();
             foreach (var (entityId, timeSeries) in _lagTimeSeries.GetAllTimeSeries())
             {
-                var longLag = CalcLongLagNormal(timeSeries);
+                // ignore first N seconds into existence of an entity (even if it might be super laggy)
+                // because spawning (and un-concealing) takes a lot of frame rate
+                // NOTE the reason why we're not using the time series data for the "first timestamp"
+                // is because we constantly dispose of old elements from the time series.
+                var startTimestamp = _firstTrackedTimestamps[entityId] + _config.GracePeriodSpan;
+                if (startTimestamp > DateTime.UtcNow) // grace period!
+                {
+                    longLags.Add(entityId, 0);
+                    continue;
+                }
+
+                var scopedTimeSeries = timeSeries.GetScoped(startTimestamp);
+                var longLag = CalcLongLagNormal(scopedTimeSeries);
                 longLags.Add(entityId, longLag);
+            }
 
-                // don't pin until sufficient data is available (even if long-laggy)
-                // but need to get players warned in case this entity just got spawned
-                var minTimestamp = DateTime.UtcNow - (_config.TrackingSpan - 5.Seconds());
-                var notEnoughData = timeSeries.IsAllYoungerThan(minTimestamp);
-
-                // pin long-laggy entities
-                if (longLag >= 1 && !notEnoughData)
+            // pin long-laggy entities
+            foreach (var (entityId, longLag) in longLags)
+            {
+                if (longLag >= 1)
                 {
                     _pinnedIds.AddOrUpdate(entityId, _config.PinSpan);
                 }
@@ -206,17 +229,8 @@ namespace AutoModerator.Core
             var outlierTests = timeSeries.TestOutlier();
             for (var i = 0; i < timeSeries.Count; i++)
             {
-                var (timestamp, normal) = timeSeries[i];
+                var (_, normal) = timeSeries[i]; // you can use the underscored timestamp if you want
                 var outlierTest = outlierTests[i];
-
-                // first interval is most always laggy due to spawning or server hiccup
-                // NOTE the element at index 0 is not necessarily the very first element
-                // because we constantly delete old elements every update
-                if (i == 0)
-                {
-                    totalNormal += Math.Min(1, normal);
-                    continue;
-                }
 
                 if (_config.OutlierFenceNormal > 0) // switch
                 {
