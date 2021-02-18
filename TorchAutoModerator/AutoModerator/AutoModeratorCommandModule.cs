@@ -290,6 +290,10 @@ namespace AutoModerator
             msgBuilder.AppendLine($"Owner: {entity.OwnerName} ({entity.OwnerId})");
             msgBuilder.AppendLine($"Lag (evaluated): {entity.LongLagNormal * 100:0}%");
             msgBuilder.AppendLine(entity.IsPinned ? $"Pinned for next {entity.RemainingTime.TotalSeconds} seconds" : "Not pinned");
+            if (entity.IsBlessed)
+            {
+                msgBuilder.AppendLine("Blessed (just spawned)");
+            }
 
             foreach (var (((_, normal), outlierTest), index) in series.Indexed())
             {

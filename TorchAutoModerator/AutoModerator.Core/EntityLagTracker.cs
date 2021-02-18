@@ -157,21 +157,30 @@ namespace AutoModerator.Core
             }
 
             // analyze long lags
-            var longLags = new Dictionary<long, double>();
+            var longLags = new Dictionary<long, double?>();
             foreach (var (entityId, timeSeries) in _lagTimeSeries.GetAllTimeSeries())
             {
-                // ignore first N seconds into existence of an entity (even if it might be super laggy)
+                // ignore first N seconds into existence of an entity (grace period)
                 // because spawning (and un-concealing) takes a lot of frame rate
                 // NOTE the reason why we're not using the time series data for the "first timestamp"
                 // is because we constantly dispose of old elements from the time series.
                 var startTimestamp = _firstTrackedTimestamps[entityId] + _config.GracePeriodSpan;
                 if (startTimestamp > DateTime.UtcNow) // grace period!
                 {
-                    longLags.Add(entityId, 0);
+                    longLags.Add(entityId, null);
                     continue;
                 }
 
+                // remove grace-period points from calculation
                 var scopedTimeSeries = timeSeries.GetScoped(startTimestamp);
+
+                // don't evaluate until sufficient data is in hand
+                if (scopedTimeSeries.GetTimeLength() < _config.TrackingSpan - 5.Seconds())
+                {
+                    longLags.Add(entityId, null);
+                    continue;
+                }
+
                 var longLag = CalcLongLagNormal(scopedTimeSeries);
                 longLags.Add(entityId, longLag);
             }
@@ -187,13 +196,15 @@ namespace AutoModerator.Core
 
             // take snapshots
             _lastSnapshots.Clear();
-            foreach (var (entityId, (longLag, pin)) in longLags.Zip(_pinnedIds.ToDictionary()))
+            foreach (var (entityId, (longLagOrNull, pin)) in longLags.Zip(_pinnedIds.ToDictionary()))
             {
                 var lastSource = _lastSources.GetValueOrDefault(entityId);
                 var name = lastSource.Name ?? $"<{entityId}>";
                 var ownerId = lastSource.OwnerId;
                 var ownerName = lastSource.OwnerName ?? $"<{ownerId}>";
-                var snapshot = new TrackedEntitySnapshot(entityId, name, ownerId, ownerName, longLag, pin);
+                var longLag = longLagOrNull ?? 0;
+                var blessed = !longLagOrNull.HasValue;
+                var snapshot = new TrackedEntitySnapshot(entityId, name, ownerId, ownerName, longLag, pin, blessed);
                 _lastSnapshots.Add(entityId, snapshot);
             }
 
