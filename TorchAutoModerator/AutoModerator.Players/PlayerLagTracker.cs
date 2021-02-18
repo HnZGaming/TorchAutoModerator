@@ -54,7 +54,7 @@ namespace AutoModerator.Players
             Log.Trace("updating player lags...");
 
             var results = new List<EntityLagSource>();
-            foreach (var (player, profilerEntry) in profileResult.GetTopEntities(50))
+            foreach (var (player, profilerEntry) in profileResult.GetTopEntities(20))
             {
                 var mspf = profilerEntry.MainThreadTime / profileResult.TotalFrameCount;
                 var factionId = MySession.Static.Factions.TryGetPlayerFaction(player.IdentityId)?.FactionId ?? 0L;

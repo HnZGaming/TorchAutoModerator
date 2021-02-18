@@ -103,7 +103,7 @@ namespace AutoModerator.Grids
             var latestLaggiestGridToOwnerIds = new Dictionary<long, long>();
             var ownerIds = new HashSet<long>();
 
-            foreach (var (grid, profileEntity) in profileResult.GetTopEntities(50))
+            foreach (var (grid, profileEntity) in profileResult.GetTopEntities(20))
             {
                 var mspf = profileEntity.MainThreadTime / profileResult.TotalFrameCount;
                 var factionId = grid.BigOwners.TryGetFirst(out var ownerId)
