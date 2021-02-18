@@ -57,6 +57,14 @@ namespace Utils.General
             return self.TryGetFirst(out var t) ? t : defaultValue;
         }
 
+        public static void Fill<T>(this IList<T> self, T element)
+        {
+            for (var i = 0; i < self.Count; i++)
+            {
+                self[i] = element;
+            }
+        }
+
         public static bool ContainsAny<T>(this ISet<T> self, IEnumerable<T> values)
         {
             foreach (var value in values)
@@ -222,9 +230,9 @@ namespace Utils.General
             return self.Select((t, i) => (t, i));
         }
 
-        public static IEnumerable<T> WhereNot<T>(this IEnumerable<T> self, Func<T, bool> f)
+        public static IEnumerable<(T, U)> Zip<T, U>(this IEnumerable<T> self, IEnumerable<U> other)
         {
-            return self.Where(t => !f(t));
+            return self.Zip(other, (t, u) => (t, u));
         }
 
         public static V GetOrElse<K, V>(this IReadOnlyDictionary<K, V> self, K key, V defaultValue)

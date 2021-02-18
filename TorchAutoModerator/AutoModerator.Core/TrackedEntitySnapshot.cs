@@ -12,7 +12,7 @@ namespace AutoModerator.Core
     /// </remarks>
     public readonly struct TrackedEntitySnapshot
     {
-        public TrackedEntitySnapshot(long id, string name, long ownerId, string ownerName, double longLagNormal, TimeSpan remainingTime)
+        public TrackedEntitySnapshot(long id, string name, long ownerId, string ownerName, double longLagNormal, TimeSpan remainingTime, bool isBlessed)
         {
             Id = id;
             Name = name;
@@ -20,6 +20,8 @@ namespace AutoModerator.Core
             OwnerName = ownerName;
             LongLagNormal = longLagNormal;
             RemainingTime = remainingTime;
+            IsBlessed = isBlessed;
+            IsPinned = remainingTime > TimeSpan.Zero;
         }
 
         public readonly long Id;
@@ -28,7 +30,8 @@ namespace AutoModerator.Core
         public readonly string OwnerName;
         public readonly double LongLagNormal;
         public readonly TimeSpan RemainingTime;
-        public bool IsPinned => RemainingTime > TimeSpan.Zero;
+        public readonly bool IsBlessed;
+        public readonly bool IsPinned;
 
         public readonly struct LongLagComparer : IComparer<TrackedEntitySnapshot>
         {

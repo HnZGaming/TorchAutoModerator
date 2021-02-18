@@ -303,13 +303,30 @@ namespace AutoModerator
 
         public void ClearQuestForUser(long playerId)
         {
-            _warningQuests.Clear(playerId);
+            _warningQuests.Remove(playerId);
         }
 
         public bool TryGetTimeSeries(long entityId, out ITimeSeries<double> timeSeries)
         {
             return _laggyGrids.TryGetTimeSeries(entityId, out timeSeries) ||
                    _laggyPlayers.TryGetTimeSeries(entityId, out timeSeries);
+        }
+
+        public bool TryGetTrackedEntity(long entityId, out TrackedEntitySnapshot entity)
+        {
+            return _laggyGrids.TryGetTrackedEntity(entityId, out entity) ||
+                   _laggyPlayers.TryGetTrackedEntity(entityId, out entity);
+        }
+
+        public bool TryTraverseEntityByName(string name, out TrackedEntitySnapshot entity)
+        {
+            return _laggyGrids.TryTraverseTrackedEntityByName(name, out entity) ||
+                   _laggyPlayers.TryTraverseTrackedEntityByName(name, out entity);
+        }
+
+        public IReadOnlyDictionary<long, LagWarningCollection.PlayerState> GetWarningState()
+        {
+            return _warningQuests.GetInternalSnapshot();
         }
 
         public IEnumerable<TrackedEntitySnapshot> GetTrackedGrids()

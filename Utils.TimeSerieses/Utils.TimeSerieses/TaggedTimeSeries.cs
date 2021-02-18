@@ -101,5 +101,10 @@ namespace Utils.TimeSerieses
                 _timeSeriesMap.Remove(key);
             }
         }
+
+        public bool ContainsKey(T key)
+        {
+            return _timeSeriesMap.ContainsKey(key);
+        }
     }
 }
