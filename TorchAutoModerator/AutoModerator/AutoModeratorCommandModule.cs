@@ -428,7 +428,7 @@ namespace AutoModerator
                 }
 
                 msgBuilder.AppendLine();
-                msgBuilder.AppendLine("Block lags (% of total):");
+                msgBuilder.AppendLine("Block lags (% of total per player or grid):");
 
                 var blockLags = new Dictionary<string, double>();
                 var blockProfilerResult = blockProfiler.GetResult();
