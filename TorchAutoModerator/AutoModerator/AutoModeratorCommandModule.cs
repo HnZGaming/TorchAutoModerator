@@ -314,7 +314,7 @@ namespace AutoModerator
 
             if (Plugin.GetWarningState().TryGetValue(entityId, out var w))
             {
-                msgBuilder.AppendLine($"Warning: {w.Quest}, {w.LastWarningLagNormal * 100:0}%");
+                msgBuilder.AppendLine($"Warning: {w.Quest} (Normal: {w.LastWarningLagNormal * 100:0}%)");
             }
 
             foreach (var (((_, normal), outlierTest), index) in series.Indexed())
