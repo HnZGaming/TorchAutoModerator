@@ -148,6 +148,8 @@ namespace Utils.Torch
                 msgBuilder.AppendLine($"> {name}: {value}");
             }
 
+            msgBuilder.AppendLine("To update, either `config <index> <value>` or `config <name> <value>`.");
+
             self.Context.Respond(msgBuilder.ToString());
         }
 

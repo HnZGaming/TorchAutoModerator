@@ -57,6 +57,14 @@ namespace Utils.General
             return self.TryGetFirst(out var t) ? t : defaultValue;
         }
 
+        public static void Fill<T>(this IList<T> self, T element)
+        {
+            for (var i = 0; i < self.Count; i++)
+            {
+                self[i] = element;
+            }
+        }
+
         public static bool ContainsAny<T>(this ISet<T> self, IEnumerable<T> values)
         {
             foreach (var value in values)
