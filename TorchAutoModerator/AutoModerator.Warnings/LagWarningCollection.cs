@@ -96,12 +96,9 @@ namespace AutoModerator.Warnings
                     _quests[playerId] = newPlayerState;
                     UpdateQuestLog(newPlayerState.Quest, playerId);
 
-                    Log.Info($"warning issued: \"{laggyPlayer.PlayerName}\" {lag * 100:0}%");
-                    continue;
+                    Log.Info($"new warning issued: \"{laggyPlayer.PlayerName}\" {lag * 100:0}%");
                 }
-
-                // update
-                if (laggyPlayer.IsPinned && playerState.Quest < QuestState.MustWaitUnpinned)
+                else if (laggyPlayer.IsPinned && playerState.Quest < QuestState.MustWaitUnpinned)
                 {
                     playerState.Quest = QuestState.MustWaitUnpinned;
                     UpdateQuestLog(playerState.Quest, playerId);
