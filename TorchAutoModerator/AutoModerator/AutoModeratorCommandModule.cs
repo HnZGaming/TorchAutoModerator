@@ -136,7 +136,7 @@ namespace AutoModerator
                 {
                     if (!Plugin.TryTraverseEntityByName(entityStr, out var entity))
                     {
-                        Context.Respond($"Entity not found by name: {entityStr}", Color.Red);
+                        Context.Respond($"Entity not tracked by name: {entityStr}", Color.Red);
                         return;
                     }
 

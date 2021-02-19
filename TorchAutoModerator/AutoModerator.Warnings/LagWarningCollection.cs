@@ -52,12 +52,14 @@ namespace AutoModerator.Warnings
         readonly IConfig _config;
         readonly ConcurrentDictionary<long, PlayerState> _quests;
         readonly HudNotificationCollection _hudNotifications;
+        readonly HashSet<long> _lastOnlinePlayerIds;
 
         public LagWarningCollection(IConfig config)
         {
             _config = config;
             _quests = new ConcurrentDictionary<long, PlayerState>();
             _hudNotifications = new HudNotificationCollection();
+            _lastOnlinePlayerIds = new HashSet<long>();
         }
 
         [MethodImpl(MethodImplOptions.Synchronized)]
@@ -83,6 +85,25 @@ namespace AutoModerator.Warnings
         [MethodImpl(MethodImplOptions.Synchronized)]
         public void Update(IEnumerable<LagWarningSource> players)
         {
+            // clear quest log of just-logged-in players
+            {
+                var onlinePlayerIds = MySession.Static.Players.GetOnlinePlayers().Select(p => p.PlayerId()).ToSet();
+                var newPlayerIds = new HashSet<long>();
+                newPlayerIds.UnionWith(onlinePlayerIds);
+                newPlayerIds.ExceptWith(_lastOnlinePlayerIds);
+                foreach (var newPlayerId in newPlayerIds)
+                {
+                    if (!_quests.ContainsKey(newPlayerId))
+                    {
+                        UpdateQuestLog(LagQuestState.Cleared, newPlayerId);
+                        Log.Info($"Cleared quest log state for player: {newPlayerId}");
+                    }
+                }
+
+                _lastOnlinePlayerIds.Clear();
+                _lastOnlinePlayerIds.UnionWith(onlinePlayerIds);
+            }
+
             var laggyPlayers = players
                 .Where(p => p.LongLagNormal >= _config.WarningLagNormal || p.IsPinned)
                 .ToArray();
