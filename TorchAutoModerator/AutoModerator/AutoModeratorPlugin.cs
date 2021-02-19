@@ -69,12 +69,6 @@ namespace AutoModerator
             _fileLoggingConfigurator.Configure(Config);
 
             _canceller = new CancellationTokenSource();
-            _laggyGrids = new GridLagTracker(Config);
-            _laggyPlayers = new PlayerLagTracker(Config);
-            _gpsReceivers = new BroadcastListenerCollection(Config);
-            _entityGpsBroadcaster = new EntityGpsBroadcaster(Config);
-            _warningQuests = new LagWarningCollection(Config);
-            _punishExecutor = new LagPunishExecutor(Config);
         }
 
         void OnGameLoaded()
@@ -82,6 +76,12 @@ namespace AutoModerator
             _chatManager = Torch.CurrentSession.Managers.GetManager<IChatManagerServer>();
             _chatManager.ThrowIfNull("chat manager not found");
 
+            _laggyGrids = new GridLagTracker(Config);
+            _laggyPlayers = new PlayerLagTracker(Config);
+            _gpsReceivers = new BroadcastListenerCollection(Config);
+            _entityGpsBroadcaster = new EntityGpsBroadcaster(Config);
+            _warningQuests = new LagWarningCollection(Config);
+            _punishExecutor = new LagPunishExecutor(Config);
             _punishChatFeed = new LagPunishChatFeed(Config, _chatManager);
 
             TaskUtils.RunUntilCancelledAsync(Main, _canceller.Token).Forget(Log);
