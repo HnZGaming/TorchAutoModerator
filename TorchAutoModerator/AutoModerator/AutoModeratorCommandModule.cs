@@ -177,9 +177,10 @@ namespace AutoModerator
                 return;
             }
 
+            Context.Respond("Gathering data...");
+
             var msgBuilder = new StringBuilder();
             msgBuilder.AppendLine();
-
 
             if (!specificGridIdOrNull.HasValue)
             {
@@ -294,6 +295,8 @@ namespace AutoModerator
                 Context.Respond("Time series found but empty", Color.Red);
                 return;
             }
+
+            Context.Respond("Gathering data...");
 
             var outlierTests = timeSeries.TestOutlier();
             var series = timeSeries.Zip(outlierTests);
