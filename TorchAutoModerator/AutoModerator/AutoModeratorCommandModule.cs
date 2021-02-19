@@ -115,9 +115,9 @@ namespace AutoModerator
 
                     if (option.TryGetParameterlessBool("mine", out asNormalPlayer))
                     {
-                        if (Context.Player?.PromoteLevel != MyPromoteLevel.Admin)
+                        if (Context.Player?.PromoteLevel < MyPromoteLevel.Admin)
                         {
-                            Context.Respond("Option allowed for admins only: all");
+                            Context.Respond("Option allowed for admins only: mine", Color.Red);
                             return;
                         }
 
