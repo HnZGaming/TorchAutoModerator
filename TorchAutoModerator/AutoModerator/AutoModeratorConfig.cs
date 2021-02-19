@@ -10,7 +10,6 @@ using AutoModerator.Warnings;
 using Sandbox.Game.World;
 using Torch;
 using Torch.Views;
-using Utils.General;
 using Utils.Torch;
 using VRage.Game.ModAPI;
 
@@ -71,6 +70,15 @@ namespace AutoModerator
         string _punishReportChatFormat = "[{faction}] {player} \"{grid}\" ({level})";
         double _outlierFenceNormal = 2;
         double _gracePeriodTime = 20;
+        bool _isEnabled = true;
+
+        [XmlElement(nameof(IsEnabled))]
+        [Display(Order = 1, Name = "Enable plugin", GroupName = OpGroupName)]
+        public bool IsEnabled
+        {
+            get => _isEnabled;
+            set => SetValue(ref _isEnabled, value);
+        }
 
         [XmlElement(nameof(FirstIdleTime))]
         [Display(Order = 2, Name = "First idle seconds", GroupName = OpGroupName,
@@ -109,7 +117,7 @@ namespace AutoModerator
             get => _punishTime;
             set => SetValue(ref _punishTime, value);
         }
-        
+
         [ConfigProperty(ConfigPropertyType.VisibleToPlayers)]
         [XmlElement(nameof(GracePeriodTime))]
         [Display(Order = 10, Name = "Grace period (seconds)", GroupName = OpGroupName,

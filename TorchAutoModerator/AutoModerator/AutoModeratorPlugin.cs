@@ -93,8 +93,8 @@ namespace AutoModerator
             _config?.Dispose();
             _canceller?.Cancel();
             _canceller?.Dispose();
-            _entityGpsBroadcaster.ClearGpss();
-            _warningQuests.Clear();
+            _entityGpsBroadcaster?.ClearGpss();
+            _warningQuests?.Clear();
         }
 
         void OnConfigChanged(object _, PropertyChangedEventArgs args)
@@ -118,6 +118,18 @@ namespace AutoModerator
             // MAIN LOOP
             while (!canceller.IsCancellationRequested)
             {
+                if (!Config.IsEnabled)
+                {
+                    _laggyGrids.Clear();
+                    _laggyPlayers.Clear();
+                    _entityGpsBroadcaster.ClearGpss();
+                    _warningQuests.Clear();
+                    _punishExecutor.Clear();
+                    _punishChatFeed.Clear();
+
+                    await Task.Delay(1.Seconds(), canceller);
+                }
+
                 // auto profile
                 var mask = new GameEntityMask(null, null, null);
                 using (var gridProfiler = new GridProfiler(mask))
