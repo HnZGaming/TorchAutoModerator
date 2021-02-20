@@ -1,7 +1,6 @@
 ﻿using System.Linq;
 using System.Text;
 using NLog;
-using Sandbox.Game.World;
 using Torch.Commands;
 using Torch.Commands.Permissions;
 using Utils.General;
@@ -116,31 +115,33 @@ namespace AutoModerator
 
                 if (option.TryParseLong("id", out playerId))
                 {
-                    if (!MySession.Static.Players.TryGetPlayerById(playerId, out var onlinePlayer))
+                    if (!Plugin.TryTraverseTrackedPlayerById(playerId, out playerName))
                     {
                         Context.Respond($"Online player not found: {playerId}", Color.Red);
                         return;
                     }
 
-                    playerId = onlinePlayer.PlayerId();
-                    playerName = onlinePlayer.DisplayName;
                     continue;
                 }
 
                 if (option.TryParse("name", out playerName))
                 {
-                    var onlinePlayer = MySession.Static.Players.GetPlayerByName(playerName);
-                    if (onlinePlayer == null)
+                    if (!Plugin.TryTraverseTrackedPlayerByName(playerName, out playerId))
                     {
                         Context.Respond($"Online player not found: {playerName}", Color.Red);
                         return;
                     }
 
-                    playerId = onlinePlayer.PlayerId();
                     continue;
                 }
 
                 Context.Respond($"Unknown option: {arg}", Color.Red);
+                return;
+            }
+
+            if (playerId == 0)
+            {
+                Context.Respond("No input", Color.Red);
                 return;
             }
 
@@ -154,7 +155,7 @@ namespace AutoModerator
 
             if (!Plugin.TryGetLaggiestGridOwnedBy(playerId, out var grid))
             {
-                Context.Respond($"No grid tracked for player: {playerName}");
+                Context.Respond($"No grid tracked for player: {playerName ?? $"<{playerId}>"}");
                 return;
             }
 

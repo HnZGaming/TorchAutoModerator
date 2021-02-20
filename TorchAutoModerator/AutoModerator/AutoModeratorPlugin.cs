@@ -336,6 +336,42 @@ namespace AutoModerator
                    _laggyPlayers.TryTraverseTrackedEntityByName(name, out entity);
         }
 
+        public bool TryTraverseTrackedPlayerById(long playerId, out string playerName)
+        {
+            if (_laggyGrids.TryGetLaggiestGridOwnedBy(playerId, out var grid))
+            {
+                playerName = grid.OwnerName;
+                return true;
+            }
+
+            if (_laggyPlayers.TryGetTrackedEntity(playerId, out var p))
+            {
+                playerName = p.Name;
+                return true;
+            }
+
+            playerName = default;
+            return false;
+        }
+
+        public bool TryTraverseTrackedPlayerByName(string playerName, out long playerId)
+        {
+            if (_laggyGrids.TryTraverseGridOwnerByName(playerName, out var p))
+            {
+                playerId = p.PlayerId;
+                return true;
+            }
+
+            if (_laggyPlayers.TryTraverseTrackedEntityByName(playerName, out var pp))
+            {
+                playerId = pp.Id;
+                return true;
+            }
+
+            playerId = default;
+            return false;
+        }
+
         public IReadOnlyDictionary<long, LagWarningCollection.PlayerState> GetWarningState()
         {
             return _warningQuests.GetInternalSnapshot();
