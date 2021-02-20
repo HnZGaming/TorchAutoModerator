@@ -1,6 +1,7 @@
 ﻿using System.Linq;
 using System.Text;
 using NLog;
+using Sandbox.Game.World;
 using Torch.Commands;
 using Torch.Commands.Permissions;
 using Utils.General;
@@ -101,6 +102,63 @@ namespace AutoModerator
         {
             Context.Player.ThrowIfNull("must be called by a player");
             Plugin.ClearQuestForUser(Context.Player.IdentityId);
+        });
+
+        [Command("laggiest", "Get the laggiest grid of player. -id or -name to specify the player name other than yourself.")]
+        [Permission(MyPromoteLevel.None)]
+        public void ShowLaggiest() => this.CatchAndReport(() =>
+        {
+            var playerId = 0L;
+            var playerName = "";
+            foreach (var arg in Context.Args)
+            {
+                if (!CommandOption.TryGetOption(arg, out var option)) continue;
+
+                if (option.TryParseLong("id", out playerId))
+                {
+                    if (!MySession.Static.Players.TryGetPlayerById(playerId, out var onlinePlayer))
+                    {
+                        Context.Respond($"Online player not found: {playerId}", Color.Red);
+                        return;
+                    }
+
+                    playerId = onlinePlayer.PlayerId();
+                    playerName = onlinePlayer.DisplayName;
+                    continue;
+                }
+
+                if (option.TryParse("name", out playerName))
+                {
+                    var onlinePlayer = MySession.Static.Players.GetPlayerByName(playerName);
+                    if (onlinePlayer == null)
+                    {
+                        Context.Respond($"Online player not found: {playerName}", Color.Red);
+                        return;
+                    }
+
+                    playerId = onlinePlayer.PlayerId();
+                    continue;
+                }
+
+                Context.Respond($"Unknown option: {arg}", Color.Red);
+                return;
+            }
+
+            if (Context.Player is IMyPlayer caller &&
+                caller.PromoteLevel < MyPromoteLevel.Moderator &&
+                !caller.IsFriendWith(playerId))
+            {
+                Context.Respond($"You're not a friend of this player: {playerName}", Color.Red);
+                return;
+            }
+
+            if (!Plugin.TryGetLaggiestGridOwnedBy(playerId, out var grid))
+            {
+                Context.Respond($"No grid tracked for player: {playerName}");
+                return;
+            }
+
+            Context.Respond($"Laggiest grid owned by player \"{playerName}\": \"{grid.Name}\" ({grid.LongLagNormal * 100:0}%)");
         });
     }
 }

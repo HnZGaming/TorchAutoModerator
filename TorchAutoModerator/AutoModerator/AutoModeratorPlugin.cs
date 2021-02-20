@@ -350,5 +350,10 @@ namespace AutoModerator
         {
             return _laggyPlayers.GetTrackedEntities();
         }
+
+        public bool TryGetLaggiestGridOwnedBy(long playerId, out TrackedEntitySnapshot grid)
+        {
+            return _laggyGrids.TryGetLaggiestGridOwnedBy(playerId, out grid);
+        }
     }
 }
