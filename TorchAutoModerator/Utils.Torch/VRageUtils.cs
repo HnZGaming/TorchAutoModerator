@@ -10,7 +10,6 @@ using Sandbox.Game.Screens.Helpers;
 using Sandbox.Game.World;
 using Utils.General;
 using VRage;
-using VRage.Game;
 using VRage.Game.Entity;
 using VRage.Game.ModAPI;
 using VRage.Game.ObjectBuilders.Components;
@@ -271,6 +270,12 @@ namespace Utils.Torch
             }
 
             return false;
+        }
+
+        public static bool IsFriendWith(this IMyPlayer self, long playerId)
+        {
+            var otherPlayerFaction = MySession.Static.Factions.GetPlayerFaction(playerId);
+            return otherPlayerFaction.Members.ContainsKey(self.IdentityId);
         }
     }
 }

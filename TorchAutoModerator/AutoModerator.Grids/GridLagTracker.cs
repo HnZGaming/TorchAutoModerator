@@ -61,6 +61,19 @@ namespace AutoModerator.Grids
         }
 
         [MethodImpl(MethodImplOptions.Synchronized)]
+        public bool TryTraverseGridOwnerByName(string ownerName, out (long PlayerId, string PlayerName) grid)
+        {
+            if (_lagTracker.GetTrackedEntities().TryGetFirst(e => e.OwnerName == ownerName, out var g))
+            {
+                grid = (g.OwnerId, g.OwnerName);
+                return true;
+            }
+
+            grid = default;
+            return false;
+        }
+
+        [MethodImpl(MethodImplOptions.Synchronized)]
         public IEnumerable<(long OwnerId, TrackedEntitySnapshot Grid)> GetPlayerLaggiestGrids(double maxLongLagNormal)
         {
             foreach (var (ownerId, laggiestGridId) in _ownerToLaggiestGrids)
