@@ -5,8 +5,8 @@ namespace Utils.Torch
     internal sealed class CommandOption
     {
         public const string Prefix = "-";
-        static readonly Regex _optionRegex = new Regex($@"{Prefix}(\w+?)=(.+?)(?: |$)");
-        static readonly Regex _parameterlessOptionRegex = new Regex($@"{Prefix}(\w+?)(?: |$)");
+        static readonly Regex _optionRegex = new Regex($@"{Prefix}(\w+?)=(.+?)(?: $|$)");
+        static readonly Regex _parameterlessOptionRegex = new Regex($@"{Prefix}(\w+?)(?: $|$)");
 
         readonly string _arg;
 
