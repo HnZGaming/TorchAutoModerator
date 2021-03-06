@@ -18,6 +18,7 @@ namespace AutoModerator.Players
             double MaxPlayerMspf { get; }
             double TrackingTime { get; }
             double PunishTime { get; }
+            double GracePeriodTime { get; }
             double OutlierFenceNormal { get; }
             bool IsFactionExempt(long factionId);
         }
@@ -35,6 +36,7 @@ namespace AutoModerator.Players
             public double OutlierFenceNormal => _masterConfig.OutlierFenceNormal;
             public TimeSpan TrackingSpan => _masterConfig.TrackingTime.Seconds();
             public TimeSpan PinSpan => _masterConfig.PunishTime.Seconds();
+            public TimeSpan GracePeriodSpan => _masterConfig.GracePeriodTime.Seconds();
             public bool IsFactionExempt(long factionId) => _masterConfig.IsFactionExempt(factionId);
         }
 
@@ -52,7 +54,7 @@ namespace AutoModerator.Players
             Log.Trace("updating player lags...");
 
             var results = new List<EntityLagSource>();
-            foreach (var (player, profilerEntry) in profileResult.GetTopEntities(50))
+            foreach (var (player, profilerEntry) in profileResult.GetTopEntities(20))
             {
                 var mspf = profilerEntry.MainThreadTime / profileResult.TotalFrameCount;
                 var factionId = MySession.Static.Factions.TryGetPlayerFaction(player.IdentityId)?.FactionId ?? 0L;
@@ -95,6 +97,17 @@ namespace AutoModerator.Players
         public bool TryGetTimeSeries(long entityId, out ITimeSeries<double> timeSeries)
         {
             return _lagTracker.TryGetTimeSeries(entityId, out timeSeries);
+        }
+
+        [MethodImpl(MethodImplOptions.Synchronized)]
+        public bool TryGetTrackedEntity(long entityId, out TrackedEntitySnapshot entity)
+        {
+            return _lagTracker.TryGetTrackedEntity(entityId, out entity);
+        }
+
+        public bool TryTraverseTrackedEntityByName(string name, out TrackedEntitySnapshot entity)
+        {
+            return _lagTracker.TryTraverseTrackedEntityByName(name, out entity);
         }
     }
 }

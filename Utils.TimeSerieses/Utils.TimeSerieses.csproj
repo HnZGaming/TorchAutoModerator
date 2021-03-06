@@ -55,6 +55,7 @@
     <ItemGroup>
         <Compile Include="Properties\AssemblyInfo.cs" />
         <Compile Include="Utils.TimeSerieses\ITimeSeries.cs" />
+        <Compile Include="Utils.TimeSerieses\ReadOnlyTimeSeries.cs" />
         <Compile Include="Utils.TimeSerieses\TaggedTimeSeries.cs" />
         <Compile Include="Utils.TimeSerieses\TimeSeries.cs" />
         <Compile Include="Utils.TimeSerieses\TimeSeriesUtils.cs" />

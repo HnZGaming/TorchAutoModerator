@@ -19,7 +19,6 @@ namespace Utils.TimeSerieses
         public Timestamped<T> this[int index] => new Timestamped<T>(_timestamps[index], _elements[index]);
 
         public int Count => _timestamps.Count;
-        public TimeSpan Length => GetLength();
         public IReadOnlyList<T> Elements => _elements;
 
         public IEnumerator<Timestamped<T>> GetEnumerator()
@@ -30,15 +29,6 @@ namespace Utils.TimeSerieses
         IEnumerator IEnumerable.GetEnumerator()
         {
             return GetEnumerator();
-        }
-
-        TimeSpan GetLength()
-        {
-            if (_timestamps.Count < 2) return TimeSpan.Zero;
-            var firstTimestamp = _timestamps[0];
-            var lastTimestamp = _timestamps[_timestamps.Count - 1];
-
-            return lastTimestamp - firstTimestamp;
         }
 
         public void Add(DateTime timestamp, T element)

@@ -15,10 +15,11 @@ namespace Utils.Torch
 {
     public static class CommandModuleUtils
     {
-        public static void CatchAndReport(this CommandModule self, Action f)
+        public static async void CatchAndReport(this CommandModule self, Action f)
         {
             try
             {
+                await TaskUtils.MoveToThreadPool();
                 f();
             }
             catch (Exception e)
@@ -31,6 +32,7 @@ namespace Utils.Torch
         {
             try
             {
+                await TaskUtils.MoveToThreadPool();
                 await f();
             }
             catch (Exception e)
@@ -147,6 +149,8 @@ namespace Utils.Torch
                 var value = property.GetValue(config);
                 msgBuilder.AppendLine($"> {name}: {value}");
             }
+
+            msgBuilder.AppendLine("To update, either `config <index> <value>` or `config <name> <value>`.");
 
             self.Context.Respond(msgBuilder.ToString());
         }

@@ -69,12 +69,6 @@ namespace AutoModerator
             _fileLoggingConfigurator.Configure(Config);
 
             _canceller = new CancellationTokenSource();
-            _laggyGrids = new GridLagTracker(Config);
-            _laggyPlayers = new PlayerLagTracker(Config);
-            _gpsReceivers = new BroadcastListenerCollection(Config);
-            _entityGpsBroadcaster = new EntityGpsBroadcaster(Config);
-            _warningQuests = new LagWarningCollection(Config);
-            _punishExecutor = new LagPunishExecutor(Config);
         }
 
         void OnGameLoaded()
@@ -82,6 +76,12 @@ namespace AutoModerator
             _chatManager = Torch.CurrentSession.Managers.GetManager<IChatManagerServer>();
             _chatManager.ThrowIfNull("chat manager not found");
 
+            _laggyGrids = new GridLagTracker(Config);
+            _laggyPlayers = new PlayerLagTracker(Config);
+            _gpsReceivers = new BroadcastListenerCollection(Config);
+            _entityGpsBroadcaster = new EntityGpsBroadcaster(Config);
+            _warningQuests = new LagWarningCollection(Config);
+            _punishExecutor = new LagPunishExecutor(Config);
             _punishChatFeed = new LagPunishChatFeed(Config, _chatManager);
 
             TaskUtils.RunUntilCancelledAsync(Main, _canceller.Token).Forget(Log);
@@ -93,8 +93,8 @@ namespace AutoModerator
             _config?.Dispose();
             _canceller?.Cancel();
             _canceller?.Dispose();
-            _entityGpsBroadcaster.ClearGpss();
-            _warningQuests.Clear();
+            _entityGpsBroadcaster?.ClearGpss();
+            _warningQuests?.Clear();
         }
 
         void OnConfigChanged(object _, PropertyChangedEventArgs args)
@@ -118,6 +118,18 @@ namespace AutoModerator
             // MAIN LOOP
             while (!canceller.IsCancellationRequested)
             {
+                if (!Config.IsEnabled)
+                {
+                    _laggyGrids.Clear();
+                    _laggyPlayers.Clear();
+                    _entityGpsBroadcaster.ClearGpss();
+                    _warningQuests.Clear();
+                    _punishExecutor.Clear();
+                    _punishChatFeed.Clear();
+
+                    await Task.Delay(1.Seconds(), canceller);
+                }
+
                 // auto profile
                 var mask = new GameEntityMask(null, null, null);
                 using (var gridProfiler = new GridProfiler(mask))
@@ -303,13 +315,30 @@ namespace AutoModerator
 
         public void ClearQuestForUser(long playerId)
         {
-            _warningQuests.Clear(playerId);
+            _warningQuests.Remove(playerId);
         }
 
         public bool TryGetTimeSeries(long entityId, out ITimeSeries<double> timeSeries)
         {
             return _laggyGrids.TryGetTimeSeries(entityId, out timeSeries) ||
                    _laggyPlayers.TryGetTimeSeries(entityId, out timeSeries);
+        }
+
+        public bool TryGetTrackedEntity(long entityId, out TrackedEntitySnapshot entity)
+        {
+            return _laggyGrids.TryGetTrackedEntity(entityId, out entity) ||
+                   _laggyPlayers.TryGetTrackedEntity(entityId, out entity);
+        }
+
+        public bool TryTraverseEntityByName(string name, out TrackedEntitySnapshot entity)
+        {
+            return _laggyGrids.TryTraverseTrackedEntityByName(name, out entity) ||
+                   _laggyPlayers.TryTraverseTrackedEntityByName(name, out entity);
+        }
+
+        public IReadOnlyDictionary<long, LagWarningCollection.PlayerState> GetWarningState()
+        {
+            return _warningQuests.GetInternalSnapshot();
         }
 
         public IEnumerable<TrackedEntitySnapshot> GetTrackedGrids()

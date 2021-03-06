@@ -10,7 +10,6 @@ using AutoModerator.Warnings;
 using Sandbox.Game.World;
 using Torch;
 using Torch.Views;
-using Utils.General;
 using Utils.Torch;
 using VRage.Game.ModAPI;
 
@@ -70,8 +69,18 @@ namespace AutoModerator
         string _punishReportChatName = "Auto Moderator";
         string _punishReportChatFormat = "[{faction}] {player} \"{grid}\" ({level})";
         double _outlierFenceNormal = 2;
+        double _gracePeriodTime = 20;
+        bool _isEnabled = true;
 
-        [XmlElement(nameof(FirstIdleTime))]
+        [XmlElement]
+        [Display(Order = 1, Name = "Enable plugin", GroupName = OpGroupName)]
+        public bool IsEnabled
+        {
+            get => _isEnabled;
+            set => SetValue(ref _isEnabled, value);
+        }
+
+        [XmlElement]
         [Display(Order = 2, Name = "First idle seconds", GroupName = OpGroupName,
             Description = "Waits for N seconds when the session starts. Game is generally laggy at startup due to concealment or cleanup.")]
         public double FirstIdleTime
@@ -80,7 +89,7 @@ namespace AutoModerator
             set => SetValue(ref _firstIdleTime, value);
         }
 
-        [XmlElement(nameof(IntervalFrequency))]
+        [XmlElement]
         [Display(Order = 5, Name = "Interval frequency (seconds)", GroupName = OpGroupName,
             Description = "Profiles N seconds per interval.")]
         public double IntervalFrequency
@@ -90,7 +99,7 @@ namespace AutoModerator
         }
 
         [ConfigProperty(ConfigPropertyType.VisibleToPlayers)]
-        [XmlElement(nameof(TrackingTime))]
+        [XmlElement]
         [Display(Order = 6, Name = "Tracking time (seconds)", GroupName = OpGroupName,
             Description = "Gives players a chance of N seconds before the punishment of per-grid lag violation.")]
         public double TrackingTime
@@ -100,7 +109,7 @@ namespace AutoModerator
         }
 
         [ConfigProperty(ConfigPropertyType.VisibleToPlayers)]
-        [XmlElement(nameof(PunishTime))]
+        [XmlElement]
         [Display(Order = 7, Name = "Pinned time (seconds)", GroupName = OpGroupName,
             Description = "Punishes players for N seconds for per-grid lag violation.")]
         public double PunishTime
@@ -109,8 +118,18 @@ namespace AutoModerator
             set => SetValue(ref _punishTime, value);
         }
 
-        [XmlElement(nameof(OutlierFenceNormal))]
-        [Display(Order = 8, Name = "Outlier fence normal", GroupName = OpGroupName,
+        [ConfigProperty(ConfigPropertyType.VisibleToPlayers)]
+        [XmlElement]
+        [Display(Order = 10, Name = "Grace period (seconds)", GroupName = OpGroupName,
+            Description = "Grids younger than N seconds will not be warned/punished.")]
+        public double GracePeriodTime
+        {
+            get => _gracePeriodTime;
+            set => SetValue(ref _gracePeriodTime, value);
+        }
+
+        [XmlElement]
+        [Display(Order = 20, Name = "Outlier fence normal", GroupName = OpGroupName,
             Description = "Ignores spontaneous lags (N times larger than the standard deviation) of given grid/player's timeline.")]
         public double OutlierFenceNormal
         {
@@ -118,23 +137,23 @@ namespace AutoModerator
             set => SetValue(ref _outlierFenceNormal, value);
         }
 
-        [XmlElement(nameof(IgnoreNpcFactions))]
-        [Display(Order = 10, Name = "Ignore NPC factions", GroupName = OpGroupName)]
+        [XmlElement]
+        [Display(Order = 22, Name = "Ignore NPC factions", GroupName = OpGroupName)]
         public bool IgnoreNpcFactions
         {
             get => _exemptNpcFactions;
             set => SetValue(ref _exemptNpcFactions, value);
         }
 
-        [XmlElement(nameof(ExemptFactionTags))]
-        [Display(Order = 11, Name = "Exempt faction tags", GroupName = OpGroupName)]
+        [XmlElement]
+        [Display(Order = 24, Name = "Exempt faction tags", GroupName = OpGroupName)]
         public List<string> ExemptFactionTags
         {
             get => _exemptFactionTags;
             set => SetValue(ref _exemptFactionTags, new HashSet<string>(value).ToList());
         }
 
-        [XmlElement(nameof(MaxGridMspf))]
+        [XmlElement]
         [Display(Order = 3, Name = "Max grid ms/f", GroupName = OpGridGroupName,
             Description = "Allows N milliseconds per game loop for each grid to consume.")]
         public double MaxGridMspf
@@ -143,7 +162,7 @@ namespace AutoModerator
             set => SetValue(ref _maxGridMspf, Math.Max(value, 0.001f));
         }
 
-        [XmlElement(nameof(MaxPlayerMspf))]
+        [XmlElement]
         [Display(Order = 3, Name = "Max player ms/f", GroupName = OpPlayerGroupName,
             Description = "Allows N milliseconds per game loop for each player to consume.")]
         public double MaxPlayerMspf
@@ -152,7 +171,7 @@ namespace AutoModerator
             set => SetValue(ref _maxPlayerMspf, value);
         }
 
-        [XmlElement(nameof(EnableWarning))]
+        [XmlElement]
         [Display(Order = 0, Name = "Enable warning", GroupName = WarningGroupName)]
         public bool EnableWarning
         {
@@ -160,7 +179,7 @@ namespace AutoModerator
             set => SetValue(ref _enableWarning, value);
         }
 
-        [XmlElement(nameof(WarningLagNormal))]
+        [XmlElement]
         [Display(Order = 1, Name = "Lag threshold (0-1)", GroupName = WarningGroupName,
             Description = "Send a warning to players when they exceed N times the max allowed lag per grid or player.")]
         public double WarningLagNormal
@@ -170,7 +189,7 @@ namespace AutoModerator
         }
 
         [ConfigPropertyIgnore]
-        [XmlElement(nameof(WarningTitle))]
+        [XmlElement]
         [Display(Order = 2, Name = "Title", GroupName = WarningGroupName)]
         public string WarningTitle
         {
@@ -179,7 +198,7 @@ namespace AutoModerator
         }
 
         [ConfigPropertyIgnore]
-        [XmlElement(nameof(WarningDetailMustProfileSelfText))]
+        [XmlElement]
         [Display(Order = 3, Name = "Detail (1)", GroupName = WarningGroupName)]
         public string WarningDetailMustProfileSelfText
         {
@@ -188,7 +207,7 @@ namespace AutoModerator
         }
 
         [ConfigPropertyIgnore]
-        [XmlElement(nameof(WarningDetailMustDelagSelfText))]
+        [XmlElement]
         [Display(Order = 4, Name = "Detail (2)", GroupName = WarningGroupName)]
         public string WarningDetailMustDelagSelfText
         {
@@ -197,7 +216,7 @@ namespace AutoModerator
         }
 
         [ConfigPropertyIgnore]
-        [XmlElement(nameof(WarningDetailMustWaitUnpinnedText))]
+        [XmlElement]
         [Display(Order = 5, Name = "Detail (3)", GroupName = WarningGroupName)]
         public string WarningDetailMustWaitUnpinnedText
         {
@@ -206,7 +225,7 @@ namespace AutoModerator
         }
 
         [ConfigPropertyIgnore]
-        [XmlElement(nameof(WarningDetailEndedText))]
+        [XmlElement]
         [Display(Order = 6, Name = "Detail (4)", GroupName = WarningGroupName)]
         public string WarningDetailEndedText
         {
@@ -215,7 +234,7 @@ namespace AutoModerator
         }
 
         [ConfigPropertyIgnore]
-        [XmlElement(nameof(WarningCurrentLevelText))]
+        [XmlElement]
         [Display(Order = 7, Name = "Current level", GroupName = WarningGroupName)]
         public string WarningCurrentLevelText
         {
@@ -224,7 +243,7 @@ namespace AutoModerator
         }
 
         [ConfigProperty(ConfigPropertyType.VisibleToPlayers)]
-        [XmlElement(nameof(PunishType))]
+        [XmlElement]
         [Display(Order = 1, Name = "Punishment type", GroupName = PunishGroupName)]
         public LagPunishType PunishType
         {
@@ -232,7 +251,7 @@ namespace AutoModerator
             set => SetValue(ref _punishType, value);
         }
 
-        [XmlElement(nameof(EnablePunishChatFeed))]
+        [XmlElement]
         [Display(Order = 2, Name = "Enable punishment chat", GroupName = PunishGroupName)]
         public bool EnablePunishChatFeed
         {
@@ -240,7 +259,7 @@ namespace AutoModerator
             set => SetValue(ref _enablePunishChatFeed, value);
         }
 
-        [XmlElement(nameof(PunishReportChatName))]
+        [XmlElement]
         [Display(Order = 3, Name = "Chat name", GroupName = PunishGroupName)]
         public string PunishReportChatName
         {
@@ -249,7 +268,7 @@ namespace AutoModerator
         }
 
         [ConfigPropertyIgnore]
-        [XmlElement(nameof(PunishReportChatFormat))]
+        [XmlElement]
         [Display(Order = 4, Name = "Chat format", GroupName = PunishGroupName)]
         public string PunishReportChatFormat
         {
@@ -257,7 +276,7 @@ namespace AutoModerator
             set => SetValue(ref _punishReportChatFormat, value);
         }
 
-        [XmlElement(nameof(DamageNormalPerInterval))]
+        [XmlElement]
         [Display(Order = 2, Name = "Damage per interval (0-1)", GroupName = DamageGroupName,
             Description = "Applies damage to subject blocks by N times the block type's max integrity.")]
         public double DamageNormalPerInterval
@@ -266,7 +285,7 @@ namespace AutoModerator
             set => SetValue(ref _damageNormal, value);
         }
 
-        [XmlElement(nameof(MinIntegrityNormal))]
+        [XmlElement]
         [Display(Order = 2, Name = "Lowest integrity (0-1)", GroupName = DamageGroupName,
             Description = "Applies damage to subject blocks until reaching N times integrity.")]
         public double MinIntegrityNormal
@@ -275,7 +294,7 @@ namespace AutoModerator
             set => SetValue(ref _minIntegrityNormal, value);
         }
 
-        [XmlElement(nameof(GpsVisiblePromoteLevel))]
+        [XmlElement]
         [Display(Order = 5, Name = "Broadcast visible promo level", GroupName = BroadcastGroupName,
             Description = "Broadcasts GPS to permitted players only.")]
         public MyPromoteLevel GpsVisiblePromoteLevel
@@ -285,7 +304,7 @@ namespace AutoModerator
         }
 
         [ConfigProperty(ConfigPropertyType.VisibleToPlayers)]
-        [XmlElement(nameof(MaxGpsCount))]
+        [XmlElement]
         [Display(Order = 6, Name = "Max GPS count", GroupName = BroadcastGroupName,
             Description = "Shows N number of GPS of laggy grids on every player's HUD.")]
         public int MaxGpsCount
@@ -294,7 +313,7 @@ namespace AutoModerator
             set => SetValue(ref _maxLaggyGpsCountPerScan, value);
         }
 
-        [XmlElement(nameof(GpsMutedPlayerIds))]
+        [XmlElement]
         [Display(Order = 12, Name = "Muted players", GroupName = BroadcastGroupName,
             Description = "Won't send chat or GPS to muted players.")]
         public List<ulong> GpsMutedPlayerIds
@@ -304,7 +323,7 @@ namespace AutoModerator
         }
 
         [ConfigPropertyIgnore]
-        [XmlElement(nameof(GpsNameFormat))]
+        [XmlElement]
         [Display(Order = 17, Name = "GPS name format", GroupName = BroadcastGroupName)]
         public string GpsNameFormat
         {
@@ -313,7 +332,7 @@ namespace AutoModerator
         }
 
         [ConfigPropertyIgnore]
-        [XmlElement(nameof(GpsDescriptionFormat))]
+        [XmlElement]
         [Display(Order = 18, Name = "GPS description format", GroupName = BroadcastGroupName)]
         public string GpsDescriptionFormat
         {
@@ -321,7 +340,7 @@ namespace AutoModerator
             set => SetValue(ref _gridGpsDescriptionFormat, value);
         }
 
-        [XmlElement(nameof(GpsColorCode))]
+        [XmlElement]
         [Display(Order = 19, Name = "GPS text color", GroupName = BroadcastGroupName)]
         public string GpsColorCode
         {
@@ -330,7 +349,7 @@ namespace AutoModerator
         }
 
         [ConfigPropertyIgnore]
-        [XmlElement(nameof(SuppressWpfOutput))]
+        [XmlElement]
         [Display(Order = 12, Name = "Suppress Console Output", GroupName = LogGroupName)]
         public bool SuppressWpfOutput
         {
@@ -339,7 +358,7 @@ namespace AutoModerator
         }
 
         [ConfigPropertyIgnore]
-        [XmlElement(nameof(EnableLoggingTrace))]
+        [XmlElement]
         [Display(Order = 13, Name = "Enable Logging Trace", GroupName = LogGroupName)]
         public bool EnableLoggingTrace
         {
@@ -348,7 +367,7 @@ namespace AutoModerator
         }
 
         [ConfigPropertyIgnore]
-        [XmlElement(nameof(EnableLoggingDebug))]
+        [XmlElement]
         [Display(Order = 13, Name = "Enable Logging Debug", GroupName = LogGroupName)]
         public bool EnableLoggingDebug
         {
@@ -357,7 +376,7 @@ namespace AutoModerator
         }
 
         [ConfigPropertyIgnore]
-        [XmlElement(nameof(LogFilePath))]
+        [XmlElement]
         [Display(Order = 14, Name = "Log File Path", GroupName = LogGroupName)]
         public string LogFilePath
         {
