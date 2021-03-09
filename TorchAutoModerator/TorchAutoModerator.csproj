@@ -182,6 +182,8 @@
         <Compile Include="AutoModerator.Core\ExpiryDictionary.cs" />
         <Compile Include="AutoModerator.Warnings\LagWarningSource.cs" />
         <Compile Include="AutoModerator.Warnings\LagWarningDefaultTexts.cs" />
+        <Compile Include="AutoModerator\AutoModeratorCommandModule.Inspect.cs" />
+        <Compile Include="AutoModerator\AutoModeratorCommandModule.Profile.cs" />
         <Compile Include="Properties\AssemblyInfo.cs" />
         <Compile Include="AutoModerator\AutoModeratorCommandModule.cs" />
         <Compile Include="AutoModerator\AutoModeratorConfig.cs" />

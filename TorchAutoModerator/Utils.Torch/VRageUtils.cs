@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using Sandbox;
 using Sandbox.Engine.Physics;
 using Sandbox.Game.Entities;
@@ -10,7 +11,6 @@ using Sandbox.Game.Screens.Helpers;
 using Sandbox.Game.World;
 using Utils.General;
 using VRage;
-using VRage.Game;
 using VRage.Game.Entity;
 using VRage.Game.ModAPI;
 using VRage.Game.ObjectBuilders.Components;
@@ -153,7 +153,7 @@ namespace Utils.Torch
         {
             if (!self.IsSessionThread())
             {
-                throw new Exception("not main thread");
+                throw new Exception($"not main thread; yours: {self.ManagedThreadId}, main: {MySandboxGame.Static.UpdateThread.ManagedThreadId}");
             }
         }
 
@@ -236,13 +236,51 @@ namespace Utils.Torch
             return MyEntities.TryGetEntityById(entityId, out var e) ? e.DisplayName : defaultName;
         }
 
+        public static async Task<(bool, MyCubeGrid)> TryGetSelectedGrid(this IMyPlayer self)
+        {
+            if (self.TryGetSeatedGrid(out var seatedGrid))
+            {
+                return (true, seatedGrid);
+            }
+
+            try
+            {
+                await GameLoopObserver.MoveToGameLoop();
+
+                if (self.TryGetGridLookedAt(out var lookedGrid))
+                {
+                    return (true, lookedGrid);
+                }
+
+                return (false, null);
+            }
+            finally
+            {
+                await TaskUtils.MoveToThreadPool();
+            }
+        }
+
         public static bool TryGetSelectedGrid(this IMyPlayer self, out MyCubeGrid selectedGrid)
+        {
+            return self.TryGetSeatedGrid(out selectedGrid) ||
+                   self.TryGetGridLookedAt(out selectedGrid);
+        }
+
+        public static bool TryGetSeatedGrid(this IMyPlayer self, out MyCubeGrid selectedGrid)
         {
             if (self.Controller?.ControlledEntity?.Entity is MyCubeGrid seatedGrid)
             {
                 selectedGrid = seatedGrid;
                 return true;
             }
+
+            selectedGrid = null;
+            return false;
+        }
+
+        public static bool TryGetGridLookedAt(this IMyPlayer self, out MyCubeGrid selectedGrid)
+        {
+            Thread.CurrentThread.ThrowIfNotSessionThread();
 
             var from = self.GetPosition();
             var vec = (self.Character.AimedPoint - from).Normalize();
@@ -271,6 +309,31 @@ namespace Utils.Torch
             }
 
             return false;
+        }
+
+        public static bool IsFriendWith(this IMyPlayer self, long playerId)
+        {
+            var otherPlayerFaction = MySession.Static.Factions.GetPlayerFaction(playerId);
+            return otherPlayerFaction.Members.ContainsKey(self.IdentityId);
+        }
+
+        public static async Task<(bool, T)> TryGetEntityByName<T>(string name) where T : IMyEntity
+        {
+            try
+            {
+                await GameLoopObserver.MoveToGameLoop();
+
+                if (MyEntities.TryGetEntityByName(name, out var entity) && entity is T typedEntity)
+                {
+                    return (true, typedEntity);
+                }
+
+                return (false, default);
+            }
+            finally
+            {
+                await TaskUtils.MoveToThreadPool();
+            }
         }
     }
 }
