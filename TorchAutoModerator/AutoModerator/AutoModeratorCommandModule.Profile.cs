@@ -33,33 +33,34 @@ namespace AutoModerator
 
                 if (option.IsParameterless("this"))
                 {
-                    if (Context.Player.TryGetSelectedGrid(out var grid))
+                    var (found, grid) = await Context.Player.TryGetSelectedGrid();
+                    if (!found)
                     {
-                        if (!grid.BigOwners.TryGetFirst(out var ownerId) || ownerId != playerId)
-                        {
-                            Context.Respond($"Not your grid: {grid.DisplayName}", Color.Red);
-                            return;
-                        }
-
-                        gridId = grid.EntityId;
-                        continue;
+                        Context.Respond("Grid not found", Color.Red);
+                        return;
                     }
 
-                    Context.Respond("Grid not found", Color.Red);
-                    return;
+                    if (!grid.BigOwners.TryGetFirst(out var ownerId) || ownerId != playerId)
+                    {
+                        Context.Respond($"Not your grid: {grid.DisplayName}", Color.Red);
+                        return;
+                    }
+
+                    gridId = grid.EntityId;
+                    continue;
                 }
 
                 if (option.TryParse("name", out var name))
                 {
-                    if (MyEntities.TryGetEntityByName(name, out var entity) &&
-                        entity is MyCubeGrid grid)
+                    if (!MyEntities.TryGetEntityByName(name, out var entity) ||
+                        !(entity is MyCubeGrid grid))
                     {
-                        gridId = grid.EntityId;
-                        continue;
+                        Context.Respond($"Grid not found by name: {name}", Color.Red);
+                        return;
                     }
 
-                    Context.Respond($"Grid not found by name: {name}", Color.Red);
-                    return;
+                    gridId = grid.EntityId;
+                    continue;
                 }
 
                 if (option.TryParseInt("time", out var time))

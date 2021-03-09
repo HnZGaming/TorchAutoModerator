@@ -20,78 +20,80 @@ namespace AutoModerator
     {
         [Command("inspect", "Show the time series of specified grid or player.")]
         [Permission(MyPromoteLevel.None)]
-        public void Inspect() => this.CatchAndReport(() =>
+        public void Inspect() => this.CatchAndReport(async () =>
         {
-            var asNormalPlayer = (Context.Player?.PromoteLevel ?? MyPromoteLevel.Admin) == MyPromoteLevel.None;
+            var calledByNormalPlayer = (Context.Player?.PromoteLevel ?? MyPromoteLevel.Admin) == MyPromoteLevel.None;
             var playerId = Context.Player?.IdentityId ?? 0L;
             var faction = MySession.Static.Factions.GetPlayerFaction(playerId);
             var memberIds = faction?.Members.Keys.ToSet() ?? new HashSet<long> {playerId};
 
             var top = 5;
             var showOutlierTests = false;
-            var specificGridIdOrNull = (long?) null;
+            var specificEntityIdOrNull = (long?) null;
             foreach (var arg in Context.Args)
             {
-                if (CommandOption.TryGetOption(arg, out var option))
+                if (!CommandOption.TryGetOption(arg, out var option)) continue;
+
+                if (option.TryParseInt("top", out top)) continue;
+                if (option.TryGetParameterlessBool("outlier", out showOutlierTests)) continue;
+
+                if (option.IsParameterless("this"))
                 {
-                    if (option.TryParseInt("top", out top)) continue;
-                    if (option.TryGetParameterlessBool("outlier", out showOutlierTests)) continue;
-
-                    if (option.TryGetParameterlessBool("this", out _))
+                    var (found, grid) = await Context.Player.TryGetSelectedGrid();
+                    if (!found)
                     {
-                        if (playerId == 0L)
-                        {
-                            Context.Respond("Players only: `this`", Color.Red);
-                            return;
-                        }
-
-                        if (Context.Player.TryGetSelectedGrid(out var grid))
-                        {
-                            if (!grid.BigOwners.TryGetFirst(out var ownerId) || ownerId != playerId)
-                            {
-                                Context.Respond($"Not your grid: {grid.DisplayName}", Color.Red);
-                                return;
-                            }
-
-                            specificGridIdOrNull = grid.EntityId;
-                            continue;
-                        }
-
                         Context.Respond("Grid not found", Color.Red);
                         return;
                     }
 
-                    if (option.TryGetParameterlessBool("mine", out asNormalPlayer))
-                    {
-                        if (Context.Player?.PromoteLevel < MyPromoteLevel.Admin)
-                        {
-                            Context.Respond("Option allowed for admins only: mine", Color.Red);
-                            return;
-                        }
-
-                        continue;
-                    }
-
-                    Context.Respond($"Invalid option: {arg}", Color.Red);
-                    return;
+                    specificEntityIdOrNull = grid.EntityId;
+                    continue;
                 }
-            }
 
-            // inspect specific entity
-            if (Context.Args.TryGetElementAt(0, out var entityStr))
-            {
-                if (!long.TryParse(entityStr, out var entityId))
+                if (option.TryParseLong("id", out var specificEntityId))
                 {
-                    if (!Plugin.TryTraverseEntityByName(entityStr, out var entity))
+                    if (!Plugin.TryGetTrackedEntity(specificEntityId, out _))
                     {
-                        Context.Respond($"Entity not tracked by name: {entityStr}", Color.Red);
+                        Context.Respond($"Entity not tracked: {specificEntityId}", Color.Red);
                         return;
                     }
 
-                    entityId = entity.Id;
+                    specificEntityIdOrNull = specificEntityId;
+                    continue;
                 }
 
-                if (asNormalPlayer)
+                if (option.TryParse("name", out var entityName))
+                {
+                    if (!Plugin.TryTraverseEntityByName(entityName, out var entity))
+                    {
+                        Context.Respond($"Entity not tracked by name: {entityName}", Color.Red);
+                        return;
+                    }
+
+                    specificEntityIdOrNull = entity.Id;
+                    continue;
+                }
+
+                if (option.IsParameterless("mine"))
+                {
+                    if (Context.Player?.PromoteLevel < MyPromoteLevel.Admin)
+                    {
+                        Context.Respond("Option allowed for admins only: mine", Color.Red);
+                        return;
+                    }
+
+                    calledByNormalPlayer = true;
+                    continue;
+                }
+
+                Context.Respond($"Invalid option: {arg}", Color.Red);
+                return;
+            }
+
+            // inspect specific entity
+            if (specificEntityIdOrNull is long entityId)
+            {
+                if (calledByNormalPlayer)
                 {
                     if (!MyEntities.TryGetEntityById(entityId, out var entity))
                     {
@@ -127,56 +129,53 @@ namespace AutoModerator
 
             Context.Respond("Gathering data...");
 
+            var players = new List<TrackedEntitySnapshot>();
+            foreach (var s in OrderForInspection(Plugin.GetTrackedPlayers()))
+            {
+                if (calledByNormalPlayer)
+                {
+                    if (!memberIds.Contains(s.Id)) continue;
+                }
+
+                players.Add(s);
+            }
+
+            var grids = new List<TrackedEntitySnapshot>();
+            foreach (var s in OrderForInspection(Plugin.GetTrackedGrids()).Take(top))
+            {
+                if (calledByNormalPlayer)
+                {
+                    if (!memberIds.Contains(s.OwnerId)) continue;
+                }
+
+                grids.Add(s);
+            }
+
             var msgBuilder = new StringBuilder();
             msgBuilder.AppendLine();
 
-            if (!specificGridIdOrNull.HasValue)
+            if (players.Any())
             {
                 msgBuilder.AppendLine("Players:");
-                var inspectablePlayers = new List<TrackedEntitySnapshot>();
-                foreach (var s in OrderForInspection(Plugin.GetTrackedPlayers()))
-                {
-                    if (asNormalPlayer && !memberIds.Contains(s.Id)) continue;
-
-                    inspectablePlayers.Add(s);
-                }
 
                 var warningStates = Plugin.GetWarningState();
-                if (inspectablePlayers.Any())
+                foreach (var s in players)
                 {
-                    foreach (var s in inspectablePlayers.Take(top))
-                    {
-                        var warning = warningStates.GetOrElse(s.Id, null);
-                        var line = MakeTrackedEntityLine(s, warning);
-                        msgBuilder.AppendLine(line);
-                    }
-                }
-                else
-                {
-                    msgBuilder.AppendLine("No tracked players found");
+                    var warning = warningStates.GetOrElse(s.Id, null);
+                    var line = MakeTrackedEntityLine(s, warning);
+                    msgBuilder.AppendLine(line);
                 }
             }
-
-            msgBuilder.AppendLine("Grids:");
-
-            var inspectableGrids = new List<TrackedEntitySnapshot>();
-            foreach (var s in OrderForInspection(Plugin.GetTrackedGrids()).Take(top))
+            else
             {
-                if (specificGridIdOrNull is long sid && sid != s.Id) continue;
-
-                if (asNormalPlayer)
-                {
-                    if (!VRageUtils.TryGetCubeGridById(s.Id, out var grid)) continue;
-                    if (!grid.BigOwners.TryGetFirst(out var ownerId)) continue;
-                    if (!memberIds.Contains(ownerId)) continue;
-                }
-
-                inspectableGrids.Add(s);
+                msgBuilder.AppendLine("No players");
             }
 
-            if (inspectableGrids.Any())
+            if (grids.Any())
             {
-                foreach (var s in inspectableGrids.Take(top))
+                msgBuilder.AppendLine("Grids:");
+
+                foreach (var s in grids)
                 {
                     var line = MakeTrackedEntityLine(s);
                     msgBuilder.AppendLine(line);
@@ -184,7 +183,7 @@ namespace AutoModerator
             }
             else
             {
-                msgBuilder.AppendLine("No tracked grids found");
+                msgBuilder.AppendLine("No grids");
             }
 
             Context.Respond(msgBuilder.ToString());
