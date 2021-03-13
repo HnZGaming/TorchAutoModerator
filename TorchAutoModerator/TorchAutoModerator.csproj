@@ -192,7 +192,6 @@
     <ItemGroup>
         <Content Include="manifest.xml" />
         <Content Include="postbuild.bat" />
-        <Content Include="symutil.bat" />
     </ItemGroup>
     <ItemGroup>
         <ProjectReference Include="..\Utils.EntityGps\Utils.EntityGps.csproj">
