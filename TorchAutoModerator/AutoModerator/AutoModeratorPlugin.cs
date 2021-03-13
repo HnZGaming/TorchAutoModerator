@@ -190,11 +190,11 @@ namespace AutoModerator
                     {
                         var lagNormal = Math.Max(laggiestGrid.LongLagNormal, player.LongLagNormal);
                         var isPinned = laggiestGrid.IsPinned || player.IsPinned;
-                        var source = new LagPunishChatSource(playerId, laggiestGrid.Id, lagNormal, isPinned);
+                        var source = new LagPunishChatSource(playerId, player.Name, player.FactionTag, laggiestGrid.Id, laggiestGrid.Name, lagNormal, isPinned);
                         sources.Add(source);
                     }
 
-                    await _punishChatFeed.Update(sources);
+                    _punishChatFeed.Update(sources);
                 }
                 else
                 {

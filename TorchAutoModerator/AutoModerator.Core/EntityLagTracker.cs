@@ -202,7 +202,8 @@ namespace AutoModerator.Core
                 var name = lastSource.Name ?? $"<{entityId}>";
                 var ownerId = lastSource.OwnerId;
                 var ownerName = lastSource.OwnerName ?? $"<{ownerId}>";
-                var snapshot = new TrackedEntitySnapshot(entityId, name, ownerId, ownerName, longLag, pin, blessed);
+                var factionTag = lastSource.FactionTag;
+                var snapshot = new TrackedEntitySnapshot(entityId, name, ownerId, ownerName, factionTag, longLag, pin, blessed);
                 _lastSnapshots.Add(entityId, snapshot);
             }
 
