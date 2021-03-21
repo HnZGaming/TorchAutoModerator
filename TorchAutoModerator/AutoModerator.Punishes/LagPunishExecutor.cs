@@ -3,14 +3,14 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using AutoModerator.Core;
 using NLog;
 using Sandbox.Game.Entities;
 using Sandbox.ModAPI;
-using SpaceEngineers.Game.Entities.Blocks;
 using Utils.General;
 using Utils.Torch;
 using VRage.Game;
-using VRage.Game.ModAPI.Ingame;
+using VRage.Game.ModAPI;
 
 namespace AutoModerator.Punishes
 {
@@ -21,6 +21,7 @@ namespace AutoModerator.Punishes
             LagPunishType PunishType { get; }
             double DamageNormalPerInterval { get; }
             double MinIntegrityNormal { get; }
+            IEnumerable<string> PunishExemptBlockTypes { get; }
         }
 
         const int ProcessedBlockCountPerFrame = 100;
@@ -28,11 +29,13 @@ namespace AutoModerator.Punishes
         static readonly ILogger Log = LogManager.GetCurrentClassLogger();
         readonly IConfig _config;
         readonly HashSet<long> _punishedIds;
+        readonly BlockTypeCollection _exemptBlockTypes;
 
         public LagPunishExecutor(IConfig config)
         {
             _config = config;
             _punishedIds = new HashSet<long>();
+            _exemptBlockTypes = new BlockTypeCollection();
         }
 
         public void Clear()
@@ -42,6 +45,13 @@ namespace AutoModerator.Punishes
 
         public async Task Update(IReadOnlyDictionary<long, LagPunishSource> lags)
         {
+            // update exempt block type list
+            _exemptBlockTypes.Clear();
+            foreach (var blockType in _config.PunishExemptBlockTypes)
+            {
+                _exemptBlockTypes.Add(blockType);
+            }
+
             // move to the game loop so we can synchronously operate on blocks
             await GameLoopObserver.MoveToGameLoop();
 
@@ -58,7 +68,7 @@ namespace AutoModerator.Punishes
                 if (!_punishedIds.Contains(gridId))
                 {
                     _punishedIds.Add(gridId);
-                    Log.Info($"Started punishment: \"{grid.DisplayName}\" type: {_config.PunishType}");
+                    Log.Info($"Punished: \"{grid.DisplayName}\" type: {_config.PunishType}");
                 }
 
                 await PunishGrid(grid);
@@ -141,13 +151,9 @@ namespace AutoModerator.Punishes
             }
         }
 
-        bool IsExemptBlock(IMyEntity block)
+        bool IsExemptBlock(IMyCubeBlock block)
         {
-            if (block is MyParachute) return true;
-            if (block is MyButtonPanel) return true;
-            if (block is IMyPowerProducer) return true;
-
-            return false;
+            return _exemptBlockTypes.ContainsBlockTypeOf(block);
         }
     }
 }

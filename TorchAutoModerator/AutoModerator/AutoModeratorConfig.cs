@@ -71,6 +71,7 @@ namespace AutoModerator
         double _outlierFenceNormal = 2;
         double _gracePeriodTime = 20;
         bool _isEnabled = true;
+        List<string> _punishExemptBlockTypes;
 
         [XmlElement]
         [Display(Order = 1, Name = "Enable plugin", GroupName = OpGroupName)]
@@ -277,6 +278,16 @@ namespace AutoModerator
         }
 
         [XmlElement]
+        [Display(Order = 200, Name = "Punishment exempt block types", GroupName = PunishGroupName)]
+        public List<string> PunishExemptBlockTypes
+        {
+            get => _punishExemptBlockTypes;
+            set => SetValue(ref _punishExemptBlockTypes, value);
+        }
+
+        IEnumerable<string> LagPunishExecutor.IConfig.PunishExemptBlockTypes => _punishExemptBlockTypes;
+
+        [XmlElement]
         [Display(Order = 2, Name = "Damage per interval (0-1)", GroupName = DamageGroupName,
             Description = "Applies damage to subject blocks by N times the block type's max integrity.")]
         public double DamageNormalPerInterval
@@ -407,6 +418,23 @@ namespace AutoModerator
         {
             _gpsMutedPlayerIds.Clear();
             OnPropertyChanged(nameof(GpsMutedPlayerIds));
+        }
+
+        public void AddPunishExemptBlockType(string blockType)
+        {
+            if (!_punishExemptBlockTypes.Contains(blockType))
+            {
+                _punishExemptBlockTypes.Add(blockType);
+                OnPropertyChanged(nameof(PunishExemptBlockTypes));
+            }
+        }
+
+        public void RemovePunishExemptBlockType(string blockType)
+        {
+            if (_punishExemptBlockTypes.Remove(blockType))
+            {
+                OnPropertyChanged(nameof(PunishExemptBlockTypes));
+            }
         }
 
         public bool IsFactionExempt(long factionId)
