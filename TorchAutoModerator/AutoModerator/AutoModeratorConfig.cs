@@ -71,7 +71,7 @@ namespace AutoModerator
         double _outlierFenceNormal = 2;
         double _gracePeriodTime = 20;
         bool _isEnabled = true;
-        List<string> _punishExemptBlockTypes;
+        List<string> _exemptBlockTypePairs;
 
         [XmlElement]
         [Display(Order = 1, Name = "Enable plugin", GroupName = OpGroupName)]
@@ -279,13 +279,11 @@ namespace AutoModerator
 
         [XmlElement]
         [Display(Order = 200, Name = "Punishment exempt block types", GroupName = PunishGroupName)]
-        public List<string> PunishExemptBlockTypes
+        public List<string> ExemptBlockTypePairs
         {
-            get => _punishExemptBlockTypes;
-            set => SetValue(ref _punishExemptBlockTypes, value);
+            get => _exemptBlockTypePairs;
+            set => SetValue(ref _exemptBlockTypePairs, value);
         }
-
-        IEnumerable<string> LagPunishExecutor.IConfig.PunishExemptBlockTypes => _punishExemptBlockTypes;
 
         [XmlElement]
         [Display(Order = 2, Name = "Damage per interval (0-1)", GroupName = DamageGroupName,
@@ -422,18 +420,18 @@ namespace AutoModerator
 
         public void AddPunishExemptBlockType(string blockType)
         {
-            if (!_punishExemptBlockTypes.Contains(blockType))
+            if (!_exemptBlockTypePairs.Contains(blockType))
             {
-                _punishExemptBlockTypes.Add(blockType);
-                OnPropertyChanged(nameof(PunishExemptBlockTypes));
+                _exemptBlockTypePairs.Add(blockType);
+                OnPropertyChanged(nameof(ExemptBlockTypePairs));
             }
         }
 
         public void RemovePunishExemptBlockType(string blockType)
         {
-            if (_punishExemptBlockTypes.Remove(blockType))
+            if (_exemptBlockTypePairs.Remove(blockType))
             {
-                OnPropertyChanged(nameof(PunishExemptBlockTypes));
+                OnPropertyChanged(nameof(ExemptBlockTypePairs));
             }
         }
 

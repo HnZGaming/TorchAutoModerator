@@ -21,21 +21,20 @@ namespace AutoModerator.Punishes
             LagPunishType PunishType { get; }
             double DamageNormalPerInterval { get; }
             double MinIntegrityNormal { get; }
-            IEnumerable<string> PunishExemptBlockTypes { get; }
         }
 
         const int ProcessedBlockCountPerFrame = 100;
 
         static readonly ILogger Log = LogManager.GetCurrentClassLogger();
         readonly IConfig _config;
+        readonly BlockTypePairCollection _exemptBlockPairs;
         readonly HashSet<long> _punishedIds;
-        readonly BlockTypeCollection _exemptBlockTypes;
 
-        public LagPunishExecutor(IConfig config)
+        public LagPunishExecutor(IConfig config, BlockTypePairCollection exemptBlockPairs)
         {
             _config = config;
+            _exemptBlockPairs = exemptBlockPairs;
             _punishedIds = new HashSet<long>();
-            _exemptBlockTypes = new BlockTypeCollection();
         }
 
         public void Clear()
@@ -45,13 +44,6 @@ namespace AutoModerator.Punishes
 
         public async Task Update(IReadOnlyDictionary<long, LagPunishSource> lags)
         {
-            // update exempt block type list
-            _exemptBlockTypes.Clear();
-            foreach (var blockType in _config.PunishExemptBlockTypes)
-            {
-                _exemptBlockTypes.Add(blockType);
-            }
-
             // move to the game loop so we can synchronously operate on blocks
             await GameLoopObserver.MoveToGameLoop();
 
@@ -153,7 +145,8 @@ namespace AutoModerator.Punishes
 
         bool IsExemptBlock(IMyCubeBlock block)
         {
-            return _exemptBlockTypes.ContainsBlockTypeOf(block);
+            var blockDef = block.BlockDefinition;
+            return _exemptBlockPairs.Contains(blockDef.TypeIdString, blockDef.SubtypeId);
         }
     }
 }
