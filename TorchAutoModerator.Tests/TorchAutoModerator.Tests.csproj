@@ -33,6 +33,10 @@
         <WarningLevel>4</WarningLevel>
     </PropertyGroup>
     <ItemGroup>
+        <Reference Include="NBench, Version=2.0.1.0, Culture=neutral, PublicKeyToken=null">
+          <HintPath>..\packages\NBench.2.0.1\lib\netstandard2.0\NBench.dll</HintPath>
+          <Private>True</Private>
+        </Reference>
         <Reference Include="System" />
         <Reference Include="System.Core" />
         <Reference Include="System.Data" />
@@ -42,7 +46,9 @@
         </Reference>
     </ItemGroup>
     <ItemGroup>
+        <Compile Include="BlockTypePairPerfTests.cs" />
         <Compile Include="BlockTypePairTests.cs" />
+        <Compile Include="PerformanceTestSuite.cs" />
         <Compile Include="Properties\AssemblyInfo.cs" />
     </ItemGroup>
     <ItemGroup>
@@ -50,6 +56,9 @@
         <Project>{ec211ae3-0bed-46af-b6d1-b8ce93f31009}</Project>
         <Name>TorchAutoModerator</Name>
       </ProjectReference>
+    </ItemGroup>
+    <ItemGroup>
+      <None Include="packages.config" />
     </ItemGroup>
     <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
     <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

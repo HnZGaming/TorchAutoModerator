@@ -205,23 +205,23 @@ namespace AutoModerator
 
                 // refresh punish-exempt block types
                 {
-                    var rawInputs = Config.ExemptBlockTypePairs.ToArray();
-                    var validInputs = new List<string>();
+                    var invalidInputs = new List<string>();
 
                     _exemptBlockTypePairs.Clear();
-                    foreach (var rawInput in rawInputs)
+                    foreach (var rawInput in Config.ExemptBlockTypePairs)
                     {
-                        if (_exemptBlockTypePairs.TryAdd(rawInput))
+                        if (!_exemptBlockTypePairs.TryAdd(rawInput))
                         {
-                            validInputs.Add(rawInput);
-                        }
-                        else
-                        {
+                            invalidInputs.Add(rawInput);
                             Log.Warn($"Removed invalid block type pair: {rawInput}");
                         }
                     }
 
-                    Config.ExemptBlockTypePairs = validInputs;
+                    // remove invalid items from the config
+                    foreach (var invalidInput in invalidInputs)
+                    {
+                        Config.RemoveExemptBlockType(invalidInput);
+                    }
                 }
 
                 if (Config.PunishType == LagPunishType.Damage ||
