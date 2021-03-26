@@ -22,7 +22,7 @@ namespace AutoModerator.Grids
             double PunishTime { get; }
             double GracePeriodTime { get; }
             double OutlierFenceNormal { get; }
-            bool IsFactionExempt(long factionId);
+            bool IsIdentityExempt(long identityId);
         }
 
         sealed class BridgeConfig : EntityLagTracker.IConfig
@@ -39,7 +39,7 @@ namespace AutoModerator.Grids
             public TimeSpan TrackingSpan => _masterConfig.TrackingTime.Seconds();
             public TimeSpan PinSpan => _masterConfig.PunishTime.Seconds();
             public TimeSpan GracePeriodSpan => _masterConfig.GracePeriodTime.Seconds();
-            public bool IsFactionExempt(long factionId) => _masterConfig.IsFactionExempt(factionId);
+            public bool IsIdentityExempt(long id) => _masterConfig.IsIdentityExempt(id);
         }
 
         static readonly ILogger Log = LogManager.GetCurrentClassLogger();

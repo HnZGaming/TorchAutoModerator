@@ -7,6 +7,7 @@ using AutoModerator.Players;
 using AutoModerator.Punishes;
 using AutoModerator.Punishes.Broadcasts;
 using AutoModerator.Warnings;
+using Sandbox.Game.Multiplayer;
 using Sandbox.Game.World;
 using Torch;
 using Torch.Views;
@@ -435,14 +436,15 @@ namespace AutoModerator
             }
         }
 
-        public bool IsFactionExempt(long factionId)
+        public bool IsIdentityExempt(long identityId)
         {
-            if (IgnoreNpcFactions && MySession.Static.Factions.IsNpcFaction(factionId)) return true;
+            var isNpc = Sync.Players.IdentityIsNpc(identityId);
+            if (isNpc && IgnoreNpcFactions) return true;
 
-            var factionTag = MySession.Static.Factions.TryGetFactionById(factionId)?.Tag;
-            if (factionTag == null) return false;
+            var faction = MySession.Static.Factions.GetPlayerFaction(identityId);
+            if (faction == null) return false;
 
-            return ExemptFactionTags.Contains(factionTag.ToLower());
+            return _exemptFactionTags.Contains(faction.Tag);
         }
     }
 }
