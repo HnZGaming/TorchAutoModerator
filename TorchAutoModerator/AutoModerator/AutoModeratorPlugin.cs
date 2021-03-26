@@ -44,6 +44,7 @@ namespace AutoModerator
         LagPunishExecutor _punishExecutor;
         LagPunishChatFeed _punishChatFeed;
         IChatManagerServer _chatManager;
+        BlockTypePairCollection _exemptBlockTypePairs;
 
         UserControl IWpfPlugin.GetControl() => _config.GetOrCreateUserControl(ref _userControl);
         public AutoModeratorConfig Config => _config.Data;
@@ -76,12 +77,13 @@ namespace AutoModerator
             _chatManager = Torch.CurrentSession.Managers.GetManager<IChatManagerServer>();
             _chatManager.ThrowIfNull("chat manager not found");
 
+            _exemptBlockTypePairs = new BlockTypePairCollection();
             _laggyGrids = new GridLagTracker(Config);
             _laggyPlayers = new PlayerLagTracker(Config);
             _gpsReceivers = new BroadcastListenerCollection(Config);
             _entityGpsBroadcaster = new EntityGpsBroadcaster(Config);
             _warningQuests = new LagWarningCollection(Config);
-            _punishExecutor = new LagPunishExecutor(Config);
+            _punishExecutor = new LagPunishExecutor(Config, _exemptBlockTypePairs);
             _punishChatFeed = new LagPunishChatFeed(Config, _chatManager);
 
             TaskUtils.RunUntilCancelledAsync(Main, _canceller.Token).Forget(Log);
@@ -199,6 +201,27 @@ namespace AutoModerator
                 else
                 {
                     _punishChatFeed.Clear();
+                }
+
+                // refresh punish-exempt block types
+                {
+                    var invalidInputs = new List<string>();
+
+                    _exemptBlockTypePairs.Clear();
+                    foreach (var rawInput in Config.ExemptBlockTypePairs)
+                    {
+                        if (!_exemptBlockTypePairs.TryAdd(rawInput))
+                        {
+                            invalidInputs.Add(rawInput);
+                            Log.Warn($"Removed invalid block type pair: {rawInput}");
+                        }
+                    }
+
+                    // remove invalid items from the config
+                    foreach (var invalidInput in invalidInputs)
+                    {
+                        Config.RemoveExemptBlockType(invalidInput);
+                    }
                 }
 
                 if (Config.PunishType == LagPunishType.Damage ||

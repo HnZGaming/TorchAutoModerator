@@ -3,14 +3,14 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using AutoModerator.Core;
 using NLog;
 using Sandbox.Game.Entities;
 using Sandbox.ModAPI;
-using SpaceEngineers.Game.Entities.Blocks;
 using Utils.General;
 using Utils.Torch;
 using VRage.Game;
-using VRage.Game.ModAPI.Ingame;
+using VRage.Game.ModAPI;
 
 namespace AutoModerator.Punishes
 {
@@ -27,11 +27,13 @@ namespace AutoModerator.Punishes
 
         static readonly ILogger Log = LogManager.GetCurrentClassLogger();
         readonly IConfig _config;
+        readonly BlockTypePairCollection _exemptBlockPairs;
         readonly HashSet<long> _punishedIds;
 
-        public LagPunishExecutor(IConfig config)
+        public LagPunishExecutor(IConfig config, BlockTypePairCollection exemptBlockPairs)
         {
             _config = config;
+            _exemptBlockPairs = exemptBlockPairs;
             _punishedIds = new HashSet<long>();
         }
 
@@ -58,7 +60,7 @@ namespace AutoModerator.Punishes
                 if (!_punishedIds.Contains(gridId))
                 {
                     _punishedIds.Add(gridId);
-                    Log.Info($"Started punishment: \"{grid.DisplayName}\" type: {_config.PunishType}");
+                    Log.Info($"Punished: \"{grid.DisplayName}\" type: {_config.PunishType}");
                 }
 
                 await PunishGrid(grid);
@@ -141,13 +143,10 @@ namespace AutoModerator.Punishes
             }
         }
 
-        bool IsExemptBlock(IMyEntity block)
+        bool IsExemptBlock(IMyCubeBlock block)
         {
-            if (block is MyParachute) return true;
-            if (block is MyButtonPanel) return true;
-            if (block is IMyPowerProducer) return true;
-
-            return false;
+            var blockDef = block.BlockDefinition;
+            return _exemptBlockPairs.Contains(blockDef.TypeIdString, blockDef.SubtypeId);
         }
     }
 }
