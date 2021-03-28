@@ -219,5 +219,6 @@
     </PropertyGroup>
     <Import Project="..\TorchUtils\Utils.General\Utils.General.projitems" Label="Shared" />
     <Import Project="..\TorchUtils\Utils.Torch\Utils.Torch.projitems" Label="Shared" />
+    <Import Project="..\TorchUtils\Utils.TorchEntityGps\Utils.TorchEntityGps.projitems" Label="Shared" />
 
 </Project>
