@@ -12,12 +12,13 @@ namespace AutoModerator.Core
     /// </remarks>
     public readonly struct TrackedEntitySnapshot
     {
-        public TrackedEntitySnapshot(long id, string name, long ownerId, string ownerName, double longLagNormal, TimeSpan remainingTime, bool isBlessed)
+        public TrackedEntitySnapshot(long id, string name, long ownerId, string ownerName, string factionTag, double longLagNormal, TimeSpan remainingTime, bool isBlessed)
         {
             Id = id;
             Name = name;
             OwnerId = ownerId;
             OwnerName = ownerName;
+            FactionTag = factionTag;
             LongLagNormal = longLagNormal;
             RemainingTime = remainingTime;
             IsBlessed = isBlessed;
@@ -28,6 +29,7 @@ namespace AutoModerator.Core
         public readonly string Name;
         public readonly long OwnerId;
         public readonly string OwnerName;
+        public readonly string FactionTag;
         public readonly double LongLagNormal;
         public readonly TimeSpan RemainingTime;
         public readonly bool IsBlessed;

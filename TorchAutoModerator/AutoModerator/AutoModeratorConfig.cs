@@ -7,6 +7,7 @@ using AutoModerator.Players;
 using AutoModerator.Punishes;
 using AutoModerator.Punishes.Broadcasts;
 using AutoModerator.Warnings;
+using Sandbox.Game.Multiplayer;
 using Sandbox.Game.World;
 using Torch;
 using Torch.Views;
@@ -71,6 +72,7 @@ namespace AutoModerator
         double _outlierFenceNormal = 2;
         double _gracePeriodTime = 20;
         bool _isEnabled = true;
+        List<string> _exemptBlockTypePairs = new List<string>();
 
         [XmlElement]
         [Display(Order = 1, Name = "Enable plugin", GroupName = OpGroupName)]
@@ -277,6 +279,14 @@ namespace AutoModerator
         }
 
         [XmlElement]
+        [Display(Order = 200, Name = "Exempt block types", GroupName = PunishGroupName)]
+        public List<string> ExemptBlockTypePairs
+        {
+            get => _exemptBlockTypePairs;
+            set => SetValue(ref _exemptBlockTypePairs, value);
+        }
+
+        [XmlElement]
         [Display(Order = 2, Name = "Damage per interval (0-1)", GroupName = DamageGroupName,
             Description = "Applies damage to subject blocks by N times the block type's max integrity.")]
         public double DamageNormalPerInterval
@@ -409,14 +419,32 @@ namespace AutoModerator
             OnPropertyChanged(nameof(GpsMutedPlayerIds));
         }
 
-        public bool IsFactionExempt(long factionId)
+        public void AddExemptBlockType(string blockType)
         {
-            if (IgnoreNpcFactions && MySession.Static.Factions.IsNpcFaction(factionId)) return true;
+            if (!_exemptBlockTypePairs.Contains(blockType))
+            {
+                _exemptBlockTypePairs.Add(blockType);
+                OnPropertyChanged(nameof(ExemptBlockTypePairs));
+            }
+        }
 
-            var factionTag = MySession.Static.Factions.TryGetFactionById(factionId)?.Tag;
-            if (factionTag == null) return false;
+        public void RemoveExemptBlockType(string blockType)
+        {
+            if (_exemptBlockTypePairs.Remove(blockType))
+            {
+                OnPropertyChanged(nameof(ExemptBlockTypePairs));
+            }
+        }
 
-            return ExemptFactionTags.Contains(factionTag.ToLower());
+        public bool IsIdentityExempt(long identityId)
+        {
+            var isNpc = Sync.Players.IdentityIsNpc(identityId);
+            if (isNpc && IgnoreNpcFactions) return true;
+
+            var faction = MySession.Static.Factions.GetPlayerFaction(identityId);
+            if (faction == null) return false;
+
+            return _exemptFactionTags.Contains(faction.Tag);
         }
     }
 }

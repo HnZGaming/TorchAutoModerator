@@ -20,7 +20,7 @@ namespace AutoModerator.Players
             double PunishTime { get; }
             double GracePeriodTime { get; }
             double OutlierFenceNormal { get; }
-            bool IsFactionExempt(long factionId);
+            bool IsIdentityExempt(long identityId);
         }
 
         sealed class BridgeConfig : EntityLagTracker.IConfig
@@ -37,7 +37,7 @@ namespace AutoModerator.Players
             public TimeSpan TrackingSpan => _masterConfig.TrackingTime.Seconds();
             public TimeSpan PinSpan => _masterConfig.PunishTime.Seconds();
             public TimeSpan GracePeriodSpan => _masterConfig.GracePeriodTime.Seconds();
-            public bool IsFactionExempt(long factionId) => _masterConfig.IsFactionExempt(factionId);
+            public bool IsIdentityExempt(long factionId) => _masterConfig.IsIdentityExempt(factionId);
         }
 
         static readonly ILogger Log = LogManager.GetCurrentClassLogger();
@@ -57,8 +57,10 @@ namespace AutoModerator.Players
             foreach (var (player, profilerEntry) in profileResult.GetTopEntities(20))
             {
                 var mspf = profilerEntry.MainThreadTime / profileResult.TotalFrameCount;
-                var factionId = MySession.Static.Factions.TryGetPlayerFaction(player.IdentityId)?.FactionId ?? 0L;
-                var result = new EntityLagSource(player.IdentityId, player.DisplayName, player.IdentityId, player.DisplayName, mspf, factionId);
+                var faction = MySession.Static.Factions.TryGetPlayerFaction(player.IdentityId);
+                var factionId = faction?.FactionId ?? 0L;
+                var factionTag = faction?.Tag ?? "<single>";
+                var result = new EntityLagSource(player.IdentityId, player.DisplayName, player.IdentityId, player.DisplayName, factionId, factionTag, mspf);
                 results.Add(result);
             }
 

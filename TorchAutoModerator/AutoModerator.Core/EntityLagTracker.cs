@@ -17,7 +17,7 @@ namespace AutoModerator.Core
             TimeSpan TrackingSpan { get; }
             TimeSpan PinSpan { get; }
             TimeSpan GracePeriodSpan { get; }
-            bool IsFactionExempt(long factionId);
+            bool IsIdentityExempt(long factionId);
         }
 
         static readonly ILogger Log = LogManager.GetCurrentClassLogger();
@@ -111,8 +111,8 @@ namespace AutoModerator.Core
             var foundInvalidValues = false;
             foreach (var src in sources)
             {
-                // skip exempt faction's entities
-                if (_config.IsFactionExempt(src.FactionId))
+                // skip exempt entities
+                if (_config.IsIdentityExempt(src.OwnerId))
                 {
                     Log.Trace($"exempt: {src}");
                     continue;
@@ -202,7 +202,8 @@ namespace AutoModerator.Core
                 var name = lastSource.Name ?? $"<{entityId}>";
                 var ownerId = lastSource.OwnerId;
                 var ownerName = lastSource.OwnerName ?? $"<{ownerId}>";
-                var snapshot = new TrackedEntitySnapshot(entityId, name, ownerId, ownerName, longLag, pin, blessed);
+                var factionTag = lastSource.FactionTag;
+                var snapshot = new TrackedEntitySnapshot(entityId, name, ownerId, ownerName, factionTag, longLag, pin, blessed);
                 _lastSnapshots.Add(entityId, snapshot);
             }
 

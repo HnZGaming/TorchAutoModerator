@@ -22,7 +22,7 @@ namespace AutoModerator.Grids
             double PunishTime { get; }
             double GracePeriodTime { get; }
             double OutlierFenceNormal { get; }
-            bool IsFactionExempt(long factionId);
+            bool IsIdentityExempt(long identityId);
         }
 
         sealed class BridgeConfig : EntityLagTracker.IConfig
@@ -39,7 +39,7 @@ namespace AutoModerator.Grids
             public TimeSpan TrackingSpan => _masterConfig.TrackingTime.Seconds();
             public TimeSpan PinSpan => _masterConfig.PunishTime.Seconds();
             public TimeSpan GracePeriodSpan => _masterConfig.GracePeriodTime.Seconds();
-            public bool IsFactionExempt(long factionId) => _masterConfig.IsFactionExempt(factionId);
+            public bool IsIdentityExempt(long id) => _masterConfig.IsIdentityExempt(id);
         }
 
         static readonly ILogger Log = LogManager.GetCurrentClassLogger();
@@ -119,12 +119,14 @@ namespace AutoModerator.Grids
             foreach (var (grid, profileEntity) in profileResult.GetTopEntities(20))
             {
                 var mspf = profileEntity.MainThreadTime / profileResult.TotalFrameCount;
-                var factionId = grid.BigOwners.TryGetFirst(out var ownerId)
-                    ? MySession.Static.Factions.GetPlayerFaction(ownerId)?.FactionId ?? 0L
-                    : 0L;
+                var faction = grid.BigOwners.TryGetFirst(out var ownerId)
+                    ? MySession.Static.Factions.GetPlayerFaction(ownerId)
+                    : null;
+                var factionId = faction?.FactionId ?? 0L;
+                var factionTag = faction?.Tag ?? "<single>";
 
                 var ownerName = MySession.Static.Players.TryGetPlayerById(ownerId, out var p) ? p.DisplayName : $"<{ownerId}>";
-                var lag = new EntityLagSource(grid.EntityId, grid.DisplayName, ownerId, ownerName, mspf, factionId);
+                var lag = new EntityLagSource(grid.EntityId, grid.DisplayName, ownerId, ownerName, factionId, factionTag, mspf);
                 lags.Add(lag);
 
                 if (!ownerIds.Contains(ownerId)) // pick the laggiest grid
