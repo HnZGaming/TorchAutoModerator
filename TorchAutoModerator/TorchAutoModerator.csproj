@@ -198,10 +198,6 @@
         <Content Include="postbuild.bat" />
     </ItemGroup>
     <ItemGroup>
-        <ProjectReference Include="..\Utils.EntityGps\Utils.EntityGps.csproj">
-            <Project>{d3f66ad3-9265-4ca7-b865-dedd0b20a8e7}</Project>
-            <Name>Utils.EntityGps</Name>
-        </ProjectReference>
         <ProjectReference Include="..\Utils.TimeSerieses\Utils.TimeSerieses.csproj">
             <Project>{7f42b008-0b81-4dcc-82e6-18125ac9524e}</Project>
             <Name>Utils.TimeSerieses</Name>
