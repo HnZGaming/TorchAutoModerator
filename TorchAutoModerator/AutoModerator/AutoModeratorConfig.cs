@@ -23,9 +23,9 @@ namespace AutoModerator
         FileLoggingConfigurator.IConfig,
         GridLagTracker.IConfig,
         PlayerLagTracker.IConfig,
-        LagWarningCollection.IConfig,
+        LagQuestlogCollection.IConfig,
         LagPunishExecutor.IConfig,
-        LagPunishChatFeed.IConfig
+        LagPunishChatFeed.IConfig, LagNotificationCollection.IConfig, LagWarningTracker.IConfig
     {
         const string OpGroupName = "Auto Moderator";
         const string OpGridGroupName = "Auto Moderator (Grids)";

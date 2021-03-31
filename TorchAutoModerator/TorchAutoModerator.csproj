@@ -174,8 +174,10 @@
         <Compile Include="AutoModerator.Punishes\LagPunishExecutor.cs" />
         <Compile Include="AutoModerator.Punishes\LagPunishSource.cs" />
         <Compile Include="AutoModerator.Punishes\LagPunishType.cs" />
-        <Compile Include="AutoModerator.Warnings\HudNotificationCollection.cs" />
-        <Compile Include="AutoModerator.Warnings\LagWarningCollection.cs" />
+        <Compile Include="AutoModerator.Warnings\LagNotificationCollection.cs" />
+        <Compile Include="AutoModerator.Warnings\LagPlayerState.cs" />
+        <Compile Include="AutoModerator.Warnings\LagQuest.cs" />
+        <Compile Include="AutoModerator.Warnings\LagQuestlogCollection.cs" />
         <Compile Include="AutoModerator.Punishes.Broadcasts\GpsUtils.cs" />
         <Compile Include="AutoModerator.Punishes.Broadcasts\EntityGpsBroadcaster.cs" />
         <Compile Include="AutoModerator.Core\EntityLagTracker.cs" />
@@ -183,6 +185,7 @@
         <Compile Include="AutoModerator.Core\ExpiryDictionary.cs" />
         <Compile Include="AutoModerator.Warnings\LagWarningSource.cs" />
         <Compile Include="AutoModerator.Warnings\LagWarningDefaultTexts.cs" />
+        <Compile Include="AutoModerator.Warnings\LagWarningTracker.cs" />
         <Compile Include="AutoModerator\AutoModeratorCommandModule.Inspect.cs" />
         <Compile Include="AutoModerator\AutoModeratorCommandModule.Profile.cs" />
         <Compile Include="Properties\AssemblyInfo.cs" />
