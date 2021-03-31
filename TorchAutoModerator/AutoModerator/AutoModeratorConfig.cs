@@ -100,7 +100,7 @@ namespace AutoModerator
             set => SetValue(ref _sampleFrequency, Math.Max(value, 5));
         }
 
-        [ConfigProperty(ConfigPropertyType.VisibleToPlayers)]
+        [ConfigProperty(MyPromoteLevel.None)]
         [XmlElement]
         [Display(Order = 6, Name = "Tracking time (seconds)", GroupName = OpGroupName,
             Description = "Gives players a chance of N seconds before the punishment of per-grid lag violation.")]
@@ -110,7 +110,7 @@ namespace AutoModerator
             set => SetValue(ref _trackingTime, value);
         }
 
-        [ConfigProperty(ConfigPropertyType.VisibleToPlayers)]
+        [ConfigProperty(MyPromoteLevel.None)]
         [XmlElement]
         [Display(Order = 7, Name = "Pinned time (seconds)", GroupName = OpGroupName,
             Description = "Punishes players for N seconds for per-grid lag violation.")]
@@ -120,7 +120,7 @@ namespace AutoModerator
             set => SetValue(ref _punishTime, value);
         }
 
-        [ConfigProperty(ConfigPropertyType.VisibleToPlayers)]
+        [ConfigProperty(MyPromoteLevel.None)]
         [XmlElement]
         [Display(Order = 10, Name = "Grace period (seconds)", GroupName = OpGroupName,
             Description = "Grids younger than N seconds will not be warned/punished.")]
@@ -244,7 +244,7 @@ namespace AutoModerator
             set => SetValue(ref _warningCurrentLevelText, value);
         }
 
-        [ConfigProperty(ConfigPropertyType.VisibleToPlayers)]
+        [ConfigProperty(MyPromoteLevel.None)]
         [XmlElement]
         [Display(Order = 1, Name = "Punishment type", GroupName = PunishGroupName)]
         public LagPunishType PunishType
@@ -313,7 +313,7 @@ namespace AutoModerator
             set => SetValue(ref _broadcastVisiblePromoLevel, value);
         }
 
-        [ConfigProperty(ConfigPropertyType.VisibleToPlayers)]
+        [ConfigProperty(MyPromoteLevel.None)]
         [XmlElement]
         [Display(Order = 6, Name = "Max GPS count", GroupName = BroadcastGroupName,
             Description = "Shows N number of GPS of laggy grids on every player's HUD.")]

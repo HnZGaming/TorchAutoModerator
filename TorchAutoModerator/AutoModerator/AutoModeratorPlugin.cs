@@ -55,8 +55,6 @@ namespace AutoModerator
             this.ListenOnGameLoaded(OnGameLoaded);
             this.ListenOnGameUnloading(OnGameUnloading);
 
-            GameLoopObserverManager.Add(torch);
-
             var configFilePath = this.MakeConfigFilePath();
             _config = Persistent<AutoModeratorConfig>.Load(configFilePath);
             Config.PropertyChanged += OnConfigChanged;
