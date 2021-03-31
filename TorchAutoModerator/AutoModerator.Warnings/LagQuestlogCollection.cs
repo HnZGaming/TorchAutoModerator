@@ -10,6 +10,7 @@ namespace AutoModerator.Warnings
     {
         public interface IConfig
         {
+            bool EnableWarningQuestlog { get; }
             string WarningTitle { get; }
             string WarningDetailMustProfileSelfText { get; }
             string WarningDetailMustDelagSelfText { get; }
@@ -27,6 +28,8 @@ namespace AutoModerator.Warnings
 
         public void OnQuestUpdated(long playerId, LagQuest quest)
         {
+            if (!_config.EnableWarningQuestlog) return;
+
             var playerName = MySession.Static.Players.GetPlayerNameOrElse(playerId, $"{playerId}");
             Log.Debug($"updating quest log: {playerName}: {quest}");
 

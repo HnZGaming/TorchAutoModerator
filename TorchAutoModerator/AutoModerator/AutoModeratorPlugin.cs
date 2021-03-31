@@ -83,7 +83,7 @@ namespace AutoModerator
             _lagWarningTracker = new LagWarningTracker(Config);
             _punishExecutor = new LagPunishExecutor(Config, _exemptBlockTypePairs);
             _punishChatFeed = new LagPunishChatFeed(Config, _chatManager);
-            
+
             _lagWarningTracker.AddListener(new LagQuestlogCollection(Config));
             _lagWarningTracker.AddListener(new LagNotificationCollection(Config));
 
@@ -152,7 +152,7 @@ namespace AutoModerator
 
                 Log.Trace("profile done");
 
-                if (Config.EnableWarning)
+                // warning
                 {
                     var usePins = Config.PunishType != LagPunishType.None;
                     Log.Debug($"punishment type: {Config.PunishType}, warning for punishment: {usePins}");
@@ -176,10 +176,6 @@ namespace AutoModerator
                     }
 
                     _lagWarningTracker.Update(sources);
-                }
-                else
-                {
-                    _lagWarningTracker.Clear();
                 }
 
                 Log.Trace("warnings done");

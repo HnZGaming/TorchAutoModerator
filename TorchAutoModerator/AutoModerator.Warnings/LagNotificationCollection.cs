@@ -9,6 +9,7 @@ namespace AutoModerator.Warnings
     {
         public interface IConfig
         {
+            bool EnableLagWarningNotification { get; }
             string WarningCurrentLevelText { get; }
         }
 
@@ -32,6 +33,8 @@ namespace AutoModerator.Warnings
             var lag = player.LongLagNormal;
 
             Remove(playerId);
+
+            if (!_config.EnableLagWarningNotification) return;
 
             var message = $"{_config.WarningCurrentLevelText}: {lag * 100:0}%";
             if (player.IsPinned)
