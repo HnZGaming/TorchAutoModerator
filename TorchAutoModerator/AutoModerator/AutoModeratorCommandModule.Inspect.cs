@@ -189,7 +189,7 @@ namespace AutoModerator
             Context.Respond(msgBuilder.ToString());
         });
 
-        string MakeTrackedEntityLine(TrackedEntitySnapshot s, LagWarningCollection.PlayerState w = null)
+        string MakeTrackedEntityLine(TrackedEntitySnapshot s, LagPlayerState w = null)
         {
             var lagGraph = MakeOnelinerGraph(30, 1, s.LongLagNormal);
 
@@ -197,7 +197,7 @@ namespace AutoModerator
             var pinSecsNormal = pinSecs / Plugin.Config.PunishTime;
             var pinGraph = MakeOnelinerGraph(30, 1, pinSecsNormal, false);
             pinGraph = s.IsPinned ? $"{pinGraph} pin {pinSecs:0} secs" : "no pin";
-            var warning = w?.Quest > LagWarningCollection.LagQuestState.None ? $"warning: {w.Quest} ({w.LastWarningLagNormal * 100:0}%)" : "";
+            var warning = w?.Quest > LagQuest.None ? $"warning: {w.Quest} ({w.LastWarningLagNormal * 100:0}%)" : "";
 
             return $"{lagGraph} {pinGraph} {s.Name} ({s.Id}) {warning}";
         }

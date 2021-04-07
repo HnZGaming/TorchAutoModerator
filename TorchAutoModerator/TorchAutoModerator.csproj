@@ -174,15 +174,19 @@
         <Compile Include="AutoModerator.Punishes\LagPunishExecutor.cs" />
         <Compile Include="AutoModerator.Punishes\LagPunishSource.cs" />
         <Compile Include="AutoModerator.Punishes\LagPunishType.cs" />
-        <Compile Include="AutoModerator.Warnings\HudNotificationCollection.cs" />
-        <Compile Include="AutoModerator.Warnings\LagWarningCollection.cs" />
+        <Compile Include="AutoModerator.Warnings\LagNotificationCollection.cs" />
+        <Compile Include="AutoModerator.Warnings\LagPlayerState.cs" />
+        <Compile Include="AutoModerator.Warnings\LagQuest.cs" />
+        <Compile Include="AutoModerator.Warnings\LagQuestlogCollection.cs" />
         <Compile Include="AutoModerator.Punishes.Broadcasts\GpsUtils.cs" />
         <Compile Include="AutoModerator.Punishes.Broadcasts\EntityGpsBroadcaster.cs" />
         <Compile Include="AutoModerator.Core\EntityLagTracker.cs" />
         <Compile Include="AutoModerator.Core\EntityLagSource.cs" />
         <Compile Include="AutoModerator.Core\ExpiryDictionary.cs" />
+        <Compile Include="AutoModerator.Warnings\LagWarningChatFeed.cs" />
         <Compile Include="AutoModerator.Warnings\LagWarningSource.cs" />
         <Compile Include="AutoModerator.Warnings\LagWarningDefaultTexts.cs" />
+        <Compile Include="AutoModerator.Warnings\LagWarningTracker.cs" />
         <Compile Include="AutoModerator\AutoModeratorCommandModule.Inspect.cs" />
         <Compile Include="AutoModerator\AutoModeratorCommandModule.Profile.cs" />
         <Compile Include="Properties\AssemblyInfo.cs" />
@@ -195,10 +199,6 @@
         <Content Include="postbuild.bat" />
     </ItemGroup>
     <ItemGroup>
-        <ProjectReference Include="..\Utils.EntityGps\Utils.EntityGps.csproj">
-            <Project>{d3f66ad3-9265-4ca7-b865-dedd0b20a8e7}</Project>
-            <Name>Utils.EntityGps</Name>
-        </ProjectReference>
         <ProjectReference Include="..\Utils.TimeSerieses\Utils.TimeSerieses.csproj">
             <Project>{7f42b008-0b81-4dcc-82e6-18125ac9524e}</Project>
             <Name>Utils.TimeSerieses</Name>
