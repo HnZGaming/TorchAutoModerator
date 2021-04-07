@@ -86,6 +86,7 @@ namespace AutoModerator
 
             _lagWarningTracker.AddListener(new LagQuestlogCollection(Config));
             _lagWarningTracker.AddListener(new LagNotificationCollection(Config));
+            _lagWarningTracker.AddListener(new LagWarningChatFeed(Config, _chatManager));
 
             TaskUtils.RunUntilCancelledAsync(Main, _canceller.Token).Forget(Log);
         }

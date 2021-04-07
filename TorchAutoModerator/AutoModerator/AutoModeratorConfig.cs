@@ -25,7 +25,10 @@ namespace AutoModerator
         PlayerLagTracker.IConfig,
         LagQuestlogCollection.IConfig,
         LagPunishExecutor.IConfig,
-        LagPunishChatFeed.IConfig, LagNotificationCollection.IConfig, LagWarningTracker.IConfig
+        LagPunishChatFeed.IConfig,
+        LagNotificationCollection.IConfig,
+        LagWarningTracker.IConfig,
+        LagWarningChatFeed.IConfig
     {
         const string OpGroupName = "Auto Moderator";
         const string OpGridGroupName = "Auto Moderator (Grids)";
@@ -209,6 +212,8 @@ namespace AutoModerator
             get => _enableWarningQuestlog;
             set => SetValue(ref _enableWarningQuestlog, value);
         }
+
+        public bool EnableWarningChatFeed => !_enableWarningQuestlog;
 
         [ConfigPropertyIgnore]
         [XmlElement]

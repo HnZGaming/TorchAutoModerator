@@ -183,6 +183,7 @@
         <Compile Include="AutoModerator.Core\EntityLagTracker.cs" />
         <Compile Include="AutoModerator.Core\EntityLagSource.cs" />
         <Compile Include="AutoModerator.Core\ExpiryDictionary.cs" />
+        <Compile Include="AutoModerator.Warnings\LagWarningChatFeed.cs" />
         <Compile Include="AutoModerator.Warnings\LagWarningSource.cs" />
         <Compile Include="AutoModerator.Warnings\LagWarningDefaultTexts.cs" />
         <Compile Include="AutoModerator.Warnings\LagWarningTracker.cs" />
