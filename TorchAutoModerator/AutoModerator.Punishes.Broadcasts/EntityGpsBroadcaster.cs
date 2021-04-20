@@ -5,9 +5,9 @@ using System.Threading.Tasks;
 using NLog;
 using Sandbox.Game.Screens.Helpers;
 using Sandbox.Game.World;
-using TorchEntityGpsBroadcaster.Core;
 using Utils.General;
 using Utils.Torch;
+using Utils.TorchEntityGps;
 
 namespace AutoModerator.Punishes.Broadcasts
 {

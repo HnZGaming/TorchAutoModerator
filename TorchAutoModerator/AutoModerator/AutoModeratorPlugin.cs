@@ -40,7 +40,7 @@ namespace AutoModerator
         PlayerLagTracker _laggyPlayers;
         EntityGpsBroadcaster _entityGpsBroadcaster;
         BroadcastListenerCollection _gpsReceivers;
-        LagWarningCollection _warningQuests;
+        LagWarningTracker _lagWarningTracker;
         LagPunishExecutor _punishExecutor;
         LagPunishChatFeed _punishChatFeed;
         IChatManagerServer _chatManager;
@@ -54,8 +54,6 @@ namespace AutoModerator
             base.Init(torch);
             this.ListenOnGameLoaded(OnGameLoaded);
             this.ListenOnGameUnloading(OnGameUnloading);
-
-            GameLoopObserverManager.Add(torch);
 
             var configFilePath = this.MakeConfigFilePath();
             _config = Persistent<AutoModeratorConfig>.Load(configFilePath);
@@ -82,9 +80,13 @@ namespace AutoModerator
             _laggyPlayers = new PlayerLagTracker(Config);
             _gpsReceivers = new BroadcastListenerCollection(Config);
             _entityGpsBroadcaster = new EntityGpsBroadcaster(Config);
-            _warningQuests = new LagWarningCollection(Config);
+            _lagWarningTracker = new LagWarningTracker(Config);
             _punishExecutor = new LagPunishExecutor(Config, _exemptBlockTypePairs);
             _punishChatFeed = new LagPunishChatFeed(Config, _chatManager);
+
+            _lagWarningTracker.AddListener(new LagQuestlogCollection(Config));
+            _lagWarningTracker.AddListener(new LagNotificationCollection(Config));
+            _lagWarningTracker.AddListener(new LagWarningChatFeed(Config, _chatManager));
 
             TaskUtils.RunUntilCancelledAsync(Main, _canceller.Token).Forget(Log);
         }
@@ -96,7 +98,7 @@ namespace AutoModerator
             _canceller?.Cancel();
             _canceller?.Dispose();
             _entityGpsBroadcaster?.ClearGpss();
-            _warningQuests?.Clear();
+            _lagWarningTracker?.Clear();
         }
 
         void OnConfigChanged(object _, PropertyChangedEventArgs args)
@@ -110,7 +112,7 @@ namespace AutoModerator
             Log.Info("started main");
 
             _entityGpsBroadcaster.ClearGpss();
-            _warningQuests.Clear();
+            _lagWarningTracker.Clear();
 
             // Wait for some time during the session startup
             await Task.Delay(Config.FirstIdleTime.Seconds(), canceller);
@@ -125,7 +127,7 @@ namespace AutoModerator
                     _laggyGrids.Clear();
                     _laggyPlayers.Clear();
                     _entityGpsBroadcaster.ClearGpss();
-                    _warningQuests.Clear();
+                    _lagWarningTracker.Clear();
                     _punishExecutor.Clear();
                     _punishChatFeed.Clear();
 
@@ -151,7 +153,7 @@ namespace AutoModerator
 
                 Log.Trace("profile done");
 
-                if (Config.EnableWarning)
+                // warning
                 {
                     var usePins = Config.PunishType != LagPunishType.None;
                     Log.Debug($"punishment type: {Config.PunishType}, warning for punishment: {usePins}");
@@ -174,11 +176,7 @@ namespace AutoModerator
                         sources.Add(src);
                     }
 
-                    _warningQuests.Update(sources);
-                }
-                else
-                {
-                    _warningQuests.Clear();
+                    _lagWarningTracker.Update(sources);
                 }
 
                 Log.Trace("warnings done");
@@ -327,7 +325,7 @@ namespace AutoModerator
 
         public void OnSelfProfiled(long playerId)
         {
-            _warningQuests.OnSelfProfiled(playerId);
+            _lagWarningTracker.OnSelfProfiled(playerId);
         }
 
         public void ClearCache()
@@ -338,7 +336,7 @@ namespace AutoModerator
 
         public void ClearQuestForUser(long playerId)
         {
-            _warningQuests.Remove(playerId);
+            _lagWarningTracker.Remove(playerId);
         }
 
         public bool TryGetTimeSeries(long entityId, out ITimeSeries<double> timeSeries)
@@ -395,9 +393,9 @@ namespace AutoModerator
             return false;
         }
 
-        public IReadOnlyDictionary<long, LagWarningCollection.PlayerState> GetWarningState()
+        public IReadOnlyDictionary<long, LagPlayerState> GetWarningState()
         {
-            return _warningQuests.GetInternalSnapshot();
+            return _lagWarningTracker.GetInternalSnapshot();
         }
 
         public IEnumerable<TrackedEntitySnapshot> GetTrackedGrids()

@@ -23,21 +23,26 @@ namespace AutoModerator
         FileLoggingConfigurator.IConfig,
         GridLagTracker.IConfig,
         PlayerLagTracker.IConfig,
-        LagWarningCollection.IConfig,
+        LagQuestlogCollection.IConfig,
         LagPunishExecutor.IConfig,
-        LagPunishChatFeed.IConfig
+        LagPunishChatFeed.IConfig,
+        LagNotificationCollection.IConfig,
+        LagWarningTracker.IConfig,
+        LagWarningChatFeed.IConfig
     {
         const string OpGroupName = "Auto Moderator";
         const string OpGridGroupName = "Auto Moderator (Grids)";
         const string OpPlayerGroupName = "Auto Moderator (Players)";
         const string BroadcastGroupName = "Punishment (Broadcast)";
         const string DamageGroupName = "Punishment (Damage)";
-        const string WarningGroupName = "Warnings";
+        const string WarningGroupName = "Warning";
+        const string WarningNotificationGroupName = "Warning (Notification)";
+        const string WarningQuestlogGroupName = "Warning (Questlog)";
         const string PunishGroupName = "Punishment";
         const string LogGroupName = "_Logging_";
         public const string DefaultLogFilePath = "Logs/AutoModerator-${shortdate}.log";
 
-        bool _enableWarning = true;
+        bool _enableLagWarningNotification = true;
         double _firstIdleTime = 180;
         MyPromoteLevel _broadcastVisiblePromoLevel = MyPromoteLevel.Admin;
         int _maxLaggyGpsCountPerScan = 3;
@@ -56,6 +61,7 @@ namespace AutoModerator
         bool _suppressWpfOutput;
         bool _enableLoggingTrace;
         bool _enableLoggingDebug;
+        bool _enableWarningQuestlog = true;
         string _logFilePath = DefaultLogFilePath;
         string _warningTitle = LagWarningDefaultTexts.Title;
         string _warningDetailMustProfileSelfText = LagWarningDefaultTexts.MustProfileSelf;
@@ -100,7 +106,7 @@ namespace AutoModerator
             set => SetValue(ref _sampleFrequency, Math.Max(value, 5));
         }
 
-        [ConfigProperty(ConfigPropertyType.VisibleToPlayers)]
+        [ConfigProperty(MyPromoteLevel.None)]
         [XmlElement]
         [Display(Order = 6, Name = "Tracking time (seconds)", GroupName = OpGroupName,
             Description = "Gives players a chance of N seconds before the punishment of per-grid lag violation.")]
@@ -110,7 +116,7 @@ namespace AutoModerator
             set => SetValue(ref _trackingTime, value);
         }
 
-        [ConfigProperty(ConfigPropertyType.VisibleToPlayers)]
+        [ConfigProperty(MyPromoteLevel.None)]
         [XmlElement]
         [Display(Order = 7, Name = "Pinned time (seconds)", GroupName = OpGroupName,
             Description = "Punishes players for N seconds for per-grid lag violation.")]
@@ -120,7 +126,7 @@ namespace AutoModerator
             set => SetValue(ref _punishTime, value);
         }
 
-        [ConfigProperty(ConfigPropertyType.VisibleToPlayers)]
+        [ConfigProperty(MyPromoteLevel.None)]
         [XmlElement]
         [Display(Order = 10, Name = "Grace period (seconds)", GroupName = OpGroupName,
             Description = "Grids younger than N seconds will not be warned/punished.")]
@@ -174,14 +180,6 @@ namespace AutoModerator
         }
 
         [XmlElement]
-        [Display(Order = 0, Name = "Enable warning", GroupName = WarningGroupName)]
-        public bool EnableWarning
-        {
-            get => _enableWarning;
-            set => SetValue(ref _enableWarning, value);
-        }
-
-        [XmlElement]
         [Display(Order = 1, Name = "Lag threshold (0-1)", GroupName = WarningGroupName,
             Description = "Send a warning to players when they exceed N times the max allowed lag per grid or player.")]
         public double WarningLagNormal
@@ -190,9 +188,36 @@ namespace AutoModerator
             set => SetValue(ref _warningNormal, value);
         }
 
+        [XmlElement]
+        [Display(Order = 0, Name = "Enable warning notification", GroupName = WarningNotificationGroupName)]
+        public bool EnableLagWarningNotification
+        {
+            get => _enableLagWarningNotification;
+            set => SetValue(ref _enableLagWarningNotification, value);
+        }
+
         [ConfigPropertyIgnore]
         [XmlElement]
-        [Display(Order = 2, Name = "Title", GroupName = WarningGroupName)]
+        [Display(Order = 1, Name = "Current level", GroupName = WarningNotificationGroupName)]
+        public string WarningCurrentLevelText
+        {
+            get => _warningCurrentLevelText;
+            set => SetValue(ref _warningCurrentLevelText, value);
+        }
+
+        [XmlElement]
+        [Display(Order = 0, Name = "Enable Questlog", GroupName = WarningQuestlogGroupName)]
+        public bool EnableWarningQuestlog
+        {
+            get => _enableWarningQuestlog;
+            set => SetValue(ref _enableWarningQuestlog, value);
+        }
+
+        public bool EnableWarningChatFeed => !_enableWarningQuestlog;
+
+        [ConfigPropertyIgnore]
+        [XmlElement]
+        [Display(Order = 2, Name = "Title", GroupName = WarningQuestlogGroupName)]
         public string WarningTitle
         {
             get => _warningTitle;
@@ -201,7 +226,7 @@ namespace AutoModerator
 
         [ConfigPropertyIgnore]
         [XmlElement]
-        [Display(Order = 3, Name = "Detail (1)", GroupName = WarningGroupName)]
+        [Display(Order = 3, Name = "Detail (1)", GroupName = WarningQuestlogGroupName)]
         public string WarningDetailMustProfileSelfText
         {
             get => _warningDetailMustProfileSelfText;
@@ -210,7 +235,7 @@ namespace AutoModerator
 
         [ConfigPropertyIgnore]
         [XmlElement]
-        [Display(Order = 4, Name = "Detail (2)", GroupName = WarningGroupName)]
+        [Display(Order = 4, Name = "Detail (2)", GroupName = WarningQuestlogGroupName)]
         public string WarningDetailMustDelagSelfText
         {
             get => _warningDetailMustDelagSelfText;
@@ -219,7 +244,7 @@ namespace AutoModerator
 
         [ConfigPropertyIgnore]
         [XmlElement]
-        [Display(Order = 5, Name = "Detail (3)", GroupName = WarningGroupName)]
+        [Display(Order = 5, Name = "Detail (3)", GroupName = WarningQuestlogGroupName)]
         public string WarningDetailMustWaitUnpinnedText
         {
             get => _warningDetailMustWaitUnpinnedText;
@@ -228,23 +253,14 @@ namespace AutoModerator
 
         [ConfigPropertyIgnore]
         [XmlElement]
-        [Display(Order = 6, Name = "Detail (4)", GroupName = WarningGroupName)]
+        [Display(Order = 6, Name = "Detail (4)", GroupName = WarningQuestlogGroupName)]
         public string WarningDetailEndedText
         {
             get => _warningDetailEndedText;
             set => SetValue(ref _warningDetailEndedText, value);
         }
 
-        [ConfigPropertyIgnore]
-        [XmlElement]
-        [Display(Order = 7, Name = "Current level", GroupName = WarningGroupName)]
-        public string WarningCurrentLevelText
-        {
-            get => _warningCurrentLevelText;
-            set => SetValue(ref _warningCurrentLevelText, value);
-        }
-
-        [ConfigProperty(ConfigPropertyType.VisibleToPlayers)]
+        [ConfigProperty(MyPromoteLevel.None)]
         [XmlElement]
         [Display(Order = 1, Name = "Punishment type", GroupName = PunishGroupName)]
         public LagPunishType PunishType
@@ -313,7 +329,7 @@ namespace AutoModerator
             set => SetValue(ref _broadcastVisiblePromoLevel, value);
         }
 
-        [ConfigProperty(ConfigPropertyType.VisibleToPlayers)]
+        [ConfigProperty(MyPromoteLevel.None)]
         [XmlElement]
         [Display(Order = 6, Name = "Max GPS count", GroupName = BroadcastGroupName,
             Description = "Shows N number of GPS of laggy grids on every player's HUD.")]
