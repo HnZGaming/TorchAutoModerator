@@ -10,6 +10,7 @@ using Sandbox.Game.World;
 using Utils.General;
 using Utils.TimeSerieses;
 using Utils.Torch;
+using VRage.Game.ModAPI;
 
 namespace AutoModerator.Grids
 {
@@ -120,7 +121,7 @@ namespace AutoModerator.Grids
             {
                 var mspf = profileEntity.MainThreadTime / profileResult.TotalFrameCount;
                 var faction = grid.BigOwners.TryGetFirst(out var ownerId)
-                    ? MySession.Static.Factions.GetPlayerFaction(ownerId)
+                    ? MySession.Static.Factions.GetPlayerFaction(ownerId) as IMyFaction
                     : null;
                 var factionId = faction?.FactionId ?? 0L;
                 var factionTag = faction?.Tag ?? "<single>";

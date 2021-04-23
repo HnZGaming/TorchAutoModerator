@@ -457,7 +457,7 @@ namespace AutoModerator
             var isNpc = Sync.Players.IdentityIsNpc(identityId);
             if (isNpc && IgnoreNpcFactions) return true;
 
-            var faction = MySession.Static.Factions.GetPlayerFaction(identityId);
+            var faction = (IMyFaction) MySession.Static.Factions.GetPlayerFaction(identityId);
             if (faction == null) return false;
 
             return _exemptFactionTags.Contains(faction.Tag);
