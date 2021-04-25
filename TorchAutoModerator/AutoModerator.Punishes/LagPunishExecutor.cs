@@ -64,11 +64,11 @@ namespace AutoModerator.Punishes
                 }
 
                 await PunishGrid(grid);
+                
+                Log.Debug($"block punish: \"{grid.Name}\" <{lag.GridId}> {_config.PunishType}");
 
                 // move to the next frame so we won't lag the server
                 await GameLoopObserver.MoveToGameLoop();
-
-                Log.Trace($"finished \"{grid.DisplayName}\" {_config.PunishType}");
             }
 
             foreach (var existingId in _punishedIds)
