@@ -20,5 +20,10 @@
         public readonly string GridName;
         public readonly double LongLagNormal;
         public readonly bool IsPinned;
+
+        public override string ToString()
+        {
+            return $"player: [{FactionTag}] \"{PlayerName}\" <{PlayerId}>, grid: \"{GridName}\" <{GridId}>, {LongLagNormal*100:0.0}%, pinned: {IsPinned}";
+        }
     }
 }

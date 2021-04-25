@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using NLog;
 using Torch.API.Managers;
 using Utils.Torch;
 
@@ -13,6 +14,7 @@ namespace AutoModerator.Punishes
             string PunishReportChatFormat { get; }
         }
 
+        static readonly ILogger Log = LogManager.GetCurrentClassLogger();
         readonly IConfig _config;
         readonly IChatManagerServer _chatManager;
         readonly HashSet<long> _pinnedPlayerIds;
@@ -45,6 +47,7 @@ namespace AutoModerator.Punishes
                     .Replace("{level}", $"{src.LongLagNormal * 100:0}%");
 
                 _chatManager.SendMessage(_config.PunishReportChatName, 0, message);
+                Log.Debug($"new punish chat: {src}");
             }
 
             _pinnedPlayerIds.Clear();
