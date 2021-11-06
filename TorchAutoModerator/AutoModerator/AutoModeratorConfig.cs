@@ -78,7 +78,8 @@ namespace AutoModerator
         double _outlierFenceNormal = 2;
         double _gracePeriodTime = 20;
         bool _isEnabled = true;
-        List<string> _exemptBlockTypePairs = new List<string>();
+        List<string> _profileExemptBlockTypeIds = new List<string>();
+        List<string> _punishExemptBlockTypes = new List<string>();
 
         [XmlElement]
         [Display(Order = 1, Name = "Enable plugin", GroupName = OpGroupName)]
@@ -159,6 +160,14 @@ namespace AutoModerator
         {
             get => _exemptFactionTags;
             set => SetValue(ref _exemptFactionTags, new HashSet<string>(value).ToList());
+        }
+
+        [XmlElement]
+        [Display(Order = 25, Name = "Exempt block types", GroupName = OpGroupName)]
+        public List<string> ProfileExemptBlockTypeIds
+        {
+            get => _profileExemptBlockTypeIds;
+            set => SetValue(ref _profileExemptBlockTypeIds, new HashSet<string>(value).ToList());
         }
 
         [XmlElement]
@@ -294,12 +303,12 @@ namespace AutoModerator
             set => SetValue(ref _punishReportChatFormat, value);
         }
 
-        [XmlElement]
-        [Display(Order = 200, Name = "Exempt block types", GroupName = PunishGroupName)]
-        public List<string> ExemptBlockTypePairs
+        [XmlElement("ExemptBlockTypePairs")]
+        [Display(Order = 200, Name = "Punish exempt block types", GroupName = PunishGroupName)]
+        public List<string> PunishExemptBlockTypes
         {
-            get => _exemptBlockTypePairs;
-            set => SetValue(ref _exemptBlockTypePairs, value);
+            get => _punishExemptBlockTypes;
+            set => SetValue(ref _punishExemptBlockTypes, value);
         }
 
         [XmlElement]
@@ -435,20 +444,20 @@ namespace AutoModerator
             OnPropertyChanged(nameof(GpsMutedPlayerIds));
         }
 
-        public void AddExemptBlockType(string blockType)
+        public void AddPunishExemptBlockType(string blockType)
         {
-            if (!_exemptBlockTypePairs.Contains(blockType))
+            if (!_punishExemptBlockTypes.Contains(blockType))
             {
-                _exemptBlockTypePairs.Add(blockType);
-                OnPropertyChanged(nameof(ExemptBlockTypePairs));
+                _punishExemptBlockTypes.Add(blockType);
+                OnPropertyChanged(nameof(PunishExemptBlockTypes));
             }
         }
 
-        public void RemoveExemptBlockType(string blockType)
+        public void RemovePunishExemptBlockType(string blockType)
         {
-            if (_exemptBlockTypePairs.Remove(blockType))
+            if (_punishExemptBlockTypes.Remove(blockType))
             {
-                OnPropertyChanged(nameof(ExemptBlockTypePairs));
+                OnPropertyChanged(nameof(PunishExemptBlockTypes));
             }
         }
 
@@ -457,7 +466,7 @@ namespace AutoModerator
             var isNpc = Sync.Players.IdentityIsNpc(identityId);
             if (isNpc && IgnoreNpcFactions) return true;
 
-            var faction = (IMyFaction) MySession.Static.Factions.GetPlayerFaction(identityId);
+            var faction = (IMyFaction)MySession.Static.Factions.GetPlayerFaction(identityId);
             if (faction == null) return false;
 
             return _exemptFactionTags.Contains(faction.Tag);
