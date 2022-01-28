@@ -120,7 +120,7 @@ namespace AutoModerator.Grids
             foreach (var (grid, profileEntity) in profileResult.GetTopEntities(20))
             {
                 var mspf = profileEntity.MainThreadTime / profileResult.TotalFrameCount;
-                var faction = grid.BigOwners.TryGetFirst(out var ownerId)
+                var faction = grid.BigOwners.Concat(grid.SmallOwners).TryGetFirst(out var ownerId)
                     ? MySession.Static.Factions.GetPlayerFaction(ownerId) as IMyFaction
                     : null;
                 var factionId = faction?.FactionId ?? 0L;

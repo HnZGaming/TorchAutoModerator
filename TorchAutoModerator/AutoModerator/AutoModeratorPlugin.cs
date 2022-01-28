@@ -135,7 +135,7 @@ namespace AutoModerator
                 }
 
                 // auto profile
-                var mask = new GameEntityMask(null, null, null);
+                var mask = new GameEntityMask(exemptBlockTypeIds: Config.ProfileExemptBlockTypeIds);
                 using (var gridProfiler = new GridProfiler(mask))
                 using (var playerProfiler = new PlayerProfiler(mask))
                 using (ProfilerResultQueue.Profile(gridProfiler))
@@ -206,7 +206,7 @@ namespace AutoModerator
                     var invalidInputs = new List<string>();
 
                     _exemptBlockTypePairs.Clear();
-                    foreach (var rawInput in Config.ExemptBlockTypePairs)
+                    foreach (var rawInput in Config.PunishExemptBlockTypes)
                     {
                         if (!_exemptBlockTypePairs.TryAdd(rawInput))
                         {
@@ -218,7 +218,7 @@ namespace AutoModerator
                     // remove invalid items from the config
                     foreach (var invalidInput in invalidInputs)
                     {
-                        Config.RemoveExemptBlockType(invalidInput);
+                        Config.RemovePunishExemptBlockType(invalidInput);
                     }
                 }
 

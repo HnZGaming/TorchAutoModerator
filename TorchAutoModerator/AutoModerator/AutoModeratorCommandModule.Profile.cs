@@ -24,7 +24,7 @@ namespace AutoModerator
 
             // parse options
             var playerId = Context.Player.IdentityId;
-            var gridId = (long?) null;
+            var gridId = (long?)null;
             var profileTime = 5.Seconds();
             var count = 4;
             foreach (var arg in Context.Args)
@@ -85,7 +85,7 @@ namespace AutoModerator
             var msgBuilder = new StringBuilder();
             msgBuilder.AppendLine();
 
-            var mask = new GameEntityMask(playerId, gridId, null);
+            var mask = new GameEntityMask(playerMask: playerId, gridMask: gridId, exemptBlockTypeIds: Plugin.Config.ProfileExemptBlockTypeIds);
             using (var gridProfiler = new GridProfiler(mask))
             using (ProfilerResultQueue.Profile(gridProfiler))
             using (var blockProfiler = new BlockDefinitionProfiler(mask))
