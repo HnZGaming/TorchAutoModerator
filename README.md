@@ -177,4 +177,4 @@ Feel free to fork and develop your own logic on top of this plugin under MIT lic
 
 ## Bugfix & Feature Requests
 
-Submit an issue in GitHub or start a discussion in [TorchMonitor Discord](https://discord.gg/AaqdbWa3AP).
+Please submit issues in GitHub or start a discussion in [TorchMonitor Discord](https://discord.gg/AaqdbWa3AP).

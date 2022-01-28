@@ -78,8 +78,8 @@ namespace AutoModerator
         double _outlierFenceNormal = 2;
         double _gracePeriodTime = 20;
         bool _isEnabled = true;
-        List<string> _profileExemptBlockTypeIds = new List<string>();
-        List<string> _punishExemptBlockTypes = new List<string>();
+        List<string> _profileExemptBlockTypeIds = new List<string>{"Cockpit", "CockpitOpen"};
+        List<string> _punishExemptBlockTypes = new List<string>{"BatteryBlock", "Door", "TerminalBlock/ControlPanel"};
 
         [XmlElement]
         [Display(Order = 1, Name = "Enable plugin", GroupName = OpGroupName)]
@@ -163,7 +163,7 @@ namespace AutoModerator
         }
 
         [XmlElement]
-        [Display(Order = 25, Name = "Exempt block types", GroupName = OpGroupName)]
+        [Display(Order = 25, Name = "Exempt block types", GroupName = OpGroupName, Description = "Type/subtype Id of blocks that shouldn't be taken into account; eg: cockpits.")]
         public List<string> ProfileExemptBlockTypeIds
         {
             get => _profileExemptBlockTypeIds;
@@ -304,7 +304,7 @@ namespace AutoModerator
         }
 
         [XmlElement("ExemptBlockTypePairs")]
-        [Display(Order = 200, Name = "Punish exempt block types", GroupName = PunishGroupName)]
+        [Display(Order = 200, Name = "Punish exempt block types", GroupName = PunishGroupName, Description = "Type/subtype ID of blocks that shouldn't be punished; eg: batteries.")]
         public List<string> PunishExemptBlockTypes
         {
             get => _punishExemptBlockTypes;
