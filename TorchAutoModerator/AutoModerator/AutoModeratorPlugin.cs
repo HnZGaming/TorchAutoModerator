@@ -48,6 +48,7 @@ namespace AutoModerator
 
         UserControl IWpfPlugin.GetControl() => _config.GetOrCreateUserControl(ref _userControl);
         public AutoModeratorConfig Config => _config.Data;
+        public bool IsIdle { get; private set; } = true;
 
         public override void Init(ITorchBase torch)
         {
@@ -116,6 +117,8 @@ namespace AutoModerator
 
             // Wait for some time during the session startup
             await Task.Delay(Config.FirstIdleTime.Seconds(), canceller);
+
+            IsIdle = false;
 
             Log.Info("started collector loop");
 

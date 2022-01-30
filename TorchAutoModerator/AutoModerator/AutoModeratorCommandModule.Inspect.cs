@@ -22,6 +22,8 @@ namespace AutoModerator
         [Permission(MyPromoteLevel.None)]
         public void Inspect() => this.CatchAndReport(async () =>
         {
+            WarnIfIdle();
+
             var calledByNormalPlayer = (Context.Player?.PromoteLevel ?? MyPromoteLevel.Admin) == MyPromoteLevel.None;
             var playerId = Context.Player?.IdentityId ?? 0L;
             var faction = MySession.Static.Factions.GetPlayerFaction(playerId);
@@ -91,7 +93,7 @@ namespace AutoModerator
             }
 
             // inspect specific entity
-            if (specificEntityIdOrNull is long entityId)
+            if (specificEntityIdOrNull is { } entityId)
             {
                 if (calledByNormalPlayer)
                 {

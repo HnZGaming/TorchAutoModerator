@@ -20,6 +20,8 @@ namespace AutoModerator
         [Permission(MyPromoteLevel.None)]
         public void ProfilePlayer() => this.CatchAndReport(async () =>
         {
+            WarnIfIdle();
+
             Context.Player.ThrowIfNull("must be called by a player");
 
             // parse options

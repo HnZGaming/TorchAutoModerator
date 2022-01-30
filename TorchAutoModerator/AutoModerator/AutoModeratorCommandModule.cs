@@ -15,7 +15,7 @@ namespace AutoModerator
     {
         static readonly ILogger Log = LogManager.GetCurrentClassLogger();
 
-        AutoModeratorPlugin Plugin => (AutoModeratorPlugin) Context.Plugin;
+        AutoModeratorPlugin Plugin => (AutoModeratorPlugin)Context.Plugin;
 
         [Command("configs", "Get or set config")]
         [Permission(MyPromoteLevel.Admin)]
@@ -35,6 +35,8 @@ namespace AutoModerator
         [Permission(MyPromoteLevel.Admin)]
         public void Clear() => this.CatchAndReport(() =>
         {
+            WarnIfIdle();
+
             Plugin.ClearCache();
             Context.Respond("cleared all internal state");
         });
@@ -43,6 +45,8 @@ namespace AutoModerator
         [Permission(MyPromoteLevel.Admin)]
         public void ShowGpss() => this.CatchAndReport(() =>
         {
+            WarnIfIdle();
+
             var gpss = Plugin.GetAllGpss();
 
             if (!gpss.Any())
@@ -64,6 +68,8 @@ namespace AutoModerator
         [Permission(MyPromoteLevel.None)]
         public void MuteBroadcastsToPlayer() => this.CatchAndReport(() =>
         {
+            WarnIfIdle();
+
             if (Context.Player == null)
             {
                 Context.Respond("Can be called by a player only", Color.Red);
@@ -78,6 +84,8 @@ namespace AutoModerator
         [Permission(MyPromoteLevel.None)]
         public void UnmuteBroadcastsToPlayer() => this.CatchAndReport(() =>
         {
+            WarnIfIdle();
+
             if (Context.Player == null)
             {
                 Context.Respond("Can be called by a player only", Color.Red);
@@ -92,6 +100,8 @@ namespace AutoModerator
         [Permission(MyPromoteLevel.Admin)]
         public void UnmuteBroadcastsToAll() => this.CatchAndReport(() =>
         {
+            WarnIfIdle();
+
             Plugin.Config.RemoveAllMutedPlayers();
         });
 
@@ -99,6 +109,8 @@ namespace AutoModerator
         [Permission(MyPromoteLevel.None)]
         public void ClearQuests() => this.CatchAndReport(() =>
         {
+            WarnIfIdle();
+
             Context.Player.ThrowIfNull("must be called by a player");
             Plugin.ClearQuestForUser(Context.Player.IdentityId);
         });
@@ -107,6 +119,8 @@ namespace AutoModerator
         [Permission(MyPromoteLevel.None)]
         public void ShowLaggiest() => this.CatchAndReport(() =>
         {
+            WarnIfIdle();
+            
             var playerId = 0L;
             var playerName = "";
             foreach (var arg in Context.Args)
@@ -145,7 +159,7 @@ namespace AutoModerator
                 return;
             }
 
-            if (Context.Player is IMyPlayer caller &&
+            if (Context.Player is { } caller &&
                 caller.PromoteLevel < MyPromoteLevel.Moderator &&
                 !caller.IsFriendWith(playerId))
             {
@@ -161,5 +175,19 @@ namespace AutoModerator
 
             Context.Respond($"Laggiest grid owned by player \"{playerName}\": \"{grid.Name}\" ({grid.LongLagNormal * 100:0}%)");
         });
+
+        void WarnIfIdle()
+        {
+            if (!Plugin.Config.IsEnabled)
+            {
+                Context.Respond("WARNING Plugin not enabled; see 'Enable plugin' in config", Color.Yellow);
+                return;
+            }
+
+            if (Plugin.IsIdle)
+            {
+                Context.Respond("WARNING Plugin idle; see 'First idle seconds' in config", Color.Yellow);
+            }
+        }
     }
 }
