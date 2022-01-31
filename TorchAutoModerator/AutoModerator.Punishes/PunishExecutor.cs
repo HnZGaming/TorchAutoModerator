@@ -14,11 +14,11 @@ using VRage.Game.ModAPI;
 
 namespace AutoModerator.Punishes
 {
-    public sealed class LagPunishExecutor
+    public sealed class PunishExecutor
     {
         public interface IConfig
         {
-            LagPunishType PunishType { get; }
+            PunishType PunishType { get; }
             double DamageNormalPerInterval { get; }
             double MinIntegrityNormal { get; }
         }
@@ -30,7 +30,7 @@ namespace AutoModerator.Punishes
         readonly BlockTypePairCollection _exemptBlockPairs;
         readonly HashSet<long> _punishedIds;
 
-        public LagPunishExecutor(IConfig config, BlockTypePairCollection exemptBlockPairs)
+        public PunishExecutor(IConfig config, BlockTypePairCollection exemptBlockPairs)
         {
             _config = config;
             _exemptBlockPairs = exemptBlockPairs;
@@ -42,7 +42,7 @@ namespace AutoModerator.Punishes
             _punishedIds.Clear();
         }
 
-        public async Task Update(IReadOnlyDictionary<long, LagPunishSource> lags)
+        public async Task Update(IReadOnlyDictionary<long, PunishSource> lags)
         {
             // move to the game loop so we can synchronously operate on blocks
             await GameLoopObserver.MoveToGameLoop();
@@ -102,12 +102,12 @@ namespace AutoModerator.Punishes
 
                 switch (_config.PunishType)
                 {
-                    case LagPunishType.Shutdown:
+                    case PunishType.Shutdown:
                     {
                         DisableFunctionalBlock(block);
                         break;
                     }
-                    case LagPunishType.Damage:
+                    case PunishType.Damage:
                     {
                         DamageBlock(block);
                         break;

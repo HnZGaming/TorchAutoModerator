@@ -6,7 +6,7 @@ using Utils.Torch;
 
 namespace AutoModerator.Punishes
 {
-    public sealed class LagPunishChatFeed
+    public sealed class PunishChatFeed
     {
         public interface IConfig
         {
@@ -19,7 +19,7 @@ namespace AutoModerator.Punishes
         readonly IChatManagerServer _chatManager;
         readonly HashSet<long> _pinnedPlayerIds;
 
-        public LagPunishChatFeed(IConfig config, IChatManagerServer chatManager)
+        public PunishChatFeed(IConfig config, IChatManagerServer chatManager)
         {
             _config = config;
             _chatManager = chatManager;
@@ -31,7 +31,7 @@ namespace AutoModerator.Punishes
             _pinnedPlayerIds.Clear();
         }
 
-        public void Update(IEnumerable<LagPunishChatSource> sources)
+        public void Update(IEnumerable<PunishSource> sources)
         {
             var pinnedSources = sources.Where(s => s.IsPinned).ToArray();
 
@@ -44,10 +44,10 @@ namespace AutoModerator.Punishes
                     .Replace("{player}", src.PlayerName)
                     .Replace("{faction}", src.FactionTag)
                     .Replace("{grid}", src.GridName)
-                    .Replace("{level}", $"{src.LongLagNormal * 100:0}%");
+                    .Replace("{level}", $"{src.LagNormal * 100:0}%");
 
                 _chatManager.SendMessage(_config.PunishReportChatName, 0, message);
-                Log.Debug($"new punish chat: {src}");
+                Log.Debug($"punishment chat sent: {src}");
             }
 
             _pinnedPlayerIds.Clear();

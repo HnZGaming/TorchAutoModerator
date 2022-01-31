@@ -15,7 +15,9 @@ namespace AutoModerator
     {
         static readonly ILogger Log = LogManager.GetCurrentClassLogger();
 
-        AutoModeratorPlugin Plugin => (AutoModeratorPlugin)Context.Plugin;
+        AutoModeratorPlugin Plugin => (AutoModeratorPlugin) Context.Plugin;
+        AutoModeratorConfig Config => Plugin.Config;
+        Core.AutoModerator AutoModerator => Plugin.AutoModerator;
 
         [Command("configs", "Get or set config")]
         [Permission(MyPromoteLevel.Admin)]
@@ -36,8 +38,7 @@ namespace AutoModerator
         public void Clear() => this.CatchAndReport(() =>
         {
             WarnIfIdle();
-
-            Plugin.ClearCache();
+            AutoModerator.ClearCache();
             Context.Respond("cleared all internal state");
         });
 
@@ -46,8 +47,7 @@ namespace AutoModerator
         public void ShowGpss() => this.CatchAndReport(() =>
         {
             WarnIfIdle();
-
-            var gpss = Plugin.GetAllGpss();
+            var gpss = AutoModerator.GetAllGpss();
 
             if (!gpss.Any())
             {
@@ -76,7 +76,7 @@ namespace AutoModerator
                 return;
             }
 
-            Plugin.Config.AddMutedPlayer(Context.Player.SteamUserId);
+            Config.AddMutedPlayer(Context.Player.SteamUserId);
             Context.Respond("Muted broadcasting. It may take some time to take effect.");
         });
 
@@ -92,7 +92,7 @@ namespace AutoModerator
                 return;
             }
 
-            Plugin.Config.RemoveMutedPlayer(Context.Player.SteamUserId);
+            Config.RemoveMutedPlayer(Context.Player.SteamUserId);
             Context.Respond("Unmuted broadcasting. It may take some time to take effect.");
         });
 
@@ -101,8 +101,7 @@ namespace AutoModerator
         public void UnmuteBroadcastsToAll() => this.CatchAndReport(() =>
         {
             WarnIfIdle();
-
-            Plugin.Config.RemoveAllMutedPlayers();
+            Config.RemoveAllMutedPlayers();
         });
 
         [Command("clearwarning", "Clear quest HUD.")]
@@ -110,9 +109,8 @@ namespace AutoModerator
         public void ClearQuests() => this.CatchAndReport(() =>
         {
             WarnIfIdle();
-
             Context.Player.ThrowIfNull("must be called by a player");
-            Plugin.ClearQuestForUser(Context.Player.IdentityId);
+            AutoModerator.ClearQuestForUser(Context.Player.IdentityId);
         });
 
         [Command("laggiest", "Get the laggiest grid of player. -id or -name to specify the player name other than yourself.")]
@@ -129,7 +127,7 @@ namespace AutoModerator
 
                 if (option.TryParseLong("id", out playerId))
                 {
-                    if (!Plugin.TryTraverseTrackedPlayerById(playerId, out playerName))
+                    if (!AutoModerator.TryFindPlayerNameById(playerId, out playerName))
                     {
                         Context.Respond($"Online player not found: {playerId}", Color.Red);
                         return;
@@ -140,7 +138,7 @@ namespace AutoModerator
 
                 if (option.TryParse("name", out playerName))
                 {
-                    if (!Plugin.TryTraverseTrackedPlayerByName(playerName, out playerId))
+                    if (!AutoModerator.TryFindPlayerByName(playerName, out playerId))
                     {
                         Context.Respond($"Online player not found: {playerName}", Color.Red);
                         return;
@@ -167,13 +165,13 @@ namespace AutoModerator
                 return;
             }
 
-            if (!Plugin.TryGetLaggiestGridOwnedBy(playerId, out var grid))
+            if (!AutoModerator.TryGetLaggiestGridOwnedBy(playerId, out var grid))
             {
                 Context.Respond($"No grid tracked for player: {playerName ?? $"<{playerId}>"}");
                 return;
             }
 
-            Context.Respond($"Laggiest grid owned by player \"{playerName}\": \"{grid.Name}\" ({grid.LongLagNormal * 100:0}%)");
+            Context.Respond($"Laggiest grid owned by player \"{playerName}\": \"{grid.Name}\" ({grid.LagNormal * 100:0}%)");
         });
 
         void WarnIfIdle()
@@ -184,7 +182,7 @@ namespace AutoModerator
                 return;
             }
 
-            if (Plugin.IsIdle)
+            if (AutoModerator.IsIdle)
             {
                 Context.Respond("WARNING Plugin idle; see 'First idle seconds' in config", Color.Yellow);
             }

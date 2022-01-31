@@ -17,7 +17,7 @@ namespace Utils.TimeSerieses.Test
             var lastCount = timeSeries.Count;
             Assert.AreEqual(3, lastCount);
 
-            timeSeries.RemoveOlderThan(DateTime.UtcNow - TimeSpan.FromSeconds(15));
+            timeSeries.Retain(DateTime.UtcNow - TimeSpan.FromSeconds(15));
 
             var nextCount = timeSeries.Count;
             Assert.AreEqual(2, nextCount);

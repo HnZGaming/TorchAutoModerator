@@ -10,7 +10,7 @@
         <AssemblyName>TorchAutoModerator</AssemblyName>
         <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
         <FileAlignment>512</FileAlignment>
-        <LangVersion>8</LangVersion>
+        <LangVersion>9</LangVersion>
     </PropertyGroup>
     <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
         <PlatformTarget>x64</PlatformTarget>
@@ -164,30 +164,26 @@
         </Reference>
     </ItemGroup>
     <ItemGroup>
-        <Compile Include="AutoModerator.Core\BlockTypePairCollection.cs" />
+        <Compile Include="AutoModerator.Core\AutoModerator.cs" />
+        <Compile Include="AutoModerator.Core\TrackedEntity.cs" />
+        <Compile Include="AutoModerator.Core\GridTracker.cs" />
+        <Compile Include="AutoModerator.Core\PlayerTracker.cs" />
+        <Compile Include="AutoModerator.Core\TrackedEntityUtils.cs" />
         <Compile Include="AutoModerator.Punishes.Broadcasts\GridGpsSource.cs" />
-        <Compile Include="AutoModerator.Core\TrackedEntitySnapshot.cs" />
-        <Compile Include="AutoModerator.Grids\GridLagTracker.cs" />
-        <Compile Include="AutoModerator.Players\PlayerLagTracker.cs" />
         <Compile Include="AutoModerator.Punishes.Broadcasts\BroadcastListenerCollection.cs" />
-        <Compile Include="AutoModerator.Punishes\LagPunishChatFeed.cs" />
-        <Compile Include="AutoModerator.Punishes\LagPunishChatSource.cs" />
-        <Compile Include="AutoModerator.Punishes\LagPunishExecutor.cs" />
-        <Compile Include="AutoModerator.Punishes\LagPunishSource.cs" />
-        <Compile Include="AutoModerator.Punishes\LagPunishType.cs" />
-        <Compile Include="AutoModerator.Warnings\LagNotificationCollection.cs" />
-        <Compile Include="AutoModerator.Warnings\LagPlayerState.cs" />
-        <Compile Include="AutoModerator.Warnings\LagQuest.cs" />
-        <Compile Include="AutoModerator.Warnings\LagQuestlogCollection.cs" />
+        <Compile Include="AutoModerator.Punishes\PunishChatFeed.cs" />
+        <Compile Include="AutoModerator.Punishes\PunishExecutor.cs" />
+        <Compile Include="AutoModerator.Punishes\PunishSource.cs" />
+        <Compile Include="AutoModerator.Punishes\PunishType.cs" />
+        <Compile Include="AutoModerator.Quests\Quest.cs" />
         <Compile Include="AutoModerator.Punishes.Broadcasts\GpsUtils.cs" />
         <Compile Include="AutoModerator.Punishes.Broadcasts\EntityGpsBroadcaster.cs" />
-        <Compile Include="AutoModerator.Core\EntityLagTracker.cs" />
-        <Compile Include="AutoModerator.Core\EntityLagSource.cs" />
-        <Compile Include="AutoModerator.Core\ExpiryDictionary.cs" />
-        <Compile Include="AutoModerator.Warnings\LagWarningChatFeed.cs" />
-        <Compile Include="AutoModerator.Warnings\LagWarningSource.cs" />
-        <Compile Include="AutoModerator.Warnings\LagWarningDefaultTexts.cs" />
-        <Compile Include="AutoModerator.Warnings\LagWarningTracker.cs" />
+        <Compile Include="AutoModerator.Core\EntityTracker.cs" />
+        <Compile Include="AutoModerator.Core\EntitySource.cs" />
+        <Compile Include="AutoModerator.Quests\QuestSource.cs" />
+        <Compile Include="AutoModerator.Quests\QuestDefaultTexts.cs" />
+        <Compile Include="AutoModerator.Quests\QuestTracker.cs" />
+        <Compile Include="AutoModerator.Quests\QuestEntity.cs" />
         <Compile Include="AutoModerator\AutoModeratorCommandModule.Inspect.cs" />
         <Compile Include="AutoModerator\AutoModeratorCommandModule.Profile.cs" />
         <Compile Include="Properties\AssemblyInfo.cs" />

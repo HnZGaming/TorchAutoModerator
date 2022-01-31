@@ -1,6 +1,6 @@
 ﻿namespace AutoModerator.Punishes
 {
-    public enum LagPunishType
+    public enum PunishType
     {
         None,
         Shutdown,

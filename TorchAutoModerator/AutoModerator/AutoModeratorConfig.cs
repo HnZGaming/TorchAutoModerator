@@ -2,15 +2,14 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Xml.Serialization;
-using AutoModerator.Grids;
-using AutoModerator.Players;
 using AutoModerator.Punishes;
 using AutoModerator.Punishes.Broadcasts;
-using AutoModerator.Warnings;
+using AutoModerator.Quests;
 using Sandbox.Game.Multiplayer;
 using Sandbox.Game.World;
 using Torch;
 using Torch.Views;
+using Utils.General;
 using Utils.Torch;
 using VRage.Game.ModAPI;
 
@@ -18,17 +17,8 @@ namespace AutoModerator
 {
     public sealed class AutoModeratorConfig :
         ViewModel,
-        EntityGpsBroadcaster.IConfig,
-        BroadcastListenerCollection.IConfig,
         FileLoggingConfigurator.IConfig,
-        GridLagTracker.IConfig,
-        PlayerLagTracker.IConfig,
-        LagQuestlogCollection.IConfig,
-        LagPunishExecutor.IConfig,
-        LagPunishChatFeed.IConfig,
-        LagNotificationCollection.IConfig,
-        LagWarningTracker.IConfig,
-        LagWarningChatFeed.IConfig
+        Core.AutoModerator.IConfig
     {
         const string OpGroupName = "Auto Moderator";
         const string OpGridGroupName = "Auto Moderator (Grids)";
@@ -56,21 +46,21 @@ namespace AutoModerator
         string _gridGpsNameFormat = "[{faction}] {grid} {ratio} ({time})";
         string _gridGpsDescriptionFormat = "The {rank} laggiest grid. Get 'em!";
         string _gpsColor = "#FF00FF";
-        List<ulong> _gpsMutedPlayerIds = new List<ulong>();
-        List<string> _exemptFactionTags = new List<string>();
+        List<ulong> _gpsMutedPlayerIds = new();
+        List<string> _exemptFactionTags = new();
         bool _suppressWpfOutput;
         bool _enableLoggingTrace;
         bool _enableLoggingDebug;
         bool _enableWarningQuestlog = true;
         string _logFilePath = DefaultLogFilePath;
-        string _warningTitle = LagWarningDefaultTexts.Title;
-        string _warningDetailMustProfileSelfText = LagWarningDefaultTexts.MustProfileSelf;
-        string _warningDetailMustDelagSelfText = LagWarningDefaultTexts.MustDelagSelf;
-        string _warningDetailMustWaitUnpinnedText = LagWarningDefaultTexts.MustWaitUnpinned;
-        string _warningDetailEndedText = LagWarningDefaultTexts.Ended;
-        LagPunishType _punishType;
+        string _warningTitle = QuestDefaultTexts.Title;
+        string _warningDetailMustProfileSelfText = QuestDefaultTexts.MustProfileSelf;
+        string _warningDetailMustDelagSelfText = QuestDefaultTexts.MustDelagSelf;
+        string _warningDetailMustWaitUnpinnedText = QuestDefaultTexts.MustWaitUnpinned;
+        string _warningDetailEndedText = QuestDefaultTexts.Ended;
+        PunishType _punishType;
         double _damageNormal = 0.05d;
-        string _warningCurrentLevelText = LagWarningDefaultTexts.CurrentLevel;
+        string _warningCurrentLevelText = QuestDefaultTexts.CurrentLevel;
         double _minIntegrityNormal = 0.5d;
         bool _enablePunishChatFeed = true;
         string _punishReportChatName = "Auto Moderator";
@@ -78,8 +68,8 @@ namespace AutoModerator
         double _outlierFenceNormal = 2;
         double _gracePeriodTime = 20;
         bool _isEnabled = true;
-        List<string> _profileExemptBlockTypeIds = new List<string>{"Cockpit", "CockpitOpen"};
-        List<string> _punishExemptBlockTypes = new List<string>{"BatteryBlock", "Door", "TerminalBlock/ControlPanel"};
+        List<string> _profileExemptBlockTypeIds;
+        List<string> _punishExemptBlockTypes;
 
         [XmlElement]
         [Display(Order = 1, Name = "Enable plugin", GroupName = OpGroupName)]
@@ -159,7 +149,7 @@ namespace AutoModerator
         public List<string> ExemptFactionTags
         {
             get => _exemptFactionTags;
-            set => SetValue(ref _exemptFactionTags, new HashSet<string>(value).ToList());
+            set => SetValue(ref _exemptFactionTags, value.ToSet().ToList());
         }
 
         [XmlElement]
@@ -167,7 +157,7 @@ namespace AutoModerator
         public List<string> ProfileExemptBlockTypeIds
         {
             get => _profileExemptBlockTypeIds;
-            set => SetValue(ref _profileExemptBlockTypeIds, new HashSet<string>(value).ToList());
+            set => SetValue(ref _profileExemptBlockTypeIds, value.ToSet().ToList());
         }
 
         [XmlElement]
@@ -188,82 +178,82 @@ namespace AutoModerator
             set => SetValue(ref _maxPlayerMspf, value);
         }
 
-        [XmlElement]
-        [Display(Order = 1, Name = "Lag threshold (0-1)", GroupName = WarningGroupName,
+        [XmlElement("WarningLagNormal")]
+        [Display(Order = 1, Name = "Warning threshold (0-1)", GroupName = WarningGroupName,
             Description = "Send a warning to players when they exceed N times the max allowed lag per grid or player.")]
-        public double WarningLagNormal
+        public double QuestLagNormal
         {
             get => _warningNormal;
             set => SetValue(ref _warningNormal, value);
         }
 
-        [XmlElement]
+        [XmlElement("EnableLagWarningNotification")]
         [Display(Order = 0, Name = "Enable warning notification", GroupName = WarningNotificationGroupName)]
-        public bool EnableLagWarningNotification
+        public bool EnableNotification
         {
             get => _enableLagWarningNotification;
             set => SetValue(ref _enableLagWarningNotification, value);
         }
 
         [ConfigPropertyIgnore]
-        [XmlElement]
+        [XmlElement("WarningCurrentLevelText")]
         [Display(Order = 1, Name = "Current level", GroupName = WarningNotificationGroupName)]
-        public string WarningCurrentLevelText
+        public string NotificationCurrentText
         {
             get => _warningCurrentLevelText;
             set => SetValue(ref _warningCurrentLevelText, value);
         }
 
-        [XmlElement]
+        [XmlElement("EnableWarningQuestlog")]
         [Display(Order = 0, Name = "Enable Questlog", GroupName = WarningQuestlogGroupName)]
-        public bool EnableWarningQuestlog
+        public bool EnableQuest
         {
             get => _enableWarningQuestlog;
             set => SetValue(ref _enableWarningQuestlog, value);
         }
 
-        public bool EnableWarningChatFeed => !_enableWarningQuestlog;
+        public bool EnableQuestChatFeed => !_enableWarningQuestlog;
 
         [ConfigPropertyIgnore]
-        [XmlElement]
+        [XmlElement("WarningTitle")]
         [Display(Order = 2, Name = "Title", GroupName = WarningQuestlogGroupName)]
-        public string WarningTitle
+        public string QuestTitle
         {
             get => _warningTitle;
             set => SetValue(ref _warningTitle, value);
         }
 
         [ConfigPropertyIgnore]
-        [XmlElement]
+        [XmlElement("WarningDetailMustProfileSelfText")]
         [Display(Order = 3, Name = "Detail (1)", GroupName = WarningQuestlogGroupName)]
-        public string WarningDetailMustProfileSelfText
+        public string QuestDetailMustProfileSelfText
         {
             get => _warningDetailMustProfileSelfText;
             set => SetValue(ref _warningDetailMustProfileSelfText, value);
         }
 
         [ConfigPropertyIgnore]
-        [XmlElement]
+        [XmlElement("WarningDetailMustDelagSelfText")]
         [Display(Order = 4, Name = "Detail (2)", GroupName = WarningQuestlogGroupName)]
-        public string WarningDetailMustDelagSelfText
+        public string QuestDetailMustDelagSelfText
         {
             get => _warningDetailMustDelagSelfText;
             set => SetValue(ref _warningDetailMustDelagSelfText, value);
         }
 
         [ConfigPropertyIgnore]
-        [XmlElement]
+        [XmlElement("WarningDetailMustWaitUnpinnedText")]
         [Display(Order = 5, Name = "Detail (3)", GroupName = WarningQuestlogGroupName)]
-        public string WarningDetailMustWaitUnpinnedText
+        public string QuestDetailMustWaitUnpinnedText
         {
             get => _warningDetailMustWaitUnpinnedText;
             set => SetValue(ref _warningDetailMustWaitUnpinnedText, value);
         }
 
         [ConfigPropertyIgnore]
-        [XmlElement]
+        [XmlElement("WarningDetailEndedText")]
         [Display(Order = 6, Name = "Detail (4)", GroupName = WarningQuestlogGroupName)]
-        public string WarningDetailEndedText
+        public string QuestDetailEndedText
         {
             get => _warningDetailEndedText;
             set => SetValue(ref _warningDetailEndedText, value);
@@ -272,7 +262,7 @@ namespace AutoModerator
         [ConfigProperty(MyPromoteLevel.None)]
         [XmlElement]
         [Display(Order = 1, Name = "Punishment type", GroupName = PunishGroupName)]
-        public LagPunishType PunishType
+        public PunishType PunishType
         {
             get => _punishType;
             set => SetValue(ref _punishType, value);
@@ -308,8 +298,10 @@ namespace AutoModerator
         public List<string> PunishExemptBlockTypes
         {
             get => _punishExemptBlockTypes;
-            set => SetValue(ref _punishExemptBlockTypes, value);
+            set => SetValue(ref _punishExemptBlockTypes, value.ToSet().ToList());
         }
+
+        IEnumerable<string> Core.AutoModerator.IConfig.ExemptBlockTypePairs => _punishExemptBlockTypes;
 
         [XmlElement]
         [Display(Order = 2, Name = "Damage per interval (0-1)", GroupName = DamageGroupName,
@@ -354,7 +346,7 @@ namespace AutoModerator
         public List<ulong> GpsMutedPlayerIds
         {
             get => _gpsMutedPlayerIds;
-            set => SetValue(ref _gpsMutedPlayerIds, new HashSet<ulong>(value).ToList());
+            set => SetValue(ref _gpsMutedPlayerIds, value.ToSet().ToList());
         }
 
         [ConfigPropertyIgnore]
@@ -420,6 +412,34 @@ namespace AutoModerator
         }
 
         IEnumerable<ulong> BroadcastListenerCollection.IConfig.GpsMutedPlayers => _gpsMutedPlayerIds;
+
+        public void Initialize()
+        {
+            // remove duplicates
+            GpsMutedPlayerIds = GpsMutedPlayerIds;
+            ExemptFactionTags = ExemptFactionTags;
+            ProfileExemptBlockTypeIds = ProfileExemptBlockTypeIds;
+            PunishExemptBlockTypes = PunishExemptBlockTypes;
+
+            if (ProfileExemptBlockTypeIds.Count == 0)
+            {
+                ProfileExemptBlockTypeIds = new List<string>
+                {
+                    "Cockpit",
+                    "CockpitOpen",
+                };
+            }
+
+            if (PunishExemptBlockTypes.Count == 0)
+            {
+                PunishExemptBlockTypes = new List<string>
+                {
+                    "BatteryBlock",
+                    "Door",
+                    "TerminalBlock/ControlPanel",
+                };
+            }
+        }
 
         public void AddMutedPlayer(ulong mutedPlayerId)
         {

@@ -1,8 +1,8 @@
 ﻿using System.Collections.Generic;
 
-namespace AutoModerator.Warnings
+namespace AutoModerator.Quests
 {
-    public static class LagWarningDefaultTexts
+    public static class QuestDefaultTexts
     {
         public const string Title = "Auto Moderator: WARNING";
         public const string CurrentLevel = "Your current lag";
