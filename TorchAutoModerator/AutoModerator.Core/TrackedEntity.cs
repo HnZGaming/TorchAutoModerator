@@ -12,7 +12,7 @@ namespace AutoModerator.Core
         readonly EntityTracker.IConfig _config;
         readonly TimeSeries<double> _timeSeries;
         readonly DateTime _spawnTime;
-        DateTime? _pinExpirationTime;
+        DateTime? _pinStartTime;
 
         public TrackedEntity(EntityTracker.IConfig config, long id)
         {
@@ -31,11 +31,12 @@ namespace AutoModerator.Core
         public string OwnerName { get; private set; } //todo multiple owners
         public string FactionTag { get; private set; } //todo multiple owners
         public bool IsBlessed { get; private set; }
-        public bool IsPinned => _pinExpirationTime > DateTime.UtcNow;
+        public DateTime? PinEndTime => _pinStartTime + _config.PinSpan;
+        public bool IsPinned => PinEndTime > DateTime.UtcNow;
         public double LatestMspf { get; private set; }
         public double LagNormal { get; private set; }
         public ITimeSeries<double> TimeSeries => _timeSeries;
-        public TimeSpan PinRemainingTime => (_pinExpirationTime - DateTime.UtcNow) ?? TimeSpan.Zero;
+        public TimeSpan PinRemainingTime => (PinEndTime - DateTime.UtcNow) ?? TimeSpan.Zero;
 
         public void Update(in EntitySource? srcOrNull)
         {
@@ -74,7 +75,7 @@ namespace AutoModerator.Core
             {
                 LagNormal = 0;
                 IsBlessed = true;
-                _pinExpirationTime = null;
+                _pinStartTime = null;
                 return;
             }
 
@@ -85,7 +86,7 @@ namespace AutoModerator.Core
             if (!_timeSeries.IsLongerThan(minDataTimeLength))
             {
                 IsBlessed = true;
-                _pinExpirationTime = null;
+                _pinStartTime = null;
                 return;
             }
 
@@ -94,7 +95,7 @@ namespace AutoModerator.Core
             // pin long-laggy entities
             if (LagNormal >= 1)
             {
-                _pinExpirationTime = now + _config.PinSpan;
+                _pinStartTime = now;
             }
         }
 

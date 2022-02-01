@@ -41,6 +41,7 @@ namespace AutoModerator.Quests
         }
 
         public long PlayerId { get; }
+        public string PlayerName { get; private set; }
         public long EntityId { get; private set; }
         public double LagNormal { get; private set; }
         public double QuestLagNormal { get; private set; }
@@ -62,6 +63,7 @@ namespace AutoModerator.Quests
             Log.Trace($"QuestEntity.Update({source})");
 
             EntityId = source.EntityId;
+            PlayerName = source.PlayerName;
             LagNormal = source.LagNormal;
             QuestLagNormal = source.LagNormal / _config.QuestLagNormal;
             Pin = source.Pin;
@@ -240,7 +242,7 @@ namespace AutoModerator.Quests
 
         public override string ToString()
         {
-            return $"{{{PlayerId} {Quest} {LagNormal * 100:0}% ({QuestLagNormal * 100:0}%) pin({Pin.TotalSeconds:0}secs)}}";
+            return $"{{\"{PlayerName}\" {Quest} {LagNormal * 100:0}% ({QuestLagNormal * 100:0}%) pin({Pin.TotalSeconds:0}secs)}}";
         }
     }
 }
