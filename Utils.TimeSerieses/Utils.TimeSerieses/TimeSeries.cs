@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using NLog;
 
 namespace Utils.TimeSerieses
 {
@@ -31,6 +32,14 @@ namespace Utils.TimeSerieses
             return GetEnumerator();
         }
 
+        public bool IsLongerThan(TimeSpan timeSpan)
+        {
+            if (_timestamps.Count < 2) return false;
+            var oldestTimestamp = _timestamps[0];
+            var youngestTimestamp = _timestamps[_timestamps.Count - 1];
+            return (youngestTimestamp - oldestTimestamp) > timeSpan;
+        }
+
         public void Add(DateTime timestamp, T element)
         {
             if (_timestamps.Count > 0)
@@ -46,14 +55,14 @@ namespace Utils.TimeSerieses
             _elements.Add(element);
         }
 
-        public void RemoveOlderThan(DateTime minTimestamp)
+        public void Retain(DateTime lastTimestamp)
         {
             if (Count == 0) return;
 
             var newTimestamps = new List<DateTime>();
             foreach (var timestamp in _timestamps)
             {
-                if (timestamp > minTimestamp)
+                if (timestamp > lastTimestamp)
                 {
                     newTimestamps.Add(timestamp);
                 }

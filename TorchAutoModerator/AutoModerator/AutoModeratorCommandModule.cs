@@ -16,16 +16,18 @@ namespace AutoModerator
         static readonly ILogger Log = LogManager.GetCurrentClassLogger();
 
         AutoModeratorPlugin Plugin => (AutoModeratorPlugin)Context.Plugin;
+        AutoModeratorConfig Config => Plugin.Config;
+        Core.AutoModerator AutoModerator => Plugin.AutoModerator;
 
         [Command("configs", "Get or set config")]
-        [Permission(MyPromoteLevel.Admin)]
+        [Permission(MyPromoteLevel.None)]
         public void GetOrSetConfig() => this.CatchAndReport(() =>
         {
             this.GetOrSetProperty(Plugin.Config);
         });
 
         [Command("commands", "Get a list of commands")]
-        [Permission(MyPromoteLevel.Admin)]
+        [Permission(MyPromoteLevel.None)]
         public void ShowCommandList() => this.CatchAndReport(() =>
         {
             this.ShowCommands();
@@ -36,8 +38,7 @@ namespace AutoModerator
         public void Clear() => this.CatchAndReport(() =>
         {
             WarnIfIdle();
-
-            Plugin.ClearCache();
+            AutoModerator.ClearCache();
             Context.Respond("cleared all internal state");
         });
 
@@ -46,8 +47,7 @@ namespace AutoModerator
         public void ShowGpss() => this.CatchAndReport(() =>
         {
             WarnIfIdle();
-
-            var gpss = Plugin.GetAllGpss();
+            var gpss = AutoModerator.GetAllGpss();
 
             if (!gpss.Any())
             {
@@ -76,7 +76,7 @@ namespace AutoModerator
                 return;
             }
 
-            Plugin.Config.AddMutedPlayer(Context.Player.SteamUserId);
+            Config.AddMutedPlayer(Context.Player.SteamUserId);
             Context.Respond("Muted broadcasting. It may take some time to take effect.");
         });
 
@@ -92,7 +92,7 @@ namespace AutoModerator
                 return;
             }
 
-            Plugin.Config.RemoveMutedPlayer(Context.Player.SteamUserId);
+            Config.RemoveMutedPlayer(Context.Player.SteamUserId);
             Context.Respond("Unmuted broadcasting. It may take some time to take effect.");
         });
 
@@ -101,8 +101,7 @@ namespace AutoModerator
         public void UnmuteBroadcastsToAll() => this.CatchAndReport(() =>
         {
             WarnIfIdle();
-
-            Plugin.Config.RemoveAllMutedPlayers();
+            Config.RemoveAllMutedPlayers();
         });
 
         [Command("clearwarning", "Clear quest HUD.")]
@@ -110,70 +109,8 @@ namespace AutoModerator
         public void ClearQuests() => this.CatchAndReport(() =>
         {
             WarnIfIdle();
-
             Context.Player.ThrowIfNull("must be called by a player");
-            Plugin.ClearQuestForUser(Context.Player.IdentityId);
-        });
-
-        [Command("laggiest", "Get the laggiest grid of player. -id or -name to specify the player name other than yourself.")]
-        [Permission(MyPromoteLevel.None)]
-        public void ShowLaggiest() => this.CatchAndReport(() =>
-        {
-            WarnIfIdle();
-            
-            var playerId = 0L;
-            var playerName = "";
-            foreach (var arg in Context.Args)
-            {
-                if (!CommandOption.TryGetOption(arg, out var option)) continue;
-
-                if (option.TryParseLong("id", out playerId))
-                {
-                    if (!Plugin.TryTraverseTrackedPlayerById(playerId, out playerName))
-                    {
-                        Context.Respond($"Online player not found: {playerId}", Color.Red);
-                        return;
-                    }
-
-                    continue;
-                }
-
-                if (option.TryParse("name", out playerName))
-                {
-                    if (!Plugin.TryTraverseTrackedPlayerByName(playerName, out playerId))
-                    {
-                        Context.Respond($"Online player not found: {playerName}", Color.Red);
-                        return;
-                    }
-
-                    continue;
-                }
-
-                Context.Respond($"Unknown option: {arg}", Color.Red);
-                return;
-            }
-
-            if (playerId == 0)
-            {
-                Context.Respond("No input", Color.Red);
-                return;
-            }
-
-            if (Context.Player is { } caller &&
-                caller.PromoteLevel < MyPromoteLevel.Moderator &&
-                !caller.IsFriendWith(playerId))
-            {
-                Context.Respond($"You're not a friend of this player: {playerName}", Color.Red);
-                return;
-            }
-
-            if (!Plugin.TryGetLaggiestGridOwnedBy(playerId, out var grid))
-            {
-                Context.Respond($"No grid tracked for player: {playerName ?? $"<{playerId}>"}");
-                return;
-            }
-
-            Context.Respond($"Laggiest grid owned by player \"{playerName}\": \"{grid.Name}\" ({grid.LongLagNormal * 100:0}%)");
+            AutoModerator.ClearQuestForUser(Context.Player.IdentityId);
         });
 
         void WarnIfIdle()
@@ -184,7 +121,7 @@ namespace AutoModerator
                 return;
             }
 
-            if (Plugin.IsIdle)
+            if (AutoModerator.IsIdle)
             {
                 Context.Respond("WARNING Plugin idle; see 'First idle seconds' in config", Color.Yellow);
             }

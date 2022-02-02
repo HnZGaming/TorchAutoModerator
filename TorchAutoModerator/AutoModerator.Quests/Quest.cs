@@ -1,12 +1,11 @@
-﻿namespace AutoModerator.Warnings
+﻿namespace AutoModerator.Quests
 {
-    public enum LagQuest
+    public enum Quest
     {
         None,
         MustProfileSelf,
         MustDelagSelf,
         MustWaitUnpinned,
         Ended, // show players that the quest is done
-        Cleared, // remove the hud
     }
 }

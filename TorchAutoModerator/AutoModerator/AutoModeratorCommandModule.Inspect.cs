@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using AutoModerator.Core;
-using AutoModerator.Warnings;
+using AutoModerator.Quests;
 using Sandbox.Game.Entities;
 using Sandbox.Game.World;
 using Torch.Commands;
@@ -27,11 +27,11 @@ namespace AutoModerator
             var calledByNormalPlayer = (Context.Player?.PromoteLevel ?? MyPromoteLevel.Admin) == MyPromoteLevel.None;
             var playerId = Context.Player?.IdentityId ?? 0L;
             var faction = MySession.Static.Factions.GetPlayerFaction(playerId);
-            var memberIds = faction?.Members.Keys.ToSet() ?? new HashSet<long> {playerId};
+            var memberIds = faction?.Members.Keys.ToSet() ?? new HashSet<long> { playerId };
 
             var top = 5;
             var showOutlierTests = false;
-            var specificEntityIdOrNull = (long?) null;
+            var specificEntityIdOrNull = (long?)null;
             foreach (var arg in Context.Args)
             {
                 if (!CommandOption.TryGetOption(arg, out var option)) continue;
@@ -54,7 +54,7 @@ namespace AutoModerator
 
                 if (option.TryParseLong("id", out var specificEntityId))
                 {
-                    if (!Plugin.TryGetTrackedEntity(specificEntityId, out _))
+                    if (!AutoModerator.TryGetEntity(specificEntityId, out _))
                     {
                         Context.Respond($"Entity not tracked: {specificEntityId}", Color.Red);
                         return;
@@ -66,7 +66,7 @@ namespace AutoModerator
 
                 if (option.TryParse("name", out var entityName))
                 {
-                    if (!Plugin.TryTraverseEntityByName(entityName, out var entity))
+                    if (!AutoModerator.TryFindEntityByName(entityName, out var entity))
                     {
                         Context.Respond($"Entity not tracked by name: {entityName}", Color.Red);
                         return;
@@ -129,28 +129,26 @@ namespace AutoModerator
                 return;
             }
 
-            Context.Respond("Gathering data...");
-
-            var players = new List<TrackedEntitySnapshot>();
-            foreach (var s in OrderForInspection(Plugin.GetTrackedPlayers()))
+            var players = new List<TrackedEntity>();
+            foreach (var entity in AutoModerator.Players.GetLaggiestEntities())
             {
                 if (calledByNormalPlayer)
                 {
-                    if (!memberIds.Contains(s.Id)) continue;
+                    if (!memberIds.Contains(entity.Id)) continue;
                 }
 
-                players.Add(s);
+                players.Add(entity);
             }
 
-            var grids = new List<TrackedEntitySnapshot>();
-            foreach (var s in OrderForInspection(Plugin.GetTrackedGrids()).Take(top))
+            var grids = new List<TrackedEntity>();
+            foreach (var entity in AutoModerator.Grids.GetLaggiestEntities().Take(top))
             {
                 if (calledByNormalPlayer)
                 {
-                    if (!memberIds.Contains(s.OwnerId)) continue;
+                    if (!memberIds.Contains(entity.OwnerId)) continue;
                 }
 
-                grids.Add(s);
+                grids.Add(entity);
             }
 
             var msgBuilder = new StringBuilder();
@@ -160,10 +158,9 @@ namespace AutoModerator
             {
                 msgBuilder.AppendLine("Players:");
 
-                var warningStates = Plugin.GetWarningState();
                 foreach (var s in players)
                 {
-                    var warning = warningStates.GetOrElse(s.Id, null);
+                    var warning = AutoModerator.TryFindQuestForEntity(s.Id, out var q) ? q : null;
                     var line = MakeTrackedEntityLine(s, warning);
                     msgBuilder.AppendLine(line);
                 }
@@ -179,7 +176,8 @@ namespace AutoModerator
 
                 foreach (var s in grids)
                 {
-                    var line = MakeTrackedEntityLine(s);
+                    var warning = AutoModerator.TryFindQuestForEntity(s.Id, out var q) ? q : null;
+                    var line = MakeTrackedEntityLine(s, warning);
                     msgBuilder.AppendLine(line);
                 }
             }
@@ -188,52 +186,34 @@ namespace AutoModerator
                 msgBuilder.AppendLine("No grids");
             }
 
-            Context.Respond(msgBuilder.ToString());
+            Context.Respond(msgBuilder.ToString(), "AutoModerator");
         });
 
-        string MakeTrackedEntityLine(TrackedEntitySnapshot s, LagPlayerState w = null)
+        static string MakeTrackedEntityLine(TrackedEntity entity, QuestEntity quest)
         {
-            var lagGraph = MakeOnelinerGraph(30, 1, s.LongLagNormal);
-
-            var pinSecs = s.RemainingTime.TotalSeconds;
-            var pinSecsNormal = pinSecs / Plugin.Config.PunishTime;
-            var pinGraph = MakeOnelinerGraph(30, 1, pinSecsNormal, false);
-            pinGraph = s.IsPinned ? $"{pinGraph} pin {pinSecs:0} secs" : "no pin";
-            var warning = w?.Quest > LagQuest.None ? $"warning: {w.Quest} ({w.LastWarningLagNormal * 100:0}%)" : "";
-
-            return $"{lagGraph} {pinGraph} {s.Name} ({s.Id}) {warning}";
-        }
-
-        static IEnumerable<TrackedEntitySnapshot> OrderForInspection(IEnumerable<TrackedEntitySnapshot> snapshots)
-        {
-            var pinnedResults = new List<TrackedEntitySnapshot>();
-            var otherResults = new List<TrackedEntitySnapshot>();
-            foreach (var snapshot in snapshots)
+            var graph = MakeOnelinerGraph(30, 1, entity.LagNormal);
+            var warning = (quest?.Quest ?? Quest.None) switch
             {
-                if (snapshot.IsPinned)
-                {
-                    pinnedResults.Add(snapshot);
-                }
-                else
-                {
-                    otherResults.Add(snapshot);
-                }
-            }
+                Quest.None => "<ok>",
+                Quest.MustProfileSelf => "<warn>",
+                Quest.MustDelagSelf => "<warn>",
+                Quest.MustWaitUnpinned => $"<punish:{entity.PinRemainingTime.TotalSeconds:0}sec>",
+                Quest.Ended => "<ok>",
+                _ => throw new ArgumentOutOfRangeException()
+            };
 
-            pinnedResults.Sort(TrackedEntitySnapshot.LongLagComparer.Instance);
-            otherResults.Sort(TrackedEntitySnapshot.LongLagComparer.Instance);
-            return pinnedResults.Concat(otherResults);
+            return $"{graph} {warning} {entity.Name}";
         }
 
         void InspectEntity(long entityId, bool showOutlierTests)
         {
-            if (!Plugin.TryGetTimeSeries(entityId, out var timeSeries))
+            if (!AutoModerator.TryGetTimeSeries(entityId, out var timeSeries))
             {
                 Context.Respond("Time series not found", Color.Red);
                 return;
             }
 
-            if (!Plugin.TryGetTrackedEntity(entityId, out var entity))
+            if (!AutoModerator.TryGetEntity(entityId, out var entity))
             {
                 Context.Respond("Tracked entity not found", Color.Red);
                 return;
@@ -244,8 +224,6 @@ namespace AutoModerator
                 Context.Respond("Time series found but empty", Color.Red);
                 return;
             }
-
-            Context.Respond("Gathering data...");
 
             var outlierTests = timeSeries.TestOutlier();
             var series = timeSeries.Zip(outlierTests);
@@ -261,12 +239,12 @@ namespace AutoModerator
                 msgBuilder.AppendLine("Blessed (just spawned)");
             }
 
-            msgBuilder.AppendLine($"Lag (evaluated): {entity.LongLagNormal * 100:0}%");
-            msgBuilder.AppendLine(entity.IsPinned ? $"Pinned for next {entity.RemainingTime.TotalSeconds} seconds" : "Not pinned");
+            msgBuilder.AppendLine($"Lag (evaluated): {entity.LagNormal * 100:0}%");
+            msgBuilder.AppendLine(entity.IsPinned ? $"Pinned for next {entity.PinRemainingTime.TotalSeconds:0} seconds" : "Not pinned");
 
-            if (Plugin.GetWarningState().TryGetValue(entityId, out var w))
+            if (AutoModerator.TryFindQuestForEntity(entityId, out var w))
             {
-                msgBuilder.AppendLine($"Warning: {w.Quest} (Normal: {w.LastWarningLagNormal * 100:0}%)");
+                msgBuilder.AppendLine($"Warning: {w.Quest} (Normal: {w.QuestLagNormal * 100:0}%)");
             }
 
             foreach (var (((_, normal), outlierTest), index) in series.Indexed())
@@ -285,7 +263,7 @@ namespace AutoModerator
         {
             normal = normal.IsValid() ? normal : 0;
             var graphNormal = Math.Min(1, Math.Max(0, normal / maxNormal));
-            var size = Math.Min(maxWidth, (int) (graphNormal * maxWidth));
+            var size = Math.Min(maxWidth, (int)(graphNormal * maxWidth));
             var graph0 = Enumerable.Repeat('¦', size);
             var graph1 = Enumerable.Repeat('\'', maxWidth - size);
             var graph = new string(graph0.Concat(graph1).ToArray());

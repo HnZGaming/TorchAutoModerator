@@ -36,7 +36,7 @@ namespace Utils.TimeSerieses
             return lastTimestamp - firstTimestamp;
         }
 
-        public static ITimeSeries<T> GetScoped<T>(this ITimeSeries<T> self, DateTime from)
+        public static ITimeSeries<T> SliceSince<T>(this ITimeSeries<T> self, DateTime from)
         {
             if (self[0].Timestamp > from) return self; // within the scope
             if (self[self.Count - 1].Timestamp < from) return new TimeSeries<T>(); // empty

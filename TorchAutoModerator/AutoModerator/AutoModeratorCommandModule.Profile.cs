@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -98,44 +99,46 @@ namespace AutoModerator
 
                 await Task.Delay(profileTime);
 
-                msgBuilder.AppendLine("Grid lags (% of max lag per grid):");
+                msgBuilder.AppendLine("Grids (% among all your grids):");
 
                 var gridProfileResult = gridProfiler.GetResult();
-                foreach (var (grid, profilerEntry) in gridProfileResult.GetTopEntities(count))
+                foreach (var (grid, percentage) in GetRelativeTimes(gridProfileResult, count))
                 {
-                    var gridName = grid.DisplayName;
-                    var mspf = profilerEntry.MainThreadTime / gridProfileResult.TotalFrameCount;
-                    var lagNormal = mspf / Plugin.Config.MaxGridMspf;
-                    msgBuilder.AppendLine($"\"{gridName}\" {lagNormal * 100:0}%");
+                    msgBuilder.AppendLine($"> {grid.DisplayName} {percentage * 100:0}%");
                 }
 
                 msgBuilder.AppendLine();
-                msgBuilder.AppendLine("Block lags (% of total per player or grid):");
+                msgBuilder.AppendLine("Blocks (% among all your blocks):");
 
-                var blockLags = new Dictionary<string, double>();
                 var blockProfilerResult = blockProfiler.GetResult();
-                foreach (var (block, profileEntity) in blockProfilerResult.GetTopEntities(count))
+                foreach (var (block, percentage) in GetRelativeTimes(blockProfilerResult, count))
                 {
-                    var blockName = block.BlockPairName;
-
-                    blockLags.TryGetValue(blockName, out var lag);
-                    lag += profileEntity.MainThreadTime;
-
-                    blockLags[blockName] = lag;
-                    Log.Trace($"player \"{Context.Player.DisplayName}\" self-profile block {blockName} {lag:0.00}ms");
+                    msgBuilder.AppendLine($"> {block.BlockPairName} {percentage * 100:0}%");
                 }
 
-                var totalBlockLag = blockLags.Values.Sum();
-                foreach (var (blockName, lag) in blockLags.OrderByDescending(p => p.Value))
-                {
-                    var relLag = lag / totalBlockLag;
-                    msgBuilder.AppendLine($"{blockName} {relLag * 100:0}%");
-                }
+                msgBuilder.AppendLine();
+                msgBuilder.AppendLine("For other commands, type: !lag commands");
 
-                Context.Respond(msgBuilder.ToString());
+                Context.Respond(msgBuilder.ToString(), "AutoModerator");
             }
 
-            Plugin.OnSelfProfiled(playerId);
+            AutoModerator.OnSelfProfiled(playerId);
         });
+
+        static IEnumerable<(T Entity, double NormalTime)> GetRelativeTimes<T>(BaseProfilerResult<T> result, int count)
+        {
+            var times = new List<(T Entity, double Time)>();
+            foreach (var (entity, profilerEntry) in result.GetTopEntities(count))
+            {
+                times.Add((entity, profilerEntry.MainThreadTime));
+            }
+
+            var totalTime = times.Sum(t => t.Time);
+            foreach (var (entity, time) in times)
+            {
+                var normalTime = time / totalTime;
+                yield return (entity, normalTime);
+            }
+        }
     }
 }

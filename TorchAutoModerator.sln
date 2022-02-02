@@ -10,8 +10,6 @@ Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "Utils.General", "TorchUtils
 EndProject
 Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "Utils.Torch", "TorchUtils\Utils.Torch\Utils.Torch.shproj", "{27569BFC-809F-4253-8959-78107741620D}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TorchAutoModerator.Tests", "TorchAutoModerator.Tests\TorchAutoModerator.Tests.csproj", "{12177C6E-D81E-495C-B240-8739838738BB}"
-EndProject
 Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "Utils.TorchEntityGps", "TorchUtils\Utils.TorchEntityGps\Utils.TorchEntityGps.shproj", "{344CC62A-4EBA-4D7C-B70D-901808BB874B}"
 EndProject
 Global
@@ -32,9 +30,5 @@ Global
 		{74E430BF-3027-4E02-8B34-39E81387FE49}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{74E430BF-3027-4E02-8B34-39E81387FE49}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{74E430BF-3027-4E02-8B34-39E81387FE49}.Release|Any CPU.Build.0 = Release|Any CPU
-		{12177C6E-D81E-495C-B240-8739838738BB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{12177C6E-D81E-495C-B240-8739838738BB}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{12177C6E-D81E-495C-B240-8739838738BB}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{12177C6E-D81E-495C-B240-8739838738BB}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
