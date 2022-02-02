@@ -78,7 +78,10 @@ namespace AutoModerator.Core
         {
             Log.Info("started main");
 
+            await GameLoopObserver.MoveToGameLoop(canceller);
             _entityGpsBroadcaster.ClearGpss();
+            await VRageUtils.MoveToThreadPool(canceller);
+
             _questTracker.Clear();
 
             // Wait for some time during the session startup
@@ -95,10 +98,12 @@ namespace AutoModerator.Core
                 {
                     _grids.Clear();
                     _players.Clear();
-                    _entityGpsBroadcaster.ClearGpss();
                     _questTracker.Clear();
                     _punishExecutor.Clear();
                     _punishChatFeed.Clear();
+
+                    await GameLoopObserver.MoveToGameLoop(canceller);
+                    _entityGpsBroadcaster.ClearGpss();
 
                     await Task.Delay(1.Seconds(), canceller);
                     return;
@@ -270,7 +275,9 @@ namespace AutoModerator.Core
         {
             if (_config.PunishType != PunishType.Broadcast)
             {
+                await GameLoopObserver.MoveToGameLoop(canceller);
                 _entityGpsBroadcaster.ClearGpss();
+                await VRageUtils.MoveToThreadPool(canceller);
                 return;
             }
 
@@ -292,7 +299,10 @@ namespace AutoModerator.Core
             }
 
             var targetIdentityIds = _gpsReceivers.GetReceiverIdentityIds();
-            await _entityGpsBroadcaster.ReplaceGpss(allGpsSources.Values, targetIdentityIds, canceller);
+
+            await GameLoopObserver.MoveToGameLoop(canceller);
+            _entityGpsBroadcaster.ReplaceGpss(allGpsSources.Values, targetIdentityIds);
+            await VRageUtils.MoveToThreadPool(canceller);
 
             Log.Trace("broadcast done");
         }

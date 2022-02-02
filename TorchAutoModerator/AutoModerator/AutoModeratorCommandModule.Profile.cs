@@ -117,7 +117,7 @@ namespace AutoModerator
                 }
 
                 msgBuilder.AppendLine();
-                msgBuilder.AppendLine("For other commands, type !lag commands");
+                msgBuilder.AppendLine("For other commands, type: !lag commands");
 
                 Context.Respond(msgBuilder.ToString(), "AutoModerator");
             }
