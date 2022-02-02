@@ -15,19 +15,19 @@ namespace AutoModerator
     {
         static readonly ILogger Log = LogManager.GetCurrentClassLogger();
 
-        AutoModeratorPlugin Plugin => (AutoModeratorPlugin) Context.Plugin;
+        AutoModeratorPlugin Plugin => (AutoModeratorPlugin)Context.Plugin;
         AutoModeratorConfig Config => Plugin.Config;
         Core.AutoModerator AutoModerator => Plugin.AutoModerator;
 
         [Command("configs", "Get or set config")]
-        [Permission(MyPromoteLevel.Admin)]
+        [Permission(MyPromoteLevel.None)]
         public void GetOrSetConfig() => this.CatchAndReport(() =>
         {
             this.GetOrSetProperty(Plugin.Config);
         });
 
         [Command("commands", "Get a list of commands")]
-        [Permission(MyPromoteLevel.Admin)]
+        [Permission(MyPromoteLevel.None)]
         public void ShowCommandList() => this.CatchAndReport(() =>
         {
             this.ShowCommands();
@@ -111,67 +111,6 @@ namespace AutoModerator
             WarnIfIdle();
             Context.Player.ThrowIfNull("must be called by a player");
             AutoModerator.ClearQuestForUser(Context.Player.IdentityId);
-        });
-
-        [Command("laggiest", "Get the laggiest grid of player. -id or -name to specify the player name other than yourself.")]
-        [Permission(MyPromoteLevel.None)]
-        public void ShowLaggiest() => this.CatchAndReport(() =>
-        {
-            WarnIfIdle();
-            
-            var playerId = 0L;
-            var playerName = "";
-            foreach (var arg in Context.Args)
-            {
-                if (!CommandOption.TryGetOption(arg, out var option)) continue;
-
-                if (option.TryParseLong("id", out playerId))
-                {
-                    if (!AutoModerator.TryFindPlayerNameById(playerId, out playerName))
-                    {
-                        Context.Respond($"Online player not found: {playerId}", Color.Red);
-                        return;
-                    }
-
-                    continue;
-                }
-
-                if (option.TryParse("name", out playerName))
-                {
-                    if (!AutoModerator.TryFindPlayerByName(playerName, out playerId))
-                    {
-                        Context.Respond($"Online player not found: {playerName}", Color.Red);
-                        return;
-                    }
-
-                    continue;
-                }
-
-                Context.Respond($"Unknown option: {arg}", Color.Red);
-                return;
-            }
-
-            if (playerId == 0)
-            {
-                Context.Respond("No input", Color.Red);
-                return;
-            }
-
-            if (Context.Player is { } caller &&
-                caller.PromoteLevel < MyPromoteLevel.Moderator &&
-                !caller.IsFriendWith(playerId))
-            {
-                Context.Respond($"You're not a friend of this player: {playerName}", Color.Red);
-                return;
-            }
-
-            if (!AutoModerator.TryGetLaggiestGridOwnedBy(playerId, out var grid))
-            {
-                Context.Respond($"No grid tracked for player: {playerName ?? $"<{playerId}>"}");
-                return;
-            }
-
-            Context.Respond($"Laggiest grid owned by player \"{playerName}\": \"{grid.Name}\" ({grid.LagNormal * 100:0}%)");
         });
 
         void WarnIfIdle()
