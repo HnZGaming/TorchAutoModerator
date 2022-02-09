@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using AutoModerator.Core;
 using NLog;
 using Sandbox.Game.Entities;
 using Sandbox.ModAPI;
@@ -45,7 +44,7 @@ namespace AutoModerator.Punishes
         public async Task Update(IReadOnlyDictionary<long, PunishSource> lags)
         {
             // move to the game loop so we can synchronously operate on blocks
-            await GameLoopObserver.MoveToGameLoop();
+            await VRageUtils.MoveToGameLoop();
 
             foreach (var (gridId, lag) in lags)
             {
@@ -68,7 +67,7 @@ namespace AutoModerator.Punishes
                 Log.Debug($"block punish: \"{grid.Name}\" <{lag.GridId}> {_config.PunishType}");
 
                 // move to the next frame so we won't lag the server
-                await GameLoopObserver.MoveToGameLoop();
+                await VRageUtils.MoveToGameLoop();
             }
 
             foreach (var existingId in _punishedIds)
@@ -94,7 +93,7 @@ namespace AutoModerator.Punishes
                 // move to the next frame so we won't lag the server
                 if (i % ProcessedBlockCountPerFrame == 0)
                 {
-                    await GameLoopObserver.MoveToGameLoop();
+                    await VRageUtils.MoveToGameLoop();
                 }
 
                 var block = blocks[i];

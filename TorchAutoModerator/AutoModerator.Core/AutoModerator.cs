@@ -78,7 +78,7 @@ namespace AutoModerator.Core
         {
             Log.Info("started main");
 
-            await GameLoopObserver.MoveToGameLoop(canceller);
+            await VRageUtils.MoveToGameLoop(canceller);
             _entityGpsBroadcaster.ClearGpss();
             await VRageUtils.MoveToThreadPool(canceller);
 
@@ -102,7 +102,7 @@ namespace AutoModerator.Core
                     _punishExecutor.Clear();
                     _punishChatFeed.Clear();
 
-                    await GameLoopObserver.MoveToGameLoop(canceller);
+                    await VRageUtils.MoveToGameLoop(canceller);
                     _entityGpsBroadcaster.ClearGpss();
 
                     await Task.Delay(1.Seconds(), canceller);
@@ -275,7 +275,7 @@ namespace AutoModerator.Core
         {
             if (_config.PunishType != PunishType.Broadcast)
             {
-                await GameLoopObserver.MoveToGameLoop(canceller);
+                await VRageUtils.MoveToGameLoop(canceller);
                 _entityGpsBroadcaster.ClearGpss();
                 await VRageUtils.MoveToThreadPool(canceller);
                 return;
@@ -300,7 +300,7 @@ namespace AutoModerator.Core
 
             var targetIdentityIds = _gpsReceivers.GetReceiverIdentityIds();
 
-            await GameLoopObserver.MoveToGameLoop(canceller);
+            await VRageUtils.MoveToGameLoop(canceller);
             _entityGpsBroadcaster.ReplaceGpss(allGpsSources.Values, targetIdentityIds);
             await VRageUtils.MoveToThreadPool(canceller);
 
@@ -313,7 +313,7 @@ namespace AutoModerator.Core
             // we're doing this right here to get the max chance of grabbing the owner name
             var lostGrids = new List<TrackedEntity>();
 
-            await GameLoopObserver.MoveToGameLoop(canceller);
+            await VRageUtils.MoveToGameLoop(canceller);
 
             foreach (var (_, trackedGrid) in _grids.Entities)
             {
