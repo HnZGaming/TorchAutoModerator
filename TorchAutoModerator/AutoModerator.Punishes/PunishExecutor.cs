@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using AutoModerator.Core;
 using NLog;
 using Sandbox.Game.Entities;
 using Sandbox.ModAPI;
@@ -14,11 +13,11 @@ using VRage.Game.ModAPI;
 
 namespace AutoModerator.Punishes
 {
-    public sealed class LagPunishExecutor
+    public sealed class PunishExecutor
     {
         public interface IConfig
         {
-            LagPunishType PunishType { get; }
+            PunishType PunishType { get; }
             double DamageNormalPerInterval { get; }
             double MinIntegrityNormal { get; }
         }
@@ -30,7 +29,7 @@ namespace AutoModerator.Punishes
         readonly BlockTypePairCollection _exemptBlockPairs;
         readonly HashSet<long> _punishedIds;
 
-        public LagPunishExecutor(IConfig config, BlockTypePairCollection exemptBlockPairs)
+        public PunishExecutor(IConfig config, BlockTypePairCollection exemptBlockPairs)
         {
             _config = config;
             _exemptBlockPairs = exemptBlockPairs;
@@ -42,10 +41,10 @@ namespace AutoModerator.Punishes
             _punishedIds.Clear();
         }
 
-        public async Task Update(IReadOnlyDictionary<long, LagPunishSource> lags)
+        public async Task Update(IReadOnlyDictionary<long, PunishSource> lags)
         {
             // move to the game loop so we can synchronously operate on blocks
-            await GameLoopObserver.MoveToGameLoop();
+            await VRageUtils.MoveToGameLoop();
 
             foreach (var (gridId, lag) in lags)
             {
@@ -68,7 +67,7 @@ namespace AutoModerator.Punishes
                 Log.Debug($"block punish: \"{grid.Name}\" <{lag.GridId}> {_config.PunishType}");
 
                 // move to the next frame so we won't lag the server
-                await GameLoopObserver.MoveToGameLoop();
+                await VRageUtils.MoveToGameLoop();
             }
 
             foreach (var existingId in _punishedIds)
@@ -94,7 +93,7 @@ namespace AutoModerator.Punishes
                 // move to the next frame so we won't lag the server
                 if (i % ProcessedBlockCountPerFrame == 0)
                 {
-                    await GameLoopObserver.MoveToGameLoop();
+                    await VRageUtils.MoveToGameLoop();
                 }
 
                 var block = blocks[i];
@@ -102,12 +101,12 @@ namespace AutoModerator.Punishes
 
                 switch (_config.PunishType)
                 {
-                    case LagPunishType.Shutdown:
+                    case PunishType.Shutdown:
                     {
                         DisableFunctionalBlock(block);
                         break;
                     }
-                    case LagPunishType.Damage:
+                    case PunishType.Damage:
                     {
                         DamageBlock(block);
                         break;

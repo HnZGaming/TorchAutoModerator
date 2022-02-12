@@ -60,7 +60,7 @@ namespace Utils.TimeSerieses
                 var tag = p.Key;
                 var timeSeries = p.Value;
 
-                timeSeries.RemoveOlderThan(thresholdTimestamp);
+                timeSeries.Retain(thresholdTimestamp);
                 if (timeSeries.Count == 0)
                 {
                     _timeSeriesMap.Remove(tag);

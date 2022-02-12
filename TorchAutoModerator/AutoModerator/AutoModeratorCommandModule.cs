@@ -15,17 +15,19 @@ namespace AutoModerator
     {
         static readonly ILogger Log = LogManager.GetCurrentClassLogger();
 
-        AutoModeratorPlugin Plugin => (AutoModeratorPlugin) Context.Plugin;
+        AutoModeratorPlugin Plugin => (AutoModeratorPlugin)Context.Plugin;
+        AutoModeratorConfig Config => Plugin.Config;
+        Core.AutoModerator AutoModerator => Plugin.AutoModerator;
 
         [Command("configs", "Get or set config")]
-        [Permission(MyPromoteLevel.Admin)]
+        [Permission(MyPromoteLevel.None)]
         public void GetOrSetConfig() => this.CatchAndReport(() =>
         {
             this.GetOrSetProperty(Plugin.Config);
         });
 
         [Command("commands", "Get a list of commands")]
-        [Permission(MyPromoteLevel.Admin)]
+        [Permission(MyPromoteLevel.None)]
         public void ShowCommandList() => this.CatchAndReport(() =>
         {
             this.ShowCommands();
@@ -35,7 +37,8 @@ namespace AutoModerator
         [Permission(MyPromoteLevel.Admin)]
         public void Clear() => this.CatchAndReport(() =>
         {
-            Plugin.ClearCache();
+            WarnIfIdle();
+            AutoModerator.ClearCache();
             Context.Respond("cleared all internal state");
         });
 
@@ -43,7 +46,8 @@ namespace AutoModerator
         [Permission(MyPromoteLevel.Admin)]
         public void ShowGpss() => this.CatchAndReport(() =>
         {
-            var gpss = Plugin.GetAllGpss();
+            WarnIfIdle();
+            var gpss = AutoModerator.GetAllGpss();
 
             if (!gpss.Any())
             {
@@ -64,13 +68,15 @@ namespace AutoModerator
         [Permission(MyPromoteLevel.None)]
         public void MuteBroadcastsToPlayer() => this.CatchAndReport(() =>
         {
+            WarnIfIdle();
+
             if (Context.Player == null)
             {
                 Context.Respond("Can be called by a player only", Color.Red);
                 return;
             }
 
-            Plugin.Config.AddMutedPlayer(Context.Player.SteamUserId);
+            Config.AddMutedPlayer(Context.Player.SteamUserId);
             Context.Respond("Muted broadcasting. It may take some time to take effect.");
         });
 
@@ -78,13 +84,15 @@ namespace AutoModerator
         [Permission(MyPromoteLevel.None)]
         public void UnmuteBroadcastsToPlayer() => this.CatchAndReport(() =>
         {
+            WarnIfIdle();
+
             if (Context.Player == null)
             {
                 Context.Respond("Can be called by a player only", Color.Red);
                 return;
             }
 
-            Plugin.Config.RemoveMutedPlayer(Context.Player.SteamUserId);
+            Config.RemoveMutedPlayer(Context.Player.SteamUserId);
             Context.Respond("Unmuted broadcasting. It may take some time to take effect.");
         });
 
@@ -92,74 +100,31 @@ namespace AutoModerator
         [Permission(MyPromoteLevel.Admin)]
         public void UnmuteBroadcastsToAll() => this.CatchAndReport(() =>
         {
-            Plugin.Config.RemoveAllMutedPlayers();
+            WarnIfIdle();
+            Config.RemoveAllMutedPlayers();
         });
 
         [Command("clearwarning", "Clear quest HUD.")]
         [Permission(MyPromoteLevel.None)]
         public void ClearQuests() => this.CatchAndReport(() =>
         {
+            WarnIfIdle();
             Context.Player.ThrowIfNull("must be called by a player");
-            Plugin.ClearQuestForUser(Context.Player.IdentityId);
+            AutoModerator.ClearQuestForUser(Context.Player.IdentityId);
         });
 
-        [Command("laggiest", "Get the laggiest grid of player. -id or -name to specify the player name other than yourself.")]
-        [Permission(MyPromoteLevel.None)]
-        public void ShowLaggiest() => this.CatchAndReport(() =>
+        void WarnIfIdle()
         {
-            var playerId = 0L;
-            var playerName = "";
-            foreach (var arg in Context.Args)
+            if (!Plugin.Config.IsEnabled)
             {
-                if (!CommandOption.TryGetOption(arg, out var option)) continue;
-
-                if (option.TryParseLong("id", out playerId))
-                {
-                    if (!Plugin.TryTraverseTrackedPlayerById(playerId, out playerName))
-                    {
-                        Context.Respond($"Online player not found: {playerId}", Color.Red);
-                        return;
-                    }
-
-                    continue;
-                }
-
-                if (option.TryParse("name", out playerName))
-                {
-                    if (!Plugin.TryTraverseTrackedPlayerByName(playerName, out playerId))
-                    {
-                        Context.Respond($"Online player not found: {playerName}", Color.Red);
-                        return;
-                    }
-
-                    continue;
-                }
-
-                Context.Respond($"Unknown option: {arg}", Color.Red);
+                Context.Respond("WARNING Plugin not enabled; see 'Enable plugin' in config", Color.Yellow);
                 return;
             }
 
-            if (playerId == 0)
+            if (AutoModerator.IsIdle)
             {
-                Context.Respond("No input", Color.Red);
-                return;
+                Context.Respond("WARNING Plugin idle; see 'First idle seconds' in config", Color.Yellow);
             }
-
-            if (Context.Player is IMyPlayer caller &&
-                caller.PromoteLevel < MyPromoteLevel.Moderator &&
-                !caller.IsFriendWith(playerId))
-            {
-                Context.Respond($"You're not a friend of this player: {playerName}", Color.Red);
-                return;
-            }
-
-            if (!Plugin.TryGetLaggiestGridOwnedBy(playerId, out var grid))
-            {
-                Context.Respond($"No grid tracked for player: {playerName ?? $"<{playerId}>"}");
-                return;
-            }
-
-            Context.Respond($"Laggiest grid owned by player \"{playerName}\": \"{grid.Name}\" ({grid.LongLagNormal * 100:0}%)");
-        });
+        }
     }
 }

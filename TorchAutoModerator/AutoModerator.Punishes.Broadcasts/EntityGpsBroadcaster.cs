@@ -1,7 +1,5 @@
 ﻿using System.Collections.Generic;
 using System.Diagnostics;
-using System.Threading;
-using System.Threading.Tasks;
 using NLog;
 using Sandbox.Game.Screens.Helpers;
 using Sandbox.Game.World;
@@ -40,47 +38,31 @@ namespace AutoModerator.Punishes.Broadcasts
             _gpsCollection.SendDeleteAllGpss();
         }
 
-        public async Task ReplaceGpss(
-            IEnumerable<GridGpsSource> gpsSources,
-            IEnumerable<long> receiverIdentityIds,
-            CancellationToken canceller)
+        public void ReplaceGpss(IEnumerable<GridGpsSource> gpsSources, IEnumerable<long> receiverIdentityIds)
         {
-            var gpss = await CreateGpss(gpsSources, canceller);
+            var gpss = CreateGpss(gpsSources);
             _gpsCollection.SendReplaceAllTrackedGpss(gpss, receiverIdentityIds);
         }
 
-        async Task<IReadOnlyList<MyGps>> CreateGpss(
-            IEnumerable<GridGpsSource> gpsSources,
-            CancellationToken canceller)
+        IEnumerable<MyGps> CreateGpss(IEnumerable<GridGpsSource> gpsSources)
         {
-            try
+            var stopwatch = Stopwatch.StartNew();
+
+            var gpss = new List<MyGps>();
+            foreach (var gpsSource in gpsSources)
             {
-                // MyGps can be created in the game loop only (idk why)
-                await GameLoopObserver.MoveToGameLoop(canceller);
-
-                var stopwatch = Stopwatch.StartNew();
-
-                var gpss = new List<MyGps>();
-                foreach (var gpsSource in gpsSources)
+                if (TryCreateGps(gpsSource, out var gps))
                 {
-                    if (TryCreateGps(gpsSource, out var gps))
-                    {
-                        gpss.Add(gps);
-                    }
+                    gpss.Add(gps);
                 }
-
-                var timeSpent = stopwatch.ElapsedMilliseconds;
-                stopwatch.Stop();
-
-                Log.Trace($"Creating GPSs time spent: {timeSpent:0.00}ms");
-
-                return gpss;
             }
-            finally
-            {
-                // make sure we're out of the main thread
-                await TaskUtils.MoveToThreadPool(canceller);
-            }
+
+            var timeSpent = stopwatch.ElapsedMilliseconds;
+            stopwatch.Stop();
+
+            Log.Trace($"Creating GPSs time spent: {timeSpent:0.00}ms");
+
+            return gpss;
         }
 
         bool TryCreateGps(GridGpsSource source, out MyGps gps)

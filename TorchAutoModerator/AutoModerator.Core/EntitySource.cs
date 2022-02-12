@@ -1,10 +1,8 @@
-﻿using Sandbox.Game.World;
-
-namespace AutoModerator.Core
+﻿namespace AutoModerator.Core
 {
-    public readonly struct EntityLagSource
+    public readonly struct EntitySource
     {
-        public EntityLagSource(long entityId, string name, long ownerId, string ownerName, long factionId, string factionTag, double lagMspf)
+        public EntitySource(long entityId, string name, long ownerId, string ownerName, long factionId, string factionTag, double lagMspf)
         {
             EntityId = entityId;
             Name = name;
