@@ -17,7 +17,7 @@ to keep the server healthy without the admin presence.
 Note that this plugin will only work on `MySector` for now.
 You need other means to moderate `MyPhysics` and anything else that can't be traced up to specific grids/players.
 
-[Download the latest version from Torch Plugin Repository.](https://torchapi.net/plugins/item/8333d8a5-c545-42d9-a606-8dae9db3c678)
+[Download the latest version from Torch Plugin Repository.](https://torchapi.com/plugins/view/?guid=8333d8a5-c545-42d9-a606-8dae9db3c678)
 
 ## General
 
@@ -150,8 +150,7 @@ If you intend to use Broadcast punishment you should start with "visible to admi
 
 Consider deleting "unowned" grids using some other plugin so that the warning and punishment get through everyone responsible.
 
-Use [SEDB](https://torchapi.net/plugins/item/3cd3ba7f-c47c-4efe-8cf1-bd3f618f5b9c) plugin to 
-monitor the current state of the server:
+Use SEDB plugin to monitor the current state of the server:
 
 ![Discord](README.media/discord.png)
 ![Discord](README.media/discord.2.png)
@@ -169,7 +168,7 @@ For more comprehensive/long-term monitoring consider [TorchMonitor](https://gith
 
 ## Dependencies
 
-* [Profiler plugin](https://torchapi.net/plugins/item/da82de0f-9d2f-4571-af1c-88c7921bc063).
+* Profiler plugin.
 
 ## Fork & Extend
 
