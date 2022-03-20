@@ -411,7 +411,7 @@ namespace AutoModerator
             set => SetValue(ref _logFilePath, value);
         }
 
-        IEnumerable<ulong> BroadcastListenerCollection.IConfig.GpsMutedPlayers => _gpsMutedPlayerIds;
+        IEnumerable<ulong> EntityGpsBroadcaster.IConfig.GpsMutedPlayers => _gpsMutedPlayerIds;
 
         public void Initialize()
         {

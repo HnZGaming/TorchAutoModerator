@@ -34,6 +34,12 @@
     <ItemGroup>
         <Reference Include="PresentationCore" />
         <Reference Include="PresentationFramework" />
+        <Reference Include="ProtoBuf.Net, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null">
+          <HintPath>..\GameBinaries\ProtoBuf.Net.dll</HintPath>
+        </Reference>
+        <Reference Include="ProtoBuf.Net.Core, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null">
+          <HintPath>..\GameBinaries\ProtoBuf.Net.Core.dll</HintPath>
+        </Reference>
         <Reference Include="System" />
         <Reference Include="System.Core" />
         <Reference Include="System.Data" />
@@ -170,7 +176,6 @@
         <Compile Include="AutoModerator.Core\PlayerTracker.cs" />
         <Compile Include="AutoModerator.Core\TrackedEntityUtils.cs" />
         <Compile Include="AutoModerator.Punishes.Broadcasts\GridGpsSource.cs" />
-        <Compile Include="AutoModerator.Punishes.Broadcasts\BroadcastListenerCollection.cs" />
         <Compile Include="AutoModerator.Punishes\PunishChatFeed.cs" />
         <Compile Include="AutoModerator.Punishes\PunishExecutor.cs" />
         <Compile Include="AutoModerator.Punishes\PunishSource.cs" />
@@ -186,6 +191,9 @@
         <Compile Include="AutoModerator.Quests\QuestEntity.cs" />
         <Compile Include="AutoModerator\AutoModeratorCommandModule.Inspect.cs" />
         <Compile Include="AutoModerator\AutoModeratorCommandModule.Profile.cs" />
+        <Compile Include="HNZ.LocalGps.Interface\LocalGpsApi.cs" />
+        <Compile Include="HNZ.LocalGps.Interface\LocalGpsSource.cs" />
+        <Compile Include="HNZ.LocalGps.Interface\LocalGpsSourceBinary.cs" />
         <Compile Include="Properties\AssemblyInfo.cs" />
         <Compile Include="AutoModerator\AutoModeratorCommandModule.cs" />
         <Compile Include="AutoModerator\AutoModeratorConfig.cs" />
@@ -216,6 +224,4 @@
     </PropertyGroup>
     <Import Project="..\TorchUtils\Utils.General\Utils.General.projitems" Label="Shared" />
     <Import Project="..\TorchUtils\Utils.Torch\Utils.Torch.projitems" Label="Shared" />
-    <Import Project="..\TorchUtils\Utils.TorchEntityGps\Utils.TorchEntityGps.projitems" Label="Shared" />
-
 </Project>
