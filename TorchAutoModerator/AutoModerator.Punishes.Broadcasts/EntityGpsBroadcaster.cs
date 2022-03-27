@@ -1,11 +1,13 @@
 ﻿using System.Collections.Generic;
-using System.Diagnostics;
+using System.Linq;
+using System.Runtime.CompilerServices;
+using HNZ.LocalGps.Interface;
 using NLog;
-using Sandbox.Game.Screens.Helpers;
 using Sandbox.Game.World;
+using Torch.Utils;
 using Utils.General;
 using Utils.Torch;
-using Utils.TorchEntityGps;
+using VRage.Game.ModAPI;
 
 namespace AutoModerator.Punishes.Broadcasts
 {
@@ -16,64 +18,82 @@ namespace AutoModerator.Punishes.Broadcasts
             string GpsNameFormat { get; }
             string GpsDescriptionFormat { get; }
             string GpsColorCode { get; }
+            IEnumerable<ulong> GpsMutedPlayers { get; }
+            MyPromoteLevel GpsVisiblePromoteLevel { get; }
         }
 
         static readonly ILogger Log = LogManager.GetCurrentClassLogger();
         readonly IConfig _config;
-        readonly EntityIdGpsCollection _gpsCollection;
+        readonly Dictionary<long, LocalGpsSource> _gpsSources;
+        readonly LocalGpsApi _gpsApi;
 
         public EntityGpsBroadcaster(IConfig config)
         {
             _config = config;
-            _gpsCollection = new EntityIdGpsCollection("<!> ");
+            _gpsSources = new Dictionary<long, LocalGpsSource>();
+            _gpsApi = new LocalGpsApi(nameof(EntityGpsBroadcaster).GetHashCode());
         }
 
-        public IEnumerable<MyGps> GetGpss()
+        [MethodImpl(MethodImplOptions.Synchronized)]
+        public IEnumerable<LocalGpsSource> GetGpss()
         {
-            return _gpsCollection.GetAllTrackedGpss();
+            return _gpsSources.Values.ToArray();
         }
 
+        [MethodImpl(MethodImplOptions.Synchronized)]
         public void ClearGpss()
         {
-            _gpsCollection.SendDeleteAllGpss();
-        }
-
-        public void ReplaceGpss(IEnumerable<GridGpsSource> gpsSources, IEnumerable<long> receiverIdentityIds)
-        {
-            var gpss = CreateGpss(gpsSources);
-            _gpsCollection.SendReplaceAllTrackedGpss(gpss, receiverIdentityIds);
-        }
-
-        IEnumerable<MyGps> CreateGpss(IEnumerable<GridGpsSource> gpsSources)
-        {
-            var stopwatch = Stopwatch.StartNew();
-
-            var gpss = new List<MyGps>();
-            foreach (var gpsSource in gpsSources)
+            foreach (var (id, _) in _gpsSources)
             {
-                if (TryCreateGps(gpsSource, out var gps))
+                _gpsApi.RemoveLocalGps(id);
+            }
+
+            _gpsSources.Clear();
+        }
+
+        [MethodImpl(MethodImplOptions.Synchronized)]
+        public void ReplaceGpss(IEnumerable<GridGpsSource> gpsSources)
+        {
+            var sources = DictionaryPool<long, LocalGpsSource>.Create();
+
+            foreach (var src in gpsSources)
+            {
+                if (TryCreateGps(src, out var localGpsSource))
                 {
-                    gpss.Add(gps);
+                    sources[localGpsSource.Id] = localGpsSource;
                 }
             }
 
-            var timeSpent = stopwatch.ElapsedMilliseconds;
-            stopwatch.Stop();
+            // remove GPSs that don't exist anymore
+            foreach (var (existingGpsId, _) in _gpsSources.ToArray())
+            {
+                if (!sources.ContainsKey(existingGpsId))
+                {
+                    _gpsSources.Remove(existingGpsId);
+                    _gpsApi.RemoveLocalGps(existingGpsId);
+                }
+            }
 
-            Log.Trace($"Creating GPSs time spent: {timeSpent:0.00}ms");
+            // add/update other GPSs
+            foreach (var (id, src) in sources)
+            {
+                _gpsSources[id] = src;
+                _gpsApi.AddOrUpdateLocalGps(src);
+            }
 
-            return gpss;
+            DictionaryPool<long, LocalGpsSource>.Release(sources);
         }
 
-        bool TryCreateGps(GridGpsSource source, out MyGps gps)
+        bool TryCreateGps(GridGpsSource source, out LocalGpsSource gps)
         {
             if (!VRageUtils.TryGetCubeGridById(source.GridId, out var grid))
             {
+                Log.Trace($"broadcast: grid not found: {source.GridId}");
                 gps = default;
                 return false;
             }
 
-            var playerName = (string) null;
+            var playerName = (string)null;
 
             if (!grid.BigOwners.TryGetFirst(out var playerId))
             {
@@ -93,7 +113,20 @@ namespace AutoModerator.Punishes.Broadcasts
 
             var name = Format(_config.GpsNameFormat);
             var description = Format(_config.GpsDescriptionFormat);
-            gps = GpsUtils.CreateGridGps(grid, name, description, _config.GpsColorCode);
+
+            gps = new LocalGpsSource
+            {
+                Id = grid.EntityId,
+                Name = name,
+                Color = ColorUtils.TranslateColor(_config.GpsColorCode),
+                Description = description,
+                Position = grid.PositionComp.GetPosition(),
+                Radius = 0,
+                EntityId = grid.EntityId,
+                PromoteLevel = (int)_config.GpsVisiblePromoteLevel,
+                ExcludedPlayers = _config.GpsMutedPlayers.ToArray(),
+            };
+
             return true;
 
             string Format(string format)

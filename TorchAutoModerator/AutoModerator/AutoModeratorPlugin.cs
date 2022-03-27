@@ -7,8 +7,10 @@ using Torch;
 using Torch.API;
 using Torch.API.Managers;
 using Torch.API.Plugins;
+using Torch.Session;
 using Utils.General;
 using Utils.Torch;
+using Utils.Torch.Patches;
 
 namespace AutoModerator
 {
@@ -37,11 +39,14 @@ namespace AutoModerator
 
             _fileLoggingConfigurator = new FileLoggingConfigurator(
                 "AutoModerator",
-                new[] {"AutoModerator.*", "Utils.TorchEntityGps.*", "Utils.TimeSerieses.*"},
+                new[] { "AutoModerator.*", "Utils.TorchEntityGps.*", "Utils.TimeSerieses.*" },
                 AutoModeratorConfig.DefaultLogFilePath);
 
             _fileLoggingConfigurator.Initialize();
             _fileLoggingConfigurator.Configure(Config);
+
+            // Local Gps Mod
+            ModAdditionPatch.AddModForServerAndClient(2781829620);
         }
 
         UserControl IWpfPlugin.GetControl()

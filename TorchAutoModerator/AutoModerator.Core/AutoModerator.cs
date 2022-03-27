@@ -6,11 +6,11 @@ using System.Threading.Tasks;
 using AutoModerator.Punishes;
 using AutoModerator.Punishes.Broadcasts;
 using AutoModerator.Quests;
+using HNZ.LocalGps.Interface;
 using NLog;
 using Profiler.Basics;
 using Profiler.Core;
 using Sandbox.Game.Entities;
-using Sandbox.Game.Screens.Helpers;
 using Torch.API.Managers;
 using Utils.General;
 using Utils.TimeSerieses;
@@ -25,7 +25,6 @@ namespace AutoModerator.Core
         public interface IConfig :
             GridTracker.IConfig,
             PlayerTracker.IConfig,
-            BroadcastListenerCollection.IConfig,
             EntityGpsBroadcaster.IConfig,
             QuestEntity.IConfig,
             PunishExecutor.IConfig,
@@ -43,7 +42,6 @@ namespace AutoModerator.Core
         readonly GridTracker _grids;
         readonly PlayerTracker _players;
         readonly EntityGpsBroadcaster _entityGpsBroadcaster;
-        readonly BroadcastListenerCollection _gpsReceivers;
         readonly QuestTracker _questTracker;
         readonly PunishExecutor _punishExecutor;
         readonly PunishChatFeed _punishChatFeed;
@@ -57,7 +55,6 @@ namespace AutoModerator.Core
             _exemptBlockTypePairs = new BlockTypePairCollection();
             _grids = new GridTracker(config);
             _players = new PlayerTracker(config);
-            _gpsReceivers = new BroadcastListenerCollection(config);
             _entityGpsBroadcaster = new EntityGpsBroadcaster(config);
             _questTracker = new QuestTracker(config, chatManager);
             _punishExecutor = new PunishExecutor(config, _exemptBlockTypePairs);
@@ -235,10 +232,10 @@ namespace AutoModerator.Core
             }
         }
 
-        async Task Punish(CancellationToken canceller)
+        async Task Punish(CancellationToken cancellationToken)
         {
             await PunishBlocks();
-            await BroadcastLaggyGrids(canceller);
+            await BroadcastLaggyGrids(cancellationToken);
         }
 
         async Task PunishBlocks()
@@ -271,13 +268,11 @@ namespace AutoModerator.Core
             Log.Trace("punishment done");
         }
 
-        async Task BroadcastLaggyGrids(CancellationToken canceller)
+        async Task BroadcastLaggyGrids(CancellationToken cancellationToken)
         {
             if (_config.PunishType != PunishType.Broadcast)
             {
-                await VRageUtils.MoveToGameLoop(canceller);
                 _entityGpsBroadcaster.ClearGpss();
-                await VRageUtils.MoveToThreadPool(canceller);
                 return;
             }
 
@@ -297,12 +292,10 @@ namespace AutoModerator.Core
                 var gpsSource = new GridGpsSource(grid.Id, grid.LagNormal, grid.PinRemainingTime, rank);
                 allGpsSources[gpsSource.GridId] = gpsSource;
             }
-
-            var targetIdentityIds = _gpsReceivers.GetReceiverIdentityIds();
-
-            await VRageUtils.MoveToGameLoop(canceller);
-            _entityGpsBroadcaster.ReplaceGpss(allGpsSources.Values, targetIdentityIds);
-            await VRageUtils.MoveToThreadPool(canceller);
+            
+            await VRageUtils.MoveToGameLoop(cancellationToken);
+            _entityGpsBroadcaster.ReplaceGpss(allGpsSources.Values);
+            await VRageUtils.MoveToThreadPool(cancellationToken);
 
             Log.Trace("broadcast done");
         }
@@ -346,7 +339,7 @@ namespace AutoModerator.Core
             Log.Trace("announcing deleted entities done");
         }
 
-        public IEnumerable<MyGps> GetAllGpss()
+        public IEnumerable<LocalGpsSource> GetAllGpss()
         {
             return _entityGpsBroadcaster.GetGpss();
         }

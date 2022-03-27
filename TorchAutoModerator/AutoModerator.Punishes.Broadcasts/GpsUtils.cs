@@ -1,40 +1,11 @@
 ﻿using System;
-using System.Threading;
 using NLog;
-using Sandbox.Game.Entities;
-using Sandbox.Game.Screens.Helpers;
-using Torch.Utils;
-using Utils.Torch;
-using VRage.Game;
 
 namespace AutoModerator.Punishes.Broadcasts
 {
     public static class GpsUtils
     {
         static readonly ILogger Log = LogManager.GetCurrentClassLogger();
-
-        public static MyGps CreateGridGps(MyCubeGrid grid, string name, string description, string colorCode)
-        {
-            if (!Thread.CurrentThread.IsSessionThread())
-            {
-                throw new Exception("Can be called in the game loop only");
-            }
-
-            var gps = new MyGps(new MyObjectBuilder_Gps.Entry
-            {
-                name = name,
-                DisplayName = name,
-                coords = grid.PositionComp.GetPosition(),
-                showOnHud = true,
-                color = ColorUtils.TranslateColor(colorCode),
-                description = description,
-            });
-
-            gps.SetEntity(grid);
-            gps.UpdateHash();
-
-            return gps;
-        }
 
         public static string RemainingTimeToString(TimeSpan remainingTime)
         {
