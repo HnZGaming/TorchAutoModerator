@@ -7,7 +7,7 @@ using Torch;
 using Torch.API;
 using Torch.API.Managers;
 using Torch.API.Plugins;
-using Torch.Session;
+using Torch.API.Session;
 using Utils.General;
 using Utils.Torch;
 using Utils.Torch.Patches;
@@ -29,8 +29,8 @@ namespace AutoModerator
         public override void Init(ITorchBase torch)
         {
             base.Init(torch);
-            this.ListenOnGameLoaded(OnGameLoaded);
-            this.ListenOnGameUnloading(OnGameUnloading);
+            this.OnSessionStateChanged(TorchSessionState.Loaded, OnGameLoaded);
+            this.OnSessionStateChanged(TorchSessionState.Unloading, OnGameUnloading);
 
             var configFilePath = this.MakeConfigFilePath();
             _config = Persistent<AutoModeratorConfig>.Load(configFilePath);
