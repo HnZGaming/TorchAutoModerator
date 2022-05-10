@@ -45,8 +45,15 @@ namespace AutoModerator
             _fileLoggingConfigurator.Initialize();
             _fileLoggingConfigurator.Configure(Config);
 
-            // Local Gps Mod
-            ModAdditionPatch.AddModForServerAndClient(2781829620);
+            if (Config.DisableGpsMod)
+            {
+                Log.Info("Not adding GPS mod");
+            }
+            else
+            {
+                // Local Gps Mod
+                ModAdditionPatch.AddModForServerAndClient(2781829620);
+            }
         }
 
         UserControl IWpfPlugin.GetControl()

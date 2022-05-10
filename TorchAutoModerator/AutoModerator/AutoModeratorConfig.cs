@@ -70,6 +70,7 @@ namespace AutoModerator
         bool _isEnabled = true;
         List<string> _profileExemptBlockTypeIds;
         List<string> _punishExemptBlockTypes;
+        bool _disableGpsMod;
 
         [XmlElement]
         [Display(Order = 1, Name = "Enable plugin", GroupName = OpGroupName)]
@@ -319,6 +320,15 @@ namespace AutoModerator
         {
             get => _minIntegrityNormal;
             set => SetValue(ref _minIntegrityNormal, value);
+        }
+
+        [XmlElement]
+        [Display(Order = 4, Name = "Disable GPS Mod (RESTART REQUIRED)", GroupName = BroadcastGroupName,
+            Description = "Tick this off if you had issue with the GPS mod. NOTE you must manually remove the mod from the save & the broadcasting feature will stop working.")]
+        public bool DisableGpsMod
+        {
+            get => _disableGpsMod;
+            set => SetValue(ref _disableGpsMod, value);
         }
 
         [XmlElement]
