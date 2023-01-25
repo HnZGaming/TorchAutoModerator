@@ -32,7 +32,7 @@ namespace AutoModerator
             this.OnSessionStateChanged(TorchSessionState.Loaded, OnGameLoaded);
             this.OnSessionStateChanged(TorchSessionState.Unloading, OnGameUnloading);
 
-            var configFilePath = this.MakeConfigFilePath();
+            var configFilePath = this.MakeFilePath($"{nameof(AutoModeratorPlugin)}.cfg");
             _config = Persistent<AutoModeratorConfig>.Load(configFilePath);
             _config.Data.Initialize();
             Config.PropertyChanged += OnConfigChanged;
