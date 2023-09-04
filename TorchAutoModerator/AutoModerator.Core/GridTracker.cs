@@ -1,9 +1,10 @@
-﻿using System;
+﻿extern alias ProfilerAlias;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using NLog;
-using Profiler.Basics;
+using ProfilerAlias::Profiler.Basics;
 using Sandbox.Game.Entities;
 using Sandbox.Game.World;
 using Utils.General;

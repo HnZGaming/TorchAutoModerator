@@ -20,7 +20,7 @@ namespace AutoModerator
     {
         [Command("inspect", "Show the time series of specified grid or player.")]
         [Permission(MyPromoteLevel.None)]
-        public void Inspect() => this.CatchAndReport(async () =>
+        public void Inspect() => this.CatchAndReportAsync(async () =>
         {
             WarnIfIdle();
 

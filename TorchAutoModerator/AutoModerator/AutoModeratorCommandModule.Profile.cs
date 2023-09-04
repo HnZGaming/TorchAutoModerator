@@ -1,10 +1,11 @@
-﻿using System;
+﻿extern alias ProfilerAlias;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Profiler.Basics;
-using Profiler.Core;
+using ProfilerAlias::Profiler.Basics;
+using ProfilerAlias::Profiler.Core;
 using Sandbox.Game.Entities;
 using Sandbox.Game.World;
 using Torch.Commands;
@@ -20,14 +21,12 @@ namespace AutoModerator
     {
         [Command("profile", "Self-profiler for players. `--this` or `--name=` to profile a specific grid.")]
         [Permission(MyPromoteLevel.None)]
-        public void ProfilePlayer() => this.CatchAndReport(async () =>
+        public void ProfilePlayer() => this.CatchAndReportAsync(async () =>
         {
             WarnIfIdle();
 
-            Context.Player.ThrowIfNull("must be called by a player");
-
             // parse options
-            var playerId = Context.Player.IdentityId;
+            var playerId = Context.Player?.IdentityId;
             var gridId = (long?)null;
             var profileTime = 5.Seconds();
             var count = 4;
@@ -53,7 +52,7 @@ namespace AutoModerator
                     var isAdmin = Context.Player.PromoteLevel >= MyPromoteLevel.Moderator;
                     var isOwner = grid.BigOwners.TryGetFirst(out var ownerId) && ownerId == playerId;
                     var theirFaction = MySession.Static.Factions.GetPlayerFaction(ownerId)?.FactionId;
-                    var myFaction = MySession.Static.Factions.GetPlayerFaction(playerId)?.FactionId;
+                    var myFaction = MySession.Static.Factions.GetPlayerFaction(playerId ?? 0)?.FactionId;
                     var isFriends = theirFaction == myFaction;
                     if (!isAdmin && !isOwner && !isFriends)
                     {
@@ -63,6 +62,9 @@ namespace AutoModerator
 
                     gridId = grid.EntityId;
                     Context.Respond($"grid found: {gridId}, name: {grid.DisplayName}");
+
+                    playerId = grid.BigOwners.GetFirstOrNull();
+
                     continue;
                 }
 
@@ -100,14 +102,14 @@ namespace AutoModerator
                 return;
             }
 
-            Log.Info($"player \"{Context.Player.DisplayName}\" self-profile; player: {playerId}, grid: {gridId}");
+            Log.Info($"player \"{Context.Player?.DisplayName ?? "<admin>"}\" self-profile; player: {playerId}, grid: {gridId}");
 
             Context.Respond($"Profiling for {profileTime.TotalSeconds} seconds...");
 
             var msgBuilder = new StringBuilder();
             msgBuilder.AppendLine();
 
-            var mask = new GameEntityMask(playerMask: playerId, gridMask: gridId, exemptBlockTypeIds: Plugin.Config.ProfileExemptBlockTypeIds);
+            var mask = new GameEntityMask(playerId, gridId, exemptBlockTypeIds: Plugin.Config.ProfileExemptBlockTypeIds);
             using (var gridProfiler = new GridProfiler(mask))
             using (ProfilerResultQueue.Profile(gridProfiler))
             using (var blockProfiler = new BlockDefinitionProfiler(mask))
@@ -141,7 +143,7 @@ namespace AutoModerator
                 Context.Respond(msgBuilder.ToString(), "AutoModerator");
             }
 
-            AutoModerator.OnSelfProfiled(playerId);
+            AutoModerator.OnSelfProfiled(playerId ?? 0);
         });
 
         static IEnumerable<(T Entity, double NormalTime)> GetRelativeTimes<T>(BaseProfilerResult<T> result, int count)
