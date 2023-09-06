@@ -1,11 +1,13 @@
-﻿using System;
+﻿extern alias ProfilerAlias;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Profiler.Basics;
-using Profiler.Core;
+using ProfilerAlias::Profiler.Basics;
+using ProfilerAlias::Profiler.Core;
 using Sandbox.Game.Entities;
+using Sandbox.Game.World;
 using Torch.Commands;
 using Torch.Commands.Permissions;
 using Utils.General;
@@ -17,16 +19,14 @@ namespace AutoModerator
 {
     public sealed partial class AutoModeratorCommandModule
     {
-        [Command("profile", "Self-profiler for players. `-this` or `-name=` to profile a specific grid.")]
+        [Command("profile", "Self-profiler for players. `--this` or `--name=` to profile a specific grid.")]
         [Permission(MyPromoteLevel.None)]
-        public void ProfilePlayer() => this.CatchAndReport(async () =>
+        public void ProfilePlayer() => this.CatchAndReportAsync(async () =>
         {
             WarnIfIdle();
 
-            Context.Player.ThrowIfNull("must be called by a player");
-
             // parse options
-            var playerId = Context.Player.IdentityId;
+            var playerId = Context.Player?.IdentityId;
             var gridId = (long?)null;
             var profileTime = 5.Seconds();
             var count = 4;
@@ -36,6 +36,12 @@ namespace AutoModerator
 
                 if (option.IsParameterless("this"))
                 {
+                    if (Context.Player == null)
+                    {
+                        Context.Respond("must be in game", Color.Red);
+                        return;
+                    }
+
                     var (found, grid) = await Context.Player.TryGetSelectedGrid();
                     if (!found)
                     {
@@ -43,26 +49,41 @@ namespace AutoModerator
                         return;
                     }
 
-                    if (!grid.BigOwners.TryGetFirst(out var ownerId) || ownerId != playerId)
+                    var isAdmin = Context.Player.PromoteLevel >= MyPromoteLevel.Moderator;
+                    var isOwner = grid.BigOwners.TryGetFirst(out var ownerId) && ownerId == playerId;
+                    var theirFaction = MySession.Static.Factions.GetPlayerFaction(ownerId)?.FactionId;
+                    var myFaction = MySession.Static.Factions.GetPlayerFaction(playerId ?? 0)?.FactionId;
+                    var isFriends = theirFaction == myFaction;
+                    if (!isAdmin && !isOwner && !isFriends)
                     {
                         Context.Respond($"Not your grid: {grid.DisplayName}", Color.Red);
                         return;
                     }
 
                     gridId = grid.EntityId;
+                    Context.Respond($"grid found: {gridId}, name: {grid.DisplayName}");
+
+                    playerId = grid.BigOwners.GetFirstOrNull();
+
                     continue;
                 }
 
-                if (option.TryParse("name", out var name))
+                if (option.TryParse("name", out var gridName))
                 {
-                    if (!MyEntities.TryGetEntityByName(name, out var entity) ||
-                        !(entity is MyCubeGrid grid))
+                    if (!MyEntities.TryGetEntityByName(gridName, out var entity))
                     {
-                        Context.Respond($"Grid not found by name: {name}", Color.Red);
+                        Context.Respond($"Grid not found by name: {gridName}", Color.Red);
+                        return;
+                    }
+
+                    if (entity is not { } grid)
+                    {
+                        Context.Respond($"Entity found by name but not a grid: {gridName}", Color.Red);
                         return;
                     }
 
                     gridId = grid.EntityId;
+                    Context.Respond($"grid found: {gridId}, by name: {gridName}");
                     continue;
                 }
 
@@ -81,14 +102,14 @@ namespace AutoModerator
                 return;
             }
 
-            Log.Debug($"player \"{Context.Player.DisplayName}\" self-profile; player: {playerId}, grid: {gridId}");
+            Log.Info($"player \"{Context.Player?.DisplayName ?? "<admin>"}\" self-profile; player: {playerId}, grid: {gridId}");
 
             Context.Respond($"Profiling for {profileTime.TotalSeconds} seconds...");
 
             var msgBuilder = new StringBuilder();
             msgBuilder.AppendLine();
 
-            var mask = new GameEntityMask(playerMask: playerId, gridMask: gridId, exemptBlockTypeIds: Plugin.Config.ProfileExemptBlockTypeIds);
+            var mask = new GameEntityMask(playerId, gridId, exemptBlockTypeIds: Plugin.Config.ProfileExemptBlockTypeIds);
             using (var gridProfiler = new GridProfiler(mask))
             using (ProfilerResultQueue.Profile(gridProfiler))
             using (var blockProfiler = new BlockDefinitionProfiler(mask))
@@ -122,7 +143,7 @@ namespace AutoModerator
                 Context.Respond(msgBuilder.ToString(), "AutoModerator");
             }
 
-            AutoModerator.OnSelfProfiled(playerId);
+            AutoModerator.OnSelfProfiled(playerId ?? 0);
         });
 
         static IEnumerable<(T Entity, double NormalTime)> GetRelativeTimes<T>(BaseProfilerResult<T> result, int count)

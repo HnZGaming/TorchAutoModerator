@@ -1,4 +1,5 @@
-﻿using System;
+﻿extern alias ProfilerAlias;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -8,8 +9,8 @@ using AutoModerator.Punishes.Broadcasts;
 using AutoModerator.Quests;
 using HNZ.LocalGps.Interface;
 using NLog;
-using Profiler.Basics;
-using Profiler.Core;
+using ProfilerAlias::Profiler.Basics;
+using ProfilerAlias::Profiler.Core;
 using Sandbox.Game.Entities;
 using Torch.API.Managers;
 using Utils.General;

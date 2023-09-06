@@ -7,7 +7,7 @@ using Torch;
 using Torch.API;
 using Torch.API.Managers;
 using Torch.API.Plugins;
-using Torch.Session;
+using Torch.API.Session;
 using Utils.General;
 using Utils.Torch;
 using Utils.Torch.Patches;
@@ -29,10 +29,10 @@ namespace AutoModerator
         public override void Init(ITorchBase torch)
         {
             base.Init(torch);
-            this.ListenOnGameLoaded(OnGameLoaded);
-            this.ListenOnGameUnloading(OnGameUnloading);
+            this.OnSessionStateChanged(TorchSessionState.Loaded, OnGameLoaded);
+            this.OnSessionStateChanged(TorchSessionState.Unloading, OnGameUnloading);
 
-            var configFilePath = this.MakeConfigFilePath();
+            var configFilePath = this.MakeFilePath($"{nameof(AutoModeratorPlugin)}.cfg");
             _config = Persistent<AutoModeratorConfig>.Load(configFilePath);
             _config.Data.Initialize();
             Config.PropertyChanged += OnConfigChanged;
@@ -45,8 +45,15 @@ namespace AutoModerator
             _fileLoggingConfigurator.Initialize();
             _fileLoggingConfigurator.Configure(Config);
 
-            // Local Gps Mod
-            ModAdditionPatch.AddModForServerAndClient(2781829620);
+            if (Config.DisableGpsMod)
+            {
+                Log.Info("Not adding GPS mod");
+            }
+            else
+            {
+                // Local Gps Mod
+                ModAdditionPatch.AddModForServerAndClient(2781829620);
+            }
         }
 
         UserControl IWpfPlugin.GetControl()

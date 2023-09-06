@@ -165,7 +165,7 @@
         </Reference>
     </ItemGroup>
     <ItemGroup>
-        <Reference Include="Profiler">
+        <Reference Include="Profiler" Aliases="ProfilerAlias">
             <HintPath>..\extern\Profiler.dll</HintPath>
         </Reference>
     </ItemGroup>

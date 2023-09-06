@@ -1,7 +1,8 @@
-﻿using System;
+﻿extern alias ProfilerAlias;
+using System;
 using System.Collections.Generic;
 using NLog;
-using Profiler.Basics;
+using ProfilerAlias::Profiler.Basics;
 using Sandbox.Game.World;
 using Utils.General;
 

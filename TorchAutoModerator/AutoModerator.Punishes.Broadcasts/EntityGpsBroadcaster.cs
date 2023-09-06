@@ -54,7 +54,7 @@ namespace AutoModerator.Punishes.Broadcasts
         [MethodImpl(MethodImplOptions.Synchronized)]
         public void ReplaceGpss(IEnumerable<GridGpsSource> gpsSources)
         {
-            var sources = DictionaryPool<long, LocalGpsSource>.Create();
+            var sources = DictionaryPool<long, LocalGpsSource>.Get();
 
             foreach (var src in gpsSources)
             {
