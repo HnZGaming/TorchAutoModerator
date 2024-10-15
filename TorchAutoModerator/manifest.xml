@@ -1,13 +1,7 @@
 <?xml version="1.0"?>
-
 <PluginManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
-
   <Name>Auto Moderator</Name>
-
   <Guid>8333d8a5-c545-42d9-a606-8dae9db3c678</Guid>
-
   <Repository>https://github.com/HnZGaming/TorchAutoModerator</Repository>
-
-  <Version>v2.1.8978.29915</Version>
-
+  <Version>v2.2.9999.99999</Version>
 </PluginManifest>
