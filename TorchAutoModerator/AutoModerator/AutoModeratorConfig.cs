@@ -68,8 +68,8 @@ namespace AutoModerator
         double _outlierFenceNormal = 2;
         double _gracePeriodTime = 20;
         bool _isEnabled = true;
-        List<string> _profileExemptBlockTypeIds;
-        List<string> _punishExemptBlockTypes;
+        List<string> _profileExemptBlockTypeIds = new();
+        List<string> _punishExemptBlockTypes = new();
         bool _disableGpsMod;
 
         [XmlElement]

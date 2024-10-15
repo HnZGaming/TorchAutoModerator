@@ -2,8 +2,12 @@
 <Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
     <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
     <PropertyGroup>
+        <Version>2.2.0</Version>
+        <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+    </PropertyGroup>
+    <PropertyGroup>
         <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
-        <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+        <Platform Condition=" '$(Platform)' == '' ">x64</Platform>
         <ProjectGuid>{EC211AE3-0BED-46AF-B6D1-B8CE93F31009}</ProjectGuid>
         <OutputType>Library</OutputType>
         <AppDesignerFolder>Properties</AppDesignerFolder>
@@ -12,7 +16,7 @@
         <FileAlignment>512</FileAlignment>
         <LangVersion>9</LangVersion>
     </PropertyGroup>
-    <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|x64' ">
         <PlatformTarget>x64</PlatformTarget>
         <DebugSymbols>true</DebugSymbols>
         <DebugType>full</DebugType>
@@ -22,7 +26,7 @@
         <ErrorReport>prompt</ErrorReport>
         <WarningLevel>4</WarningLevel>
     </PropertyGroup>
-    <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|x64' ">
         <PlatformTarget>x64</PlatformTarget>
         <DebugType>pdbonly</DebugType>
         <Optimize>true</Optimize>
@@ -34,12 +38,6 @@
     <ItemGroup>
         <Reference Include="PresentationCore" />
         <Reference Include="PresentationFramework" />
-        <Reference Include="ProtoBuf.Net, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null">
-          <HintPath>..\GameBinaries\ProtoBuf.Net.dll</HintPath>
-        </Reference>
-        <Reference Include="ProtoBuf.Net.Core, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null">
-          <HintPath>..\GameBinaries\ProtoBuf.Net.Core.dll</HintPath>
-        </Reference>
         <Reference Include="System" />
         <Reference Include="System.Core" />
         <Reference Include="System.Data" />
@@ -49,124 +47,171 @@
         <Reference Include="WindowsBase" />
     </ItemGroup>
     <ItemGroup>
+        <Reference Include="ProtoBuf.Net, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null">
+            <HintPath>..\GameBinaries\ProtoBuf.Net.dll</HintPath>
+            <Private>False</Private>
+        </Reference>
+        <Reference Include="ProtoBuf.Net.Core, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null">
+            <HintPath>..\GameBinaries\ProtoBuf.Net.Core.dll</HintPath>
+            <Private>False</Private>
+        </Reference>
         <Reference Include="Newtonsoft.Json">
             <HintPath>..\TorchBinaries\Newtonsoft.Json.dll</HintPath>
+            <Private>False</Private>
         </Reference>
         <Reference Include="NLog">
             <HintPath>..\TorchBinaries\NLog.dll</HintPath>
+            <Private>False</Private>
         </Reference>
         <Reference Include="Sandbox.Common">
             <HintPath>..\TorchBinaries\DedicatedServer64\Sandbox.Common.dll</HintPath>
+            <Private>False</Private>
         </Reference>
         <Reference Include="Sandbox.Game">
             <HintPath>..\TorchBinaries\DedicatedServer64\Sandbox.Game.dll</HintPath>
+            <Private>False</Private>
         </Reference>
         <Reference Include="Sandbox.Game.XmlSerializers">
             <HintPath>..\TorchBinaries\DedicatedServer64\Sandbox.Game.XmlSerializers.dll</HintPath>
+            <Private>False</Private>
         </Reference>
         <Reference Include="Sandbox.Graphics">
             <HintPath>..\TorchBinaries\DedicatedServer64\Sandbox.Graphics.dll</HintPath>
+            <Private>False</Private>
         </Reference>
         <Reference Include="Sandbox.RenderDirect">
             <HintPath>..\TorchBinaries\DedicatedServer64\Sandbox.RenderDirect.dll</HintPath>
+            <Private>False</Private>
         </Reference>
         <Reference Include="SpaceEngineers.Game">
             <HintPath>..\TorchBinaries\DedicatedServer64\SpaceEngineers.Game.dll</HintPath>
+            <Private>False</Private>
         </Reference>
         <Reference Include="SpaceEngineers.ObjectBuilders">
             <HintPath>..\TorchBinaries\DedicatedServer64\SpaceEngineers.ObjectBuilders.dll</HintPath>
+            <Private>False</Private>
         </Reference>
         <Reference Include="SpaceEngineers.ObjectBuilders.XmlSerializers">
             <HintPath>..\TorchBinaries\DedicatedServer64\SpaceEngineers.ObjectBuilders.XmlSerializers.dll</HintPath>
+            <Private>False</Private>
         </Reference>
         <Reference Include="SpaceEngineersDedicated">
             <HintPath>..\TorchBinaries\DedicatedServer64\SpaceEngineersDedicated.exe</HintPath>
+            <Private>False</Private>
         </Reference>
         <Reference Include="Torch">
             <HintPath>..\TorchBinaries\Torch.dll</HintPath>
+            <Private>False</Private>
         </Reference>
         <Reference Include="Torch.API">
             <HintPath>..\TorchBinaries\Torch.API.dll</HintPath>
+            <Private>False</Private>
         </Reference>
         <Reference Include="Torch.Server">
             <HintPath>..\TorchBinaries\Torch.Server.exe</HintPath>
+            <Private>False</Private>
         </Reference>
         <Reference Include="VRage">
             <HintPath>..\TorchBinaries\DedicatedServer64\VRage.dll</HintPath>
+            <Private>False</Private>
         </Reference>
         <Reference Include="VRage.Ansel">
             <HintPath>..\TorchBinaries\DedicatedServer64\VRage.Ansel.dll</HintPath>
+            <Private>False</Private>
         </Reference>
         <Reference Include="VRage.Audio">
             <HintPath>..\TorchBinaries\DedicatedServer64\VRage.Audio.dll</HintPath>
+            <Private>False</Private>
         </Reference>
         <Reference Include="VRage.Dedicated">
             <HintPath>..\TorchBinaries\DedicatedServer64\VRage.Dedicated.dll</HintPath>
+            <Private>False</Private>
         </Reference>
         <Reference Include="VRage.EOS">
             <HintPath>..\TorchBinaries\DedicatedServer64\VRage.EOS.dll</HintPath>
+            <Private>False</Private>
         </Reference>
         <Reference Include="VRage.EOS.XmlSerializers">
             <HintPath>..\TorchBinaries\DedicatedServer64\VRage.EOS.XmlSerializers.dll</HintPath>
+            <Private>False</Private>
         </Reference>
         <Reference Include="VRage.Game">
             <HintPath>..\TorchBinaries\DedicatedServer64\VRage.Game.dll</HintPath>
+            <Private>False</Private>
         </Reference>
         <Reference Include="VRage.Game.XmlSerializers">
             <HintPath>..\TorchBinaries\DedicatedServer64\VRage.Game.XmlSerializers.dll</HintPath>
+            <Private>False</Private>
         </Reference>
         <Reference Include="VRage.Input">
             <HintPath>..\TorchBinaries\DedicatedServer64\VRage.Input.dll</HintPath>
+            <Private>False</Private>
         </Reference>
         <Reference Include="VRage.Library">
             <HintPath>..\TorchBinaries\DedicatedServer64\VRage.Library.dll</HintPath>
+            <Private>False</Private>
         </Reference>
         <Reference Include="VRage.Math">
             <HintPath>..\TorchBinaries\DedicatedServer64\VRage.Math.dll</HintPath>
+            <Private>False</Private>
         </Reference>
         <Reference Include="VRage.Math.XmlSerializers">
             <HintPath>..\TorchBinaries\DedicatedServer64\VRage.Math.XmlSerializers.dll</HintPath>
+            <Private>False</Private>
         </Reference>
         <Reference Include="VRage.Mod.Io">
             <HintPath>..\TorchBinaries\DedicatedServer64\VRage.Mod.Io.dll</HintPath>
+            <Private>False</Private>
         </Reference>
         <Reference Include="VRage.NativeWrapper">
             <HintPath>..\TorchBinaries\DedicatedServer64\VRage.NativeWrapper.dll</HintPath>
+            <Private>False</Private>
         </Reference>
         <Reference Include="VRage.Network">
             <HintPath>..\TorchBinaries\DedicatedServer64\VRage.Network.dll</HintPath>
+            <Private>False</Private>
         </Reference>
         <Reference Include="VRage.Platform.Windows">
             <HintPath>..\TorchBinaries\DedicatedServer64\VRage.Platform.Windows.dll</HintPath>
+            <Private>False</Private>
         </Reference>
         <Reference Include="VRage.RemoteClient.Core">
             <HintPath>..\TorchBinaries\DedicatedServer64\VRage.RemoteClient.Core.dll</HintPath>
+            <Private>False</Private>
         </Reference>
         <Reference Include="VRage.Render">
             <HintPath>..\TorchBinaries\DedicatedServer64\VRage.Render.dll</HintPath>
+            <Private>False</Private>
         </Reference>
         <Reference Include="VRage.Render11">
             <HintPath>..\TorchBinaries\DedicatedServer64\VRage.Render11.dll</HintPath>
+            <Private>False</Private>
         </Reference>
         <Reference Include="VRage.Scripting">
             <HintPath>..\TorchBinaries\DedicatedServer64\VRage.Scripting.dll</HintPath>
+            <Private>False</Private>
         </Reference>
         <Reference Include="VRage.Steam">
             <HintPath>..\TorchBinaries\DedicatedServer64\VRage.Steam.dll</HintPath>
+            <Private>False</Private>
         </Reference>
         <Reference Include="VRage.UserInterfacel">
             <HintPath>..\TorchBinaries\DedicatedServer64\VRage.UserInterface.dll</HintPath>
+            <Private>False</Private>
         </Reference>
         <Reference Include="VRage.XmlSerializers">
             <HintPath>..\TorchBinaries\DedicatedServer64\VRage.XmlSerializers.dll</HintPath>
+            <Private>False</Private>
         </Reference>
         <Reference Include="HavokWrapper">
             <HintPath>..\GameBinaries\HavokWrapper.dll</HintPath>
+            <Private>False</Private>
         </Reference>
     </ItemGroup>
     <ItemGroup>
         <Reference Include="Profiler" Aliases="ProfilerAlias">
             <HintPath>..\extern\Profiler.dll</HintPath>
+            <Private>False</Private>
         </Reference>
     </ItemGroup>
     <ItemGroup>
@@ -194,14 +239,12 @@
         <Compile Include="HNZ.LocalGps.Interface\LocalGpsApi.cs" />
         <Compile Include="HNZ.LocalGps.Interface\LocalGpsSource.cs" />
         <Compile Include="HNZ.LocalGps.Interface\LocalGpsSourceBinary.cs" />
-        <Compile Include="Properties\AssemblyInfo.cs" />
         <Compile Include="AutoModerator\AutoModeratorCommandModule.cs" />
         <Compile Include="AutoModerator\AutoModeratorConfig.cs" />
         <Compile Include="AutoModerator\AutoModeratorPlugin.cs" />
     </ItemGroup>
     <ItemGroup>
         <Content Include="manifest.xml" />
-        <Content Include="postbuild.bat" />
     </ItemGroup>
     <ItemGroup>
         <ProjectReference Include="..\Utils.TimeSerieses\Utils.TimeSerieses.csproj">
@@ -209,19 +252,27 @@
             <Name>Utils.TimeSerieses</Name>
         </ProjectReference>
     </ItemGroup>
+    <ItemGroup>
+      <Folder Include="Properties" />
+    </ItemGroup>
     <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
-    <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
-         Other similar extension points exist, see Microsoft.Common.targets.
-    <Target Name="BeforeBuild">
-    </Target>
-    <Target Name="AfterBuild">
-    </Target>
-    -->
-    <PropertyGroup>
-        <PostBuildEvent>
-            [ -z "$NoDeploy" ] || $(ProjectDir)postbuild.bat $(ProjectName) $(SolutionDir)
-        </PostBuildEvent>
-    </PropertyGroup>
     <Import Project="..\TorchUtils\Utils.General\Utils.General.projitems" Label="Shared" />
     <Import Project="..\TorchUtils\Utils.Torch\Utils.Torch.projitems" Label="Shared" />
+    <PropertyGroup>
+        <PostBuildEvent>
+            setlocal
+
+            set ManifestFile=$(ProjectDir)manifest.xml
+            set ZipFile=$(TargetDir)$(ProjectName)-$(Version).zip
+            set PluginsPath=C:/torch-server/Plugins
+
+            powershell -ExecutionPolicy Bypass -Command "[xml]$xml = Get-Content '%ManifestFile%'; $xml.PluginManifest.Version = 'v$(Version)'; $xml.Save('%ManifestFile%');"
+            powershell -ExecutionPolicy Bypass -Command "Compress-Archive -Path '*.dll', '*.pdb', '*.xml', '%ManifestFile%' -DestinationPath '%ZipFile%' -Force"
+
+            powershell -ExecutionPolicy Bypass -Command "Get-ChildItem -Path '%PluginsPath%' -Filter '$(ProjectName)-*.zip' | Remove-Item -Force"
+            copy /Y "%ZipFile%" "%PluginsPath%"
+
+            endlocal
+        </PostBuildEvent>
+    </PropertyGroup>
 </Project>
