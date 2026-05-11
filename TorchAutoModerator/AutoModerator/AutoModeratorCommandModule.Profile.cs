@@ -120,6 +120,8 @@ namespace AutoModerator
 
                 await Task.Delay(profileTime);
 
+                await VRageUtils.MoveToGameLoop();
+
                 msgBuilder.AppendLine("Grids (% among all your grids):");
 
                 var gridProfileResult = gridProfiler.GetResult();
