@@ -426,10 +426,10 @@ namespace AutoModerator
         public void Initialize()
         {
             // remove duplicates
-            GpsMutedPlayerIds = GpsMutedPlayerIds;
-            ExemptFactionTags = ExemptFactionTags;
-            ProfileExemptBlockTypeIds = ProfileExemptBlockTypeIds;
-            PunishExemptBlockTypes = PunishExemptBlockTypes;
+            GpsMutedPlayerIds = _gpsMutedPlayerIds.Distinct().ToList();
+            ExemptFactionTags = _exemptFactionTags.Distinct().ToList();
+            ProfileExemptBlockTypeIds = _profileExemptBlockTypeIds.Distinct().ToList();
+            PunishExemptBlockTypes = _punishExemptBlockTypes.Distinct().ToList();
 
             if (ProfileExemptBlockTypeIds.Count == 0)
             {
@@ -493,7 +493,7 @@ namespace AutoModerator
 
         public bool IsIdentityExempt(long identityId)
         {
-            var isNpc = Sync.Players.IdentityIsNpc(identityId);
+            var isNpc = MySession.Static.Players.IdentityIsNpc(identityId);
             if (isNpc && IgnoreNpcFactions) return true;
 
             var faction = (IMyFaction)MySession.Static.Factions.GetPlayerFaction(identityId);

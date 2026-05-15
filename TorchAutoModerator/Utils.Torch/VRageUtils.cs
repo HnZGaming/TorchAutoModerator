@@ -305,7 +305,7 @@ namespace Utils.Torch
         {
             foreach (var (id, _) in self.Members)
             {
-                if (Sync.Players.IdentityIsNpc(id)) return true;
+                if (MySession.Static.Players.IdentityIsNpc(id)) return true;
             }
 
             return false;

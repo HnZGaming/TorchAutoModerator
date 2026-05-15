@@ -97,33 +97,44 @@ namespace AutoModerator
             {
                 if (calledByNormalPlayer)
                 {
-                    if (!MyEntities.TryGetEntityById(entityId, out var entity))
+                    // 1 Check belonging
+                    if (AutoModerator.Players.ContainersKey(entityId))
                     {
-                        Context.Respond("Entity not found", Color.Red);
-                        return;
-                    }
-
-                    if (entity is IMyCharacter && !memberIds.Contains(entityId))
-                    {
-                        Context.Respond("Not you or your faction member", Color.Red);
-                        return;
-                    }
-
-                    if (entity is MyCubeGrid grid)
-                    {
-                        if (!grid.BigOwners.TryGetFirst(out var ownerId))
+                        if (!memberIds.Contains(entityId))
                         {
-                            Context.Respond("Not owned by anyone", Color.Red);
+                            Context.Respond("Not you or your faction member". Color.Red);
                             return;
                         }
+                    }
 
-                        if (!memberIds.Contains(ownerId))
+                    else if (!MyEntities.TryGetEntityById(entityId, out var entity))
+                    {
+                        Context.Respond("Entity not found", Color.Red)
+                        return;
+                    }
+                    else
+                    {
+                        if (entity is IMyCharacter)
                         {
-                            Context.Respond("Not yours or your faction member's grid", Color.Red);
-                            return;
+                            var charIdentityId = ((Sandbox.Game.Entities.Character.MyCharacter)entity).GetPlayerIdentityId();
+                            if (!memberIds.Contains(charIdentityId))
+                            {
+                                Context.Respond("Not you or your faction member", Color.Red);
+                                return;
+                            }
+                        }
+
+                        else if (entity is MyCubeGrid grid)
+                        {
+                            if (!grid.BigOwners.TryGetFirst(out var ownerId))
+                            {
+                                Context.Respond("Not yorus or your faction member's grid", Color.Red)
+                                return;
+                            }
                         }
                     }
                 }
+
 
                 InspectEntity(entityId, showOutlierTests);
                 return;
