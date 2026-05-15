@@ -63,7 +63,7 @@ namespace AutoModerator.Punishes
                 }
 
                 await PunishGrid(grid);
-                
+
                 Log.Debug($"block punish: \"{grid.Name}\" <{lag.GridId}> {_config.PunishType}");
 
                 // move to the next frame so we won't lag the server
@@ -87,8 +87,8 @@ namespace AutoModerator.Punishes
 
         async Task PunishGrid(MyCubeGrid grid)
         {
-            var blocks = grid.GetFatBlocks();
-            for (var i = 0; i < blocks.Count; i++)
+            var blocks = grid.GetFatBlocks().ToArray();
+            for (var i = 0; i < blocks.Length; i++)
             {
                 // move to the next frame so we won't lag the server
                 if (i % ProcessedBlockCountPerFrame == 0)
@@ -97,7 +97,7 @@ namespace AutoModerator.Punishes
                 }
 
                 var block = blocks[i];
-                if (block == null) continue;
+                if (block.Closed) continue;
 
                 switch (_config.PunishType)
                 {
@@ -125,7 +125,7 @@ namespace AutoModerator.Punishes
             var maxIntegrity = slimBlock.BlockDefinition.MaxIntegrity;
             if (slimBlock.Integrity / maxIntegrity > _config.MinIntegrityNormal)
             {
-                var damage = maxIntegrity * (float) _config.DamageNormalPerInterval;
+                var damage = maxIntegrity * (float)_config.DamageNormalPerInterval;
                 slimBlock.DoDamage(damage, MyDamageType.Fire, true, null, 0);
             }
         }
