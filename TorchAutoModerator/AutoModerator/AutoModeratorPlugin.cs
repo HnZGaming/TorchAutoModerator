@@ -18,6 +18,25 @@ namespace AutoModerator
     {
         static readonly ILogger Log = LogManager.GetCurrentClassLogger();
 
+        static AutoModeratorPlugin()
+        {
+            // Profiler is a Torch plugin loaded with its own version number.
+            // This plugin compiles against extern/Profiler.dll (version 0.0.0.0),
+            // so the manifest requires that exact version at runtime. Redirect any
+            // Profiler assembly request to whatever version is already in the process.
+            AppDomain.CurrentDomain.AssemblyResolve += (sender, args) =>
+            {
+                var requested = new System.Reflection.AssemblyName(args.Name);
+                if (requested.Name != "Profiler") return null;
+                foreach (var asm in AppDomain.CurrentDomain.GetAssemblies())
+                {
+                    if (asm.GetName().Name == "Profiler")
+                        return asm;
+                }
+                return null;
+            };
+        }
+
         Persistent<AutoModeratorConfig> _config;
         UserControl _userControl;
         CancellationTokenSource _canceller;
