@@ -2,7 +2,7 @@
 <Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
     <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
     <PropertyGroup>
-        <Version>2.2.9999.99999</Version>
+        <Version>2.3.9999.99999</Version>
         <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
     </PropertyGroup>
     <PropertyGroup>
